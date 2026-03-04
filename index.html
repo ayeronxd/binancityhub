@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biñan City Hub - Smart City Portal</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <!-- Custom CSS -->
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <div class="d-flex" id="wrapper">
+        <!-- Top Navigation Bar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header d-flex align-items-center justify-content-between">
+                <div class="header-left d-flex align-items-center gap-4">
+                    <div class="logo-container">
+                        <i class="fas fa-city logo-icon"></i>
+                        <h4 class="mb-0">Biñan City Hub</h4>
+                    </div>
+                    <!-- Navigation Menu -->
+                    <ul class="nav header-nav mb-0">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" data-section="dashboard">
+                                <i class="fas fa-chart-line"></i> <span>Dashboard</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-section="governance">
+                                <i class="fas fa-file-alt"></i> <span>Digital Governance</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-section="workers">
+                                <i class="fas fa-briefcase"></i> <span>Worker Hub</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-section="community">
+                                <i class="fas fa-newspaper"></i> <span>Community Reports & News</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="header-right d-flex align-items-center gap-3">
+                    <div class="status-container d-none d-md-flex align-items-center gap-2">
+                        <span class="badge bg-success">Online</span>
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <!-- User Role Selector -->
+                    <div class="user-role-section">
+                        <label for="userRole" class="form-label small">User Role:</label>
+                        <select id="userRole" class="form-select form-select-sm">
+                            <option value="guest">Guest</option>
+                            <option value="resident-adult">Resident (Adult)</option>
+                            <option value="resident-minor">Resident (Minor)</option>
+                        </select>
+                    </div>
+                    <!-- Auth Buttons -->
+                    <div class="auth-buttons d-flex align-items-center gap-2">
+                        <button class="btn btn-login" data-bs-toggle="modal" data-bs-target="#loginModal">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </button>
+                        <button class="btn btn-signup" data-bs-toggle="modal" data-bs-target="#signupModal">
+                            <i class="fas fa-user-plus"></i> Sign Up
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <div class="main-content" id="mainContent">
+            <!-- Toggle button for mobile -->
+            <div class="mobile-toggle d-md-none p-2">
+                <button class="btn btn-outline-primary" id="toggleSidebarBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+
+            <!-- Content Container -->
+            <div class="content-container">
+                <!-- DASHBOARD SECTION -->
+                <section id="dashboard-section" class="section active">
+                    <div class="section-header">
+                        <h2><i class="fas fa-chart-line"></i> Dashboard</h2>
+                        <p class="text-muted">Administrative Overview & Key Metrics</p>
+                    </div>
+
+                    <div class="row g-4">
+                        <!-- Metric Cards -->
+                        <div class="col-md-6 col-lg-3">
+                            <div class="metric-card">
+                                <i class="fas fa-file-circle-check metric-icon"></i>
+                                <h6>Document Requests</h6>
+                                <p class="metric-value">1,247</p>
+                                <span class="text-success small"><i class="fas fa-arrow-up"></i> +12% this month</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <div class="metric-card">
+                                <i class="fas fa-users metric-icon"></i>
+                                <h6>Active Residents</h6>
+                                <p class="metric-value">3,892</p>
+                                <span class="text-success small"><i class="fas fa-arrow-up"></i> +5% growth</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <div class="metric-card">
+                                <i class="fas fa-briefcase metric-icon"></i>
+                                <h6>Registered Workers</h6>
+                                <p class="metric-value">456</p>
+                                <span class="text-warning small"><i class="fas fa-arrow-right"></i> Stable</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <div class="metric-card">
+                                <i class="fas fa-exclamation-circle metric-icon"></i>
+                                <h6>Open Reports</h6>
+                                <p class="metric-value">78</p>
+                                <span class="text-danger small"><i class="fas fa-arrow-up"></i> Under review</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-4 mt-3">
+                        <!-- Document Request Volume Chart -->
+                        <div class="col-lg-6">
+                            <div class="chart-container">
+                                <h5>Document Request Volume</h5>
+                                <canvas id="documentChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Top Searched Skills Chart -->
+                        <div class="col-lg-6">
+                            <div class="chart-container">
+                                <h5>Top Searched Skills</h5>
+                                <canvas id="skillsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- DIGITAL GOVERNANCE SECTION -->
+                <section id="governance-section" class="section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-file-alt"></i> Digital Governance</h2>
+                        <p class="text-muted">Apply for Official Documents & Services</p>
+                    </div>
+
+                    <!-- Minor Protection Alert -->
+                    <div id="minorAlert" class="alert alert-warning alert-dismissible fade show d-none" role="alert">
+                        <i class="fas fa-exclamation-triangle"></i> <strong>Parental Consent Required</strong>
+                        <p class="mb-0 small mt-2">As a minor, you need parental consent to access document request forms. Please have a parent/guardian present during the application process.</p>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <div class="row g-4">
+                        <!-- Barangay ID Card -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="service-card">
+                                <div class="service-icon">
+                                    <i class="fas fa-id-card"></i>
+                                </div>
+                                <h5>Barangay ID</h5>
+                                <p class="text-muted small">Official identification for barangay residents</p>
+                                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#barangayIdModal">
+                                    Apply Now
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Barangay Clearance Card -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="service-card">
+                                <div class="service-icon">
+                                    <i class="fas fa-certificate"></i>
+                                </div>
+                                <h5>Barangay Clearance</h5>
+                                <p class="text-muted small">Character clearance certificate for employment</p>
+                                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#barangayClearanceModal">
+                                    Apply Now
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- First-Time Job Seeker Card -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="service-card">
+                                <div class="service-icon">
+                                    <i class="fas fa-graduation-cap"></i>
+                                </div>
+                                <h5>First-Time Job Seeker Certification</h5>
+                                <p class="text-muted small">Certificate for first-time job applicants</p>
+                                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#jobSeekerModal">
+                                    Apply Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Application Status Tracking -->
+                    <div class="status-section mt-5">
+                        <h5>Your Application Status</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Document Type</th>
+                                        <th>Application Date</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="statusTableBody">
+                                    <tr>
+                                        <td>Barangay Clearance</td>
+                                        <td>Feb 28, 2026</td>
+                                        <td><span class="badge bg-warning">Processing</span></td>
+                                        <td><a href="#" class="btn btn-link btn-sm action-btn" data-app-id="1" data-action="details">View Details</a></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Barangay ID</td>
+                                        <td>Feb 20, 2026</td>
+                                        <td><span class="badge bg-success">Completed</span></td>
+                                        <td><a href="#" class="btn btn-link btn-sm action-btn" data-app-id="2" data-action="download">Download</a></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- WORKER HUB SECTION -->
+                <section id="workers-section" class="section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-briefcase"></i> Worker Hub</h2>
+                        <p class="text-muted">Find Skilled Workers in Your Community</p>
+                    </div>
+
+                    <!-- Search & Filter Bar -->
+                    <div class="filter-bar">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <input type="text" id="workerSearch" class="form-control" placeholder="Search by name or specialty...">
+                            </div>
+                            <div class="col-md-4">
+                                <select id="categoryFilter" class="form-select">
+                                    <option value="">All Categories</option>
+                                    <option value="blue-collar">Blue Collar</option>
+                                    <option value="white-collar">White Collar</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <select id="specialtyFilter" class="form-select">
+                                    <option value="">All Specialties</option>
+                                    <option value="plumber">Plumber</option>
+                                    <option value="electrician">Electrician</option>
+                                    <option value="carpenter">Carpenter</option>
+                                    <option value="tutor">Tutor</option>
+                                    <option value="accountant">Accountant</option>
+                                    <option value="mechanic">Mechanic</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Worker Directory -->
+                    <div class="row g-4 mt-3" id="workerDirectory">
+                        <!-- Worker cards will be dynamically populated -->
+                    </div>
+                </section>
+
+                <!-- COMMUNITY REPORTS & NEWS SECTION -->
+                <section id="community-section" class="section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-newspaper"></i> Community Reports & News</h2>
+                        <p class="text-muted">Report Issues & Stay Updated with Official Announcements</p>
+                    </div>
+
+                    <div class="row g-4">
+                        <!-- Report Issue Form -->
+                        <div class="col-lg-5">
+                            <div class="report-form-container">
+                                <h5>Report Infrastructure Issue</h5>
+                                <form id="reportForm">
+                                    <div class="mb-3">
+                                        <label for="reportCategory" class="form-label">Category:</label>
+                                        <select id="reportCategory" class="form-select" required>
+                                            <option value="">Select a category...</option>
+                                            <option value="road-damage">Road Damage</option>
+                                            <option value="water-issue">Water Supply Issue</option>
+                                            <option value="waste-management">Waste Management</option>
+                                            <option value="street-light">Street Light Problem</option>
+                                            <option value="drainage">Drainage Problem</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                        <small class="text-danger" id="categoryError"></small>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="reportLocation" class="form-label">Location:</label>
+                                        <input type="text" id="reportLocation" class="form-control" placeholder="Address or landmark..." required>
+                                        <small class="text-danger" id="locationError"></small>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="reportDescription" class="form-label">Description:</label>
+                                        <textarea id="reportDescription" class="form-control" rows="4" placeholder="Describe the issue..." required></textarea>
+                                        <small class="text-danger" id="descriptionError"></small>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fas fa-paper-plane"></i> Submit Report
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Official Announcements Feed -->
+                        <div class="col-lg-7">
+                            <div class="announcements-container">
+                                <h5>Official Announcements</h5>
+                                <div id="announcementsFeed">
+                                    <!-- Announcement cards will be dynamically populated -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <div class="footer-content">
+                    <p><strong>Pilot Implementation:</strong> Barangay Poblacion, Biñan City</p>
+                    <p>© 2026 Biñan City Government. Designed for Smart City Excellence.</p>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- MODALS FOR DOCUMENT APPLICATIONS -->
+
+    <!-- Barangay ID Modal -->
+    <div class="modal fade" id="barangayIdModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Barangay ID Application</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="barangayIdForm">
+                        <div class="mb-3">
+                            <label for="idFullName" class="form-label">Full Name:</label>
+                            <input type="text" id="idFullName" class="form-control" required>
+                            <small class="text-danger" id="idFullNameError"></small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="idAddress" class="form-label">Address:</label>
+                            <input type="text" id="idAddress" class="form-control" required>
+                            <small class="text-danger" id="idAddressError"></small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="idBirthdate" class="form-label">Birthdate:</label>
+                            <input type="date" id="idBirthdate" class="form-control" required>
+                            <small class="text-danger" id="idBirthdateError"></small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="idPhone" class="form-label">Phone Number:</label>
+                            <input type="tel" id="idPhone" class="form-control" required>
+                            <small class="text-danger" id="idPhoneError"></small>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Submit Application</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barangay Clearance Modal -->
+    <div class="modal fade" id="barangayClearanceModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Barangay Clearance Application</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="barangayClearanceForm">
+                        <div class="mb-3">
+                            <label for="clearFullName" class="form-label">Full Name:</label>
+                            <input type="text" id="clearFullName" class="form-control" required>
+                            <small class="text-danger" id="clearFullNameError"></small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="clearAddress" class="form-label">Address:</label>
+                            <input type="text" id="clearAddress" class="form-control" required>
+                            <small class="text-danger" id="clearAddressError"></small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="clearPurpose" class="form-label">Purpose of Clearance:</label>
+                            <select id="clearPurpose" class="form-select" required>
+                                <option value="">Select purpose...</option>
+                                <option value="employment">Employment</option>
+                                <option value="business">Business</option>
+                                <option value="loan">Loan Application</option>
+                                <option value="other">Other</option>
+                            </select>
+                            <small class="text-danger" id="clearPurposeError"></small>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Submit Application</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Details Modal -->
+    <div class="modal fade" id="applicationDetailsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Application Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="application-details">
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Document Type:</strong></label>
+                            <p id="detailType" class="form-control-plaintext">-</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Full Name:</strong></label>
+                            <p id="detailName" class="form-control-plaintext">-</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Address:</strong></label>
+                            <p id="detailAddress" class="form-control-plaintext">-</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Application Date:</strong></label>
+                            <p id="detailDate" class="form-control-plaintext">-</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Status:</strong></label>
+                            <p id="detailStatus" class="form-control-plaintext">-</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Submitted Data:</strong></label>
+                            <p id="detailData" class="form-control-plaintext" style="font-size: 12px; white-space: pre-wrap;">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- First-Time Job Seeker Modal -->
+    <div class="modal fade" id="jobSeekerModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">First-Time Job Seeker Certification</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="jobSeekerForm">
+                        <div class="mb-3">
+                            <label for="jobFullName" class="form-label">Full Name:</label>
+                            <input type="text" id="jobFullName" class="form-control" required>
+                            <small class="text-danger" id="jobFullNameError"></small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="jobEducation" class="form-label">Educational Attainment:</label>
+                            <select id="jobEducation" class="form-select" required>
+                                <option value="">Select...</option>
+                                <option value="hs">High School Graduate</option>
+                                <option value="college">College Graduate</option>
+                                <option value="vocational">Vocational Training</option>
+                            </select>
+                            <small class="text-danger" id="jobEducationError"></small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="jobEmail" class="form-label">Email:</label>
+                            <input type="email" id="jobEmail" class="form-control" required>
+                            <small class="text-danger" id="jobEmailError"></small>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Submit Application</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal fade" id="loginModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Login to Biñan City Hub</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label for="loginEmail" class="form-label">Email Address:</label>
+                            <input type="email" id="loginEmail" class="form-control" placeholder="Enter your email" required>
+                            <small class="text-danger" id="loginEmailError"></small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="loginPassword" class="form-label">Password:</label>
+                            <input type="password" id="loginPassword" class="form-control" placeholder="Enter your password" required>
+                            <small class="text-danger" id="loginPasswordError"></small>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="rememberMe">
+                            <label class="form-check-label" for="rememberMe">Remember me</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Login</button>
+                    </form>
+                    <hr>
+                    <p class="text-center text-muted">Don't have an account? <a href="#" class="text-primary fw-bold" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#signupModal">Sign up here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sign Up Modal -->
+    <div class="modal fade" id="signupModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create Account - Biñan City Hub</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="signupForm">
+                        <div class="mb-3">
+                            <label for="signupName" class="form-label">Full Name:</label>
+                            <input type="text" id="signupName" class="form-control" placeholder="Enter your full name" required>
+                            <small class="text-danger" id="signupNameError"></small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="signupEmail" class="form-label">Email Address:</label>
+                            <input type="email" id="signupEmail" class="form-control" placeholder="Enter your email" required>
+                            <small class="text-danger" id="signupEmailError"></small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="signupPhone" class="form-label">Phone Number:</label>
+                            <input type="tel" id="signupPhone" class="form-control" placeholder="Enter your phone number" required>
+                            <small class="text-danger" id="signupPhoneError"></small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="signupPassword" class="form-label">Password:</label>
+                            <input type="password" id="signupPassword" class="form-control" placeholder="Create a strong password" required>
+                            <small class="text-danger" id="signupPasswordError"></small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="signupConfirmPassword" class="form-label">Confirm Password:</label>
+                            <input type="password" id="signupConfirmPassword" class="form-control" placeholder="Confirm your password" required>
+                            <small class="text-danger" id="signupConfirmPasswordError"></small>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="agreeTerms" required>
+                            <label class="form-check-label" for="agreeTerms">I agree to the Terms and Conditions</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Create Account</button>
+                    </form>
+                    <hr>
+                    <p class="text-center text-muted">Already have an account? <a href="#" class="text-primary fw-bold" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#loginModal">Login here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JavaScript -->
+    <script src="script.js"></script>
+</body>
+</html>
