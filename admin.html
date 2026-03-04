@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard — Biñan City Hub</title>
+    <meta name="description"
+        content="Biñan City Hub Administrator Dashboard — manage barangays, users, documents, and city data.">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <!-- Bootstrap 5 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <!-- Admin CSS -->
+    <link href="admin.css" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- ======= SIDEBAR ======= -->
+    <aside class="admin-sidebar" id="adminSidebar">
+        <div class="admin-sidebar-header">
+            <div class="admin-logo">
+                <div class="admin-logo-icon"><i class="fas fa-city"></i></div>
+                <div>
+                    <span class="admin-logo-name">Biñan City Hub</span>
+                    <span class="admin-logo-sub">Admin Panel</span>
+                </div>
+            </div>
+            <button class="sidebar-close-btn d-lg-none" id="sidebarCloseBtn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <nav class="admin-nav">
+            <div class="admin-nav-label">Main</div>
+            <ul>
+                <li>
+                    <a href="#" class="admin-nav-link active" data-panel="overview">
+                        <i class="fas fa-chart-pie"></i> <span>Overview</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="admin-nav-link" data-panel="barangays">
+                        <i class="fas fa-map-marker-alt"></i> <span>Barangays</span>
+                        <span class="nav-badge">1</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="admin-nav-link" data-panel="users">
+                        <i class="fas fa-users"></i> <span>Users / Residents</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="admin-nav-link" data-panel="documents">
+                        <i class="fas fa-file-alt"></i> <span>Document Requests</span>
+                        <span class="nav-badge pending">12</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="admin-nav-label">Content</div>
+            <ul>
+                <li>
+                    <a href="#" class="admin-nav-link" data-panel="announcements">
+                        <i class="fas fa-bullhorn"></i> <span>Announcements</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="admin-nav-link" data-panel="reports">
+                        <i class="fas fa-triangle-exclamation"></i> <span>Issue Reports</span>
+                        <span class="nav-badge pending">78</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="admin-nav-link" data-panel="workers">
+                        <i class="fas fa-briefcase"></i> <span>Workers Registry</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="admin-nav-label">System</div>
+            <ul>
+                <li>
+                    <a href="#" class="admin-nav-link" data-panel="settings">
+                        <i class="fas fa-gear"></i> <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="admin-sidebar-footer">
+            <div class="admin-user-info">
+                <div class="admin-user-avatar"><i class="fas fa-user-shield"></i></div>
+                <div>
+                    <div class="admin-user-name">Administrator</div>
+                    <div class="admin-user-email">admin@binan.gov.ph</div>
+                </div>
+            </div>
+            <a href="index.html" class="admin-logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Sidebar overlay for mobile -->
+    <div class="sidebar-overlay d-lg-none" id="sidebarOverlay"></div>
+
+    <!-- ======= MAIN AREA ======= -->
+    <div class="admin-main" id="adminMain">
+
+        <!-- Top Header -->
+        <header class="admin-header">
+            <div class="admin-header-left">
+                <button class="sidebar-toggle-btn d-lg-none" id="sidebarToggleBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <h1 id="adminPanelTitle">Overview</h1>
+                    <p id="adminPanelSub">Biñan City Hub — Administrative Dashboard</p>
+                </div>
+            </div>
+            <div class="admin-header-right">
+                <div class="admin-notif-btn">
+                    <i class="fas fa-bell"></i>
+                    <span class="notif-dot"></span>
+                </div>
+                <div class="admin-header-date">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span id="headerDate">March 4, 2026</span>
+                </div>
+                <a href="index.html" class="btn-view-site">
+                    <i class="fas fa-external-link-alt"></i> View Site
+                </a>
+            </div>
+        </header>
+
+        <!-- ======= PANELS ======= -->
+        <div class="admin-content">
+
+            <!-- ===== OVERVIEW PANEL ===== -->
+            <div class="admin-panel active" id="panel-overview">
+                <!-- Stat Cards -->
+                <div class="stat-cards-row">
+                    <div class="stat-card">
+                        <div class="stat-card-icon blue"><i class="fas fa-users"></i></div>
+                        <div class="stat-card-info">
+                            <span class="stat-label">Total Residents</span>
+                            <span class="stat-value">3,892</span>
+                            <span class="stat-trend up"><i class="fas fa-arrow-up"></i> +5.2%</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon gold"><i class="fas fa-file-circle-check"></i></div>
+                        <div class="stat-card-info">
+                            <span class="stat-label">Document Requests</span>
+                            <span class="stat-value">1,247</span>
+                            <span class="stat-trend up"><i class="fas fa-arrow-up"></i> +12%</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon green"><i class="fas fa-briefcase"></i></div>
+                        <div class="stat-card-info">
+                            <span class="stat-label">Registered Workers</span>
+                            <span class="stat-value">456</span>
+                            <span class="stat-trend neutral"><i class="fas fa-minus"></i> Stable</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon red"><i class="fas fa-triangle-exclamation"></i></div>
+                        <div class="stat-card-info">
+                            <span class="stat-label">Pending Reports</span>
+                            <span class="stat-value">78</span>
+                            <span class="stat-trend down"><i class="fas fa-arrow-up"></i> Needs attention</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="charts-row">
+                    <div class="admin-chart-card large">
+                        <div class="chart-header">
+                            <h4>Document Requests — Monthly</h4>
+                            <span class="chart-period">Last 6 months</span>
+                        </div>
+                        <canvas id="adminDocChart" height="100"></canvas>
+                    </div>
+                    <div class="admin-chart-card">
+                        <div class="chart-header">
+                            <h4>Request Types</h4>
+                        </div>
+                        <canvas id="adminTypeChart" height="180"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="admin-table-card">
+                    <div class="table-card-header">
+                        <h4>Recent Document Requests</h4>
+                        <button class="btn-table-action" onclick="showPanel('documents')">View All</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Ref No.</th>
+                                    <th>Resident</th>
+                                    <th>Document</th>
+                                    <th>Barangay</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="overviewRequestsBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== BARANGAYS PANEL ===== -->
+            <div class="admin-panel" id="panel-barangays">
+                <div class="panel-toolbar">
+                    <div class="toolbar-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="barangaySearch" placeholder="Search barangays..."
+                            oninput="filterBarangays()">
+                    </div>
+                    <button class="btn-admin-primary" onclick="openAddBarangayModal()">
+                        <i class="fas fa-plus"></i> Add Barangay
+                    </button>
+                </div>
+
+                <!-- Barangay Status Summary -->
+                <div class="brgy-summary-row">
+                    <div class="brgy-summary-item active-brgy-summary">
+                        <i class="fas fa-circle-check"></i>
+                        <div>
+                            <strong>1</strong>
+                            <span>Active</span>
+                        </div>
+                    </div>
+                    <div class="brgy-summary-item pending-brgy-summary">
+                        <i class="fas fa-clock"></i>
+                        <div>
+                            <strong id="pendingBrgyCount">23</strong>
+                            <span>Pending Rollout</span>
+                        </div>
+                    </div>
+                    <div class="brgy-summary-item total-brgy-summary">
+                        <i class="fas fa-map"></i>
+                        <div>
+                            <strong>24</strong>
+                            <span>Total Barangays</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barangays Table -->
+                <div class="admin-table-card">
+                    <div class="table-card-header">
+                        <h4>All Barangays — Biñan City</h4>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table" id="barangayTable">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Barangay Name</th>
+                                    <th>Captain</th>
+                                    <th>Registered Users</th>
+                                    <th>Status</th>
+                                    <th>Added</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="barangayTableBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== USERS PANEL ===== -->
+            <div class="admin-panel" id="panel-users">
+                <div class="panel-toolbar">
+                    <div class="toolbar-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="userSearch" placeholder="Search users..." oninput="filterUsers()">
+                    </div>
+                    <div class="toolbar-filters">
+                        <select id="userStatusFilter" class="admin-select" onchange="filterUsers()">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="pending">Pending Verification</option>
+                        </select>
+                        <select id="userBarangayFilter" class="admin-select" onchange="filterUsers()">
+                            <option value="">All Barangays</option>
+                            <option value="Poblacion">Poblacion</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="admin-table-card">
+                    <div class="table-card-header">
+                        <h4>Registered Users</h4>
+                        <span class="table-count-badge" id="userCount">0 users</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table" id="usersTable">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Full Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Barangay</th>
+                                    <th>Registered</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== DOCUMENTS PANEL ===== -->
+            <div class="admin-panel" id="panel-documents">
+                <div class="panel-toolbar">
+                    <div class="toolbar-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="docSearch" placeholder="Search by name or ref no..."
+                            oninput="filterDocuments()">
+                    </div>
+                    <div class="toolbar-filters">
+                        <select id="docTypeFilter" class="admin-select" onchange="filterDocuments()">
+                            <option value="">All Document Types</option>
+                            <option value="Barangay ID">Barangay ID</option>
+                            <option value="Barangay Clearance">Barangay Clearance</option>
+                            <option value="Job Seeker Cert.">Job Seeker Cert.</option>
+                        </select>
+                        <select id="docStatusFilter" class="admin-select" onchange="filterDocuments()">
+                            <option value="">All Statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Processing">Processing</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="admin-table-card">
+                    <div class="table-card-header">
+                        <h4>All Document Requests</h4>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Ref No.</th>
+                                    <th>Resident</th>
+                                    <th>Document Type</th>
+                                    <th>Barangay</th>
+                                    <th>Submitted</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="docRequestsBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== ANNOUNCEMENTS PANEL ===== -->
+            <div class="admin-panel" id="panel-announcements">
+                <div class="panel-toolbar">
+                    <button class="btn-admin-primary" onclick="openAddAnnouncementModal()">
+                        <i class="fas fa-plus"></i> New Announcement
+                    </button>
+                </div>
+
+                <div class="announcements-admin-grid" id="announcementsAdminGrid">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- ===== ISSUE REPORTS PANEL ===== -->
+            <div class="admin-panel" id="panel-reports">
+                <div class="panel-toolbar">
+                    <div class="toolbar-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search reports...">
+                    </div>
+                    <select class="admin-select">
+                        <option value="">All Categories</option>
+                        <option>Road Damage</option>
+                        <option>Water Supply Issue</option>
+                        <option>Waste Management</option>
+                        <option>Street Light Problem</option>
+                        <option>Drainage Problem</option>
+                    </select>
+                </div>
+
+                <div class="admin-table-card">
+                    <div class="table-card-header">
+                        <h4>Community Issue Reports</h4>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Category</th>
+                                    <th>Location</th>
+                                    <th>Description</th>
+                                    <th>Reported By</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="issueReportsBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== WORKERS PANEL ===== -->
+            <div class="admin-panel" id="panel-workers">
+                <div class="panel-toolbar">
+                    <div class="toolbar-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search workers...">
+                    </div>
+                    <button class="btn-admin-primary" onclick="openAddWorkerModal()">
+                        <i class="fas fa-plus"></i> Add Worker
+                    </button>
+                </div>
+                <div class="admin-table-card">
+                    <div class="table-card-header">
+                        <h4>Workers Registry</h4>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Name</th>
+                                    <th>Specialty</th>
+                                    <th>Category</th>
+                                    <th>Phone</th>
+                                    <th>Rating</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="workersAdminBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== SETTINGS PANEL ===== -->
+            <div class="admin-panel" id="panel-settings">
+                <div class="settings-grid">
+                    <div class="settings-card">
+                        <h4><i class="fas fa-city"></i> City Information</h4>
+                        <form>
+                            <div class="settings-field">
+                                <label>City Name</label>
+                                <input type="text" class="admin-input" value="Biñan City">
+                            </div>
+                            <div class="settings-field">
+                                <label>Province</label>
+                                <input type="text" class="admin-input" value="Laguna">
+                            </div>
+                            <div class="settings-field">
+                                <label>Contact Email</label>
+                                <input type="email" class="admin-input" value="hub@binan.gov.ph">
+                            </div>
+                            <div class="settings-field">
+                                <label>Contact Phone</label>
+                                <input type="text" class="admin-input" value="(049) 123-4567">
+                            </div>
+                            <button type="button" class="btn-admin-primary mt-3">Save Changes</button>
+                        </form>
+                    </div>
+                    <div class="settings-card">
+                        <h4><i class="fas fa-map"></i> Pilot Information</h4>
+                        <form>
+                            <div class="settings-field">
+                                <label>Pilot Barangay</label>
+                                <input type="text" class="admin-input" value="Barangay Poblacion">
+                            </div>
+                            <div class="settings-field">
+                                <label>Pilot Start Date</label>
+                                <input type="date" class="admin-input" value="2026-01-01">
+                            </div>
+                            <div class="settings-field">
+                                <label>Project Status</label>
+                                <select class="admin-select admin-input">
+                                    <option>Active Pilot</option>
+                                    <option>Planning</option>
+                                    <option>Expansion</option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn-admin-primary mt-3">Save Changes</button>
+                        </form>
+                    </div>
+                    <div class="settings-card">
+                        <h4><i class="fas fa-shield-halved"></i> Admin Account</h4>
+                        <form>
+                            <div class="settings-field">
+                                <label>Admin Name</label>
+                                <input type="text" class="admin-input" value="System Administrator">
+                            </div>
+                            <div class="settings-field">
+                                <label>Admin Email</label>
+                                <input type="email" class="admin-input" value="admin@binan.gov.ph">
+                            </div>
+                            <div class="settings-field">
+                                <label>New Password</label>
+                                <input type="password" class="admin-input" placeholder="Leave blank to keep current">
+                            </div>
+                            <button type="button" class="btn-admin-primary mt-3">Update Account</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- end admin-content -->
+    </div><!-- end admin-main -->
+
+    <!-- ======= MODALS ======= -->
+
+    <!-- Add Barangay Modal -->
+    <div class="admin-modal-overlay" id="addBarangayModalOverlay">
+        <div class="admin-modal" id="addBarangayModal">
+            <div class="admin-modal-header">
+                <h4><i class="fas fa-map-marker-alt"></i> Add Barangay</h4>
+                <button class="admin-modal-close" onclick="closeModal('addBarangayModalOverlay')"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <div class="admin-modal-body">
+                <form id="addBarangayForm">
+                    <div class="modal-field">
+                        <label>Barangay Name *</label>
+                        <input type="text" class="admin-input" id="brgName" placeholder="e.g. Barangay San Pedro"
+                            required>
+                        <span class="modal-field-error" id="brgNameError"></span>
+                    </div>
+                    <div class="modal-field">
+                        <label>Barangay Captain</label>
+                        <input type="text" class="admin-input" id="brgCaptain" placeholder="Full name of Captain">
+                    </div>
+                    <div class="modal-field">
+                        <label>Status</label>
+                        <select class="admin-select admin-input" id="brgStatus">
+                            <option value="active">Active</option>
+                            <option value="pending" selected>Pending Rollout</option>
+                        </select>
+                    </div>
+                    <div class="modal-field">
+                        <label>Notes</label>
+                        <textarea class="admin-input" id="brgNotes" rows="3"
+                            placeholder="Additional notes..."></textarea>
+                    </div>
+                    <div class="admin-modal-footer">
+                        <button type="button" class="btn-admin-secondary"
+                            onclick="closeModal('addBarangayModalOverlay')">Cancel</button>
+                        <button type="submit" class="btn-admin-primary">
+                            <i class="fas fa-plus"></i> Add Barangay
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Barangay Modal -->
+    <div class="admin-modal-overlay" id="editBarangayModalOverlay">
+        <div class="admin-modal" id="editBarangayModal">
+            <div class="admin-modal-header">
+                <h4><i class="fas fa-pen"></i> Edit Barangay</h4>
+                <button class="admin-modal-close" onclick="closeModal('editBarangayModalOverlay')"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <div class="admin-modal-body">
+                <form id="editBarangayForm">
+                    <input type="hidden" id="editBrgId">
+                    <div class="modal-field">
+                        <label>Barangay Name *</label>
+                        <input type="text" class="admin-input" id="editBrgName" required>
+                    </div>
+                    <div class="modal-field">
+                        <label>Barangay Captain</label>
+                        <input type="text" class="admin-input" id="editBrgCaptain">
+                    </div>
+                    <div class="modal-field">
+                        <label>Status</label>
+                        <select class="admin-select admin-input" id="editBrgStatus">
+                            <option value="active">Active</option>
+                            <option value="pending">Pending Rollout</option>
+                        </select>
+                    </div>
+                    <div class="modal-field">
+                        <label>Notes</label>
+                        <textarea class="admin-input" id="editBrgNotes" rows="3"></textarea>
+                    </div>
+                    <div class="admin-modal-footer">
+                        <button type="button" class="btn-admin-secondary"
+                            onclick="closeModal('editBarangayModalOverlay')">Cancel</button>
+                        <button type="submit" class="btn-admin-primary">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Announcement Modal -->
+    <div class="admin-modal-overlay" id="addAnnouncementModalOverlay">
+        <div class="admin-modal" id="addAnnouncementModal">
+            <div class="admin-modal-header">
+                <h4><i class="fas fa-bullhorn"></i> New Announcement</h4>
+                <button class="admin-modal-close" onclick="closeModal('addAnnouncementModalOverlay')"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <div class="admin-modal-body">
+                <form id="addAnnouncementForm">
+                    <div class="modal-field">
+                        <label>Title *</label>
+                        <input type="text" class="admin-input" id="annTitle" placeholder="Announcement title" required>
+                    </div>
+                    <div class="modal-field">
+                        <label>Category</label>
+                        <select class="admin-select admin-input" id="annCategory">
+                            <option value="General">General</option>
+                            <option value="Health">Health</option>
+                            <option value="Infrastructure">Infrastructure</option>
+                            <option value="Youth">Youth</option>
+                            <option value="Event">Event</option>
+                        </select>
+                    </div>
+                    <div class="modal-field">
+                        <label>Barangay Scope</label>
+                        <select class="admin-select admin-input" id="annBarangay">
+                            <option value="All">All Barangays</option>
+                            <option value="Poblacion">Barangay Poblacion</option>
+                        </select>
+                    </div>
+                    <div class="modal-field">
+                        <label>Content *</label>
+                        <textarea class="admin-input" id="annContent" rows="4" placeholder="Write the announcement..."
+                            required></textarea>
+                    </div>
+                    <div class="admin-modal-footer">
+                        <button type="button" class="btn-admin-secondary"
+                            onclick="closeModal('addAnnouncementModalOverlay')">Cancel</button>
+                        <button type="submit" class="btn-admin-primary">
+                            <i class="fas fa-paper-plane"></i> Publish
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div class="admin-toast d-none" id="adminToast">
+        <i class="fas fa-check-circle"></i>
+        <span id="adminToastMsg">Done!</span>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="admin.js"></script>
+</body>
+
+</html>
