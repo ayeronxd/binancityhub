@@ -1,12 +1,12 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login / Sign Up — Biñan City Hub</title>
+    <title>Login / Sign Up â€” BiÃ±an City Hub</title>
     <meta name="description"
-        content="Login or create your account to access Biñan City Hub's digital government services.">
+        content="Login or create your account to access BiÃ±an City Hub's digital government services.">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
@@ -19,6 +19,16 @@
 </head>
 
 <body class="auth-body">
+
+<!--
+  File: login.html
+  What this file does:
+  - Provides login/signup UI for Supabase Auth.
+  - Collects resident identity fields used for profile provisioning.
+  Why this structure:
+  - Keeps authentication isolated from portal business pages.
+  - Enables role-based redirect immediately after sign-in.
+-->
 
     <!-- Back to Home -->
     <a href="index.html" class="back-home">
@@ -36,6 +46,7 @@
     </div>
 
     <div class="auth-container">
+        <!-- Left panel communicates value and trust cues; right panel handles transactional auth. -->
         <!-- Left Panel: Branding -->
         <div class="auth-left">
             <div class="auth-left-content">
@@ -43,13 +54,13 @@
                     <div class="auth-logo-icon">
                         <i class="fas fa-city"></i>
                     </div>
-                    <h1>Biñan City Hub</h1>
+                    <h1>BiÃ±an City Hub</h1>
                     <p class="auth-logo-sub">Smart City Digital Portal</p>
                 </div>
                 <div class="auth-left-tagline">
                     <h2>Your barangay services,<br><span>now at your fingertips.</span></h2>
-                    <p>Join thousands of Biñan City residents who are already using the digital portal to access
-                        government services online — fast, easy, and secure.</p>
+                    <p>Join thousands of BiÃ±an City residents who are already using the digital portal to access
+                        government services online â€” fast, easy, and secure.</p>
                 </div>
                 <div class="auth-features">
                     <div class="auth-feat">
@@ -70,12 +81,13 @@
                     </div>
                 </div>
                 <div class="auth-left-footer">
-                    <p><i class="fas fa-map-marker-alt"></i> Pilot: Barangay Poblacion, Biñan City</p>
-                    <p>© 2026 Biñan City Government</p>
+                    <p><i class="fas fa-map-marker-alt"></i> Pilot: Barangay Poblacion, BiÃ±an City</p>
+                    <p>Â© 2026 BiÃ±an City Government</p>
                 </div>
             </div>
         </div>
 
+        <!-- Right panel keeps auth forms focused with minimal distraction. -->
         <!-- Right Panel: Forms -->
         <div class="auth-right">
             <div class="auth-form-wrapper">
@@ -155,7 +167,7 @@
                 <div class="auth-form d-none" id="signupForm">
                     <div class="auth-form-header">
                         <h3>Create Your Account</h3>
-                        <p>Join Biñan City Hub — it's free and takes less than a minute.</p>
+                        <p>Join BiÃ±an City Hub â€” it's free and takes less than a minute.</p>
                     </div>
 
                     <form id="signupFormEl" novalidate>
@@ -205,7 +217,7 @@
                                     <option value="">Select your barangay...</option>
                                     <option value="poblacion">Barangay Poblacion</option>
                                     <option value="san-antonio">Barangay San Antonio</option>
-                                    <option value="binan">Barangay Biñan</option>
+                                    <option value="binan">Barangay BiÃ±an</option>
                                     <option value="canlalay">Barangay Canlalay</option>
                                     <option value="dela-paz-norte">Barangay Dela Paz Norte</option>
                                     <option value="dela-paz-sur">Barangay Dela Paz Sur</option>
@@ -278,9 +290,10 @@
                             class="switch-link">Login here</button></p>
                 </div>
 
+                <!-- Toast feedback is state-aware: success vs error styling controlled in auth.js/auth.css. -->
                 <!-- Success Toast -->
                 <div class="auth-toast d-none" id="authToast">
-                    <i class="fas fa-check-circle"></i>
+                    <i class="fas fa-check-circle" id="authToastIcon"></i>
                     <span id="toastMessage">Success!</span>
                 </div>
 
@@ -290,7 +303,16 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <script src="auth.js"></script>
 </body>
 
 </html>
+
+
+
+
+
+
+

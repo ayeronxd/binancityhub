@@ -1,12 +1,12 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard — Biñan City Hub</title>
+    <title>Admin Dashboard â€” BiÃ±an City Hub</title>
     <meta name="description"
-        content="Biñan City Hub Administrator Dashboard — manage barangays, users, documents, and city data.">
+        content="BiÃ±an City Hub Administrator Dashboard â€” manage barangays, users, documents, and city data.">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
@@ -22,13 +22,23 @@
 
 <body>
 
+<!--
+  File: admin.html
+  What this file does:
+  - Defines the admin operational workspace (overview, CRUD panels, charts, modals).
+  Why this structure:
+  - Sidebar + panel layout allows role-scoped workflows without page reloads.
+  - Forms are modalized to keep context while editing records.
+-->
+
+    <!-- Sidebar drives panel navigation; admin.js binds click handlers to data-panel targets. -->
     <!-- ======= SIDEBAR ======= -->
     <aside class="admin-sidebar" id="adminSidebar">
         <div class="admin-sidebar-header">
             <div class="admin-logo">
                 <div class="admin-logo-icon"><i class="fas fa-city"></i></div>
                 <div>
-                    <span class="admin-logo-name">Biñan City Hub</span>
+                    <span class="admin-logo-name">BiÃ±an City Hub</span>
                     <span class="admin-logo-sub">Admin Panel</span>
                 </div>
             </div>
@@ -122,7 +132,7 @@
                 </button>
                 <div>
                     <h1 id="adminPanelTitle">Overview</h1>
-                    <p id="adminPanelSub">Biñan City Hub — Administrative Dashboard</p>
+                    <p id="adminPanelSub">BiÃ±an City Hub â€” Administrative Dashboard</p>
                 </div>
             </div>
             <div class="admin-header-right">
@@ -185,7 +195,7 @@
                 <div class="charts-row">
                     <div class="admin-chart-card large">
                         <div class="chart-header">
-                            <h4>Document Requests — Monthly</h4>
+                            <h4>Document Requests â€” Monthly</h4>
                             <span class="chart-period">Last 6 months</span>
                         </div>
                         <canvas id="adminDocChart" height="100"></canvas>
@@ -266,7 +276,7 @@
                 <!-- Barangays Table -->
                 <div class="admin-table-card">
                     <div class="table-card-header">
-                        <h4>All Barangays — Biñan City</h4>
+                        <h4>All Barangays â€” BiÃ±an City</h4>
                     </div>
                     <div class="table-responsive">
                         <table class="admin-table" id="barangayTable">
@@ -487,7 +497,7 @@
                         <form>
                             <div class="settings-field">
                                 <label>City Name</label>
-                                <input type="text" class="admin-input" value="Biñan City">
+                                <input type="text" class="admin-input" value="BiÃ±an City">
                             </div>
                             <div class="settings-field">
                                 <label>Province</label>
@@ -505,20 +515,20 @@
                         </form>
                     </div>
                     <div class="settings-card">
-                        <h4><i class="fas fa-map"></i> Pilot Information</h4>
+                        <h4><i class="fas fa-map"></i> Portal Information</h4>
                         <form>
                             <div class="settings-field">
-                                <label>Pilot Barangay</label>
+                                <label>Primary Barangay</label>
                                 <input type="text" class="admin-input" value="Barangay Poblacion">
                             </div>
                             <div class="settings-field">
-                                <label>Pilot Start Date</label>
+                                <label>Portal Launch Date</label>
                                 <input type="date" class="admin-input" value="2026-01-01">
                             </div>
                             <div class="settings-field">
                                 <label>Project Status</label>
                                 <select class="admin-select admin-input">
-                                    <option>Active Pilot</option>
+                                    <option>Active</option>
                                     <option>Planning</option>
                                     <option>Expansion</option>
                                 </select>
@@ -686,6 +696,7 @@
         </div>
     </div>
 
+    <!-- Toast notification communicates result of database-backed admin actions. -->
     <!-- Toast notification -->
     <div class="admin-toast d-none" id="adminToast">
         <i class="fas fa-check-circle"></i>
@@ -694,7 +705,14 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <script src="admin.js"></script>
 </body>
 
 </html>
+
+
+
+
+

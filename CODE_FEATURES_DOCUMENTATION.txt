@@ -1,0 +1,312 @@
+﻿BINAN CITY HUB - FEATURE AND CODE DOCUMENTATION
+Generated: 2026-03-05
+
+============================================================
+1) PROJECT OVERVIEW
+============================================================
+This project is a serverless web app using:
+- Bootstrap 5 + custom CSS
+- Vanilla JavaScript
+- Supabase (Auth + Postgres + Row Level Security)
+
+Core goal:
+- Public users can browse city content (announcements, workers, analytics summaries).
+- Authenticated residents can submit requests/reports.
+- Admin users can manage city/barangay operations from the admin dashboard.
+
+Key files:
+- index.html: Resident/public portal UI
+- login.html: Login + signup UI
+- admin.html: Admin dashboard UI
+- main.js: Public/resident portal logic
+- auth.js: Login/signup/auth redirection logic
+- admin.js: Admin dashboard data management logic
+- supabase-config.js: Supabase client bootstrap
+- supabase-schema.sql: Database schema, triggers, views, RLS policies
+
+
+============================================================
+2) AUTHENTICATION AND ROLE FLOW
+============================================================
+Where implemented:
+- auth.js
+- main.js
+- admin.js
+- supabase-schema.sql (profiles + policies)
+
+What it does:
+- User signs up or logs in through Supabase Auth.
+- After login, app checks `profiles.role`.
+- If role is `resident` -> user stays on index portal.
+- If role is `barangay_admin` or `super_admin` -> redirected to admin panel.
+
+Why it is done this way:
+- Role decisions must come from DB, not frontend constants, to prevent privilege spoofing.
+- Supabase session state is secure and central.
+- Redirect-by-role keeps one login entry point with controlled authorization.
+
+Related functions:
+- auth.js: `handleLogin()`, `handleSignup()`
+- main.js: `initAuthState()`
+- admin.js: `enforceAdminAccess()`
+
+
+============================================================
+3) GUEST VS AUTHENTICATED EXPERIENCE
+============================================================
+Where implemented:
+- index.html (UI states)
+- main.js
+
+What it does:
+- Guests can browse workers, announcements, and analytics.
+- Protected actions (document request, worker contact, report submission, My Portal) trigger login requirement.
+
+Why it is done this way:
+- Maintains discoverability and transparency for public city information.
+- Prevents unauthorized writes (requests/reports) while keeping UX smooth.
+- Aligns with RLS: read for public, write for authenticated users only.
+
+Related functions:
+- `requireLogin(action)`
+- `handleDocAction()`
+- `handleWorkerContact()`
+- `setupReportForm()`
+- `switchTab(tabId)`
+
+
+============================================================
+4) SUPABASE CLIENT BOOTSTRAP
+============================================================
+Where implemented:
+- supabase-config.js
+
+What it does:
+- Initializes one shared Supabase client (`window.__bchSupabase`).
+- Prevents repeated client instantiation.
+- Blocks usage when placeholders are not replaced.
+
+Why it is done this way:
+- Single client instance reduces inconsistent session handling.
+- Placeholder guard avoids misleading behavior when project keys are missing.
+
+Key function:
+- `getBchSupabaseClient()`
+
+
+============================================================
+5) PUBLIC DATA MODULES (INDEX)
+============================================================
+Where implemented:
+- main.js
+
+What it does:
+- Loads live data for:
+  - Workers (`workers` table)
+  - Announcements (`announcements` table)
+  - Barangay metrics (`v_barangay_analytics` view)
+  - Issue reports summary (`issue_reports` table)
+  - Document chart data (`document_requests` table)
+
+Why it is done this way:
+- Removes hardcoded arrays and stale metrics.
+- Lets analytics auto-update as real transactions happen.
+- Uses SQL view for barangay aggregation so frontend stays simple.
+
+Related functions:
+- `loadPortalData()`
+- `loadWorkers()`
+- `loadAnnouncements()`
+- `loadBarangaysAndMetrics()`
+- `loadIssueReports()`
+- `loadChartData()`
+
+
+============================================================
+6) ANALYTICS COUNTERS AND CHARTS
+============================================================
+Where implemented:
+- main.js
+
+What it does:
+- Counter cards are fed from DB counts.
+- Trend chart uses recent document request records.
+- Doughnut chart computes request-type distribution.
+- Skills chart computes worker category/service distribution.
+
+Why it is done this way:
+- Analytics should reflect real operational data, not static numbers.
+- Aggregating in JS from query results avoids extra backend service in this serverless setup.
+
+Important note:
+- If Supabase is not configured, counters are reset to zero (not fake values).
+
+Related functions:
+- `setCounterTargetByIndex()`
+- `resetAnalyticsCountersToZero()`
+- `renderAnalyticsCharts()`
+
+
+============================================================
+7) RESIDENT FEATURES
+============================================================
+Where implemented:
+- main.js
+
+What it does:
+- Submit document request -> insert into `document_requests`
+- Submit issue report -> insert into `issue_reports`
+- View own requests in My Portal
+
+Why it is done this way:
+- Writes happen directly from frontend to Supabase (serverless requirement).
+- RLS enforces that users only create/read allowed rows.
+
+Related functions:
+- `setupApplyForm()`
+- `setupReportForm()`
+- `loadUserApplications()`
+- `renderUserApplications()`
+- `renderDocRecentApps()`
+
+
+============================================================
+8) ADMIN DASHBOARD FEATURES
+============================================================
+Where implemented:
+- admin.js
+
+What it does:
+- Loads and renders:
+  - Barangays and metrics
+  - Resident list
+  - Document requests
+  - Announcements
+  - Issue reports
+  - Workers registry
+- Supports actions:
+  - Approve/update document requests
+  - Create/edit/delete barangays
+  - Publish/delete announcements
+
+Why it is done this way:
+- Centralized admin workflows in one dashboard.
+- Super admin and barangay admin both supported with scope filtering.
+- DB updates keep operations auditable and persistent.
+
+Related functions:
+- `loadAdminData()`
+- `loadBarangays()`
+- `loadResidents()`
+- `loadDocRequests()`
+- `loadAnnouncements()`
+- `loadIssueReports()`
+- `loadWorkers()`
+- `approveDoc()`
+- `initFormHandlers()`
+
+
+============================================================
+9) DATABASE SCHEMA AND SECURITY (RLS)
+============================================================
+Where implemented:
+- supabase-schema.sql
+
+Core tables:
+- `profiles`
+- `barangays`
+- `workers`
+- `announcements`
+- `document_requests`
+- `issue_reports`
+
+Supporting pieces:
+- `v_barangay_analytics` view for aggregate analytics
+- `touch_updated_at()` trigger function
+- `handle_new_user_profile()` trigger for signup profile bootstrap
+
+Why RLS is critical:
+- Frontend is direct-to-database.
+- Without RLS, any client could overread/overwrite data.
+- Policies enforce least privilege by user role and barangay scope.
+
+Examples of enforced behavior:
+- Public can read announcements/workers/barangays.
+- Residents can insert own document requests/reports.
+- Admins can read/manage operational data according to role.
+
+
+============================================================
+10) TOAST FEEDBACK SYSTEM (AUTH)
+============================================================
+Where implemented:
+- auth.js
+- auth.css
+- login.html
+
+What it does:
+- Displays success and error toasts with different icon/color.
+- Wrong credentials now show red error style, not green success style.
+
+Why it is done this way:
+- Prevents misleading feedback.
+- Improves user trust and troubleshooting clarity.
+
+Related function:
+- `showToast(message, type = "success")`
+
+
+============================================================
+11) DESIGN/UX DECISIONS
+============================================================
+- Kept existing visual structure so your current layout is preserved.
+- Replaced hardcoded data logic first before visual redesign.
+- Used DB-driven defaults and fallbacks to prevent blank/incorrect state.
+- Protected interactions are routed through auth checks instead of hidden only by CSS.
+
+
+============================================================
+12) KNOWN DEPENDENCIES / ASSUMPTIONS
+============================================================
+- `supabase-config.js` must contain valid project URL and anon key.
+- `supabase-schema.sql` must be executed in Supabase SQL Editor.
+- At least one account must be promoted to `super_admin` for full admin access.
+
+Promotion SQL example:
+update public.profiles
+set role = 'super_admin'
+where email = 'your-email@example.com';
+
+
+============================================================
+13) HOW TO EXTEND SAFELY
+============================================================
+Recommended pattern for new features:
+1. Add schema/table/policy in SQL first.
+2. Add read/write calls in JS next.
+3. Keep UI optimistic but policy-safe.
+4. Validate with role-specific test accounts.
+
+Do not:
+- Re-introduce static arrays for production data.
+- Trust frontend-only role checks without RLS.
+
+
+============================================================
+14) QUICK TROUBLESHOOTING
+============================================================
+If analytics still look wrong:
+- Verify `supabase-config.js` keys are real.
+- Check browser console for Supabase query errors.
+- Confirm tables contain rows.
+- Confirm RLS policies allow the needed query role.
+
+If login works but admin page denies access:
+- Check `profiles.role` for that user.
+- Re-login after role update so session/profile is refreshed.
+
+If signup works but profile missing:
+- Verify trigger `on_auth_user_created` exists and runs.
+
+
+END OF DOCUMENT

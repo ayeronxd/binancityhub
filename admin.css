@@ -1,5 +1,14 @@
+﻿/*
+  File: admin.css
+  What this file does:
+  - Styles the admin sidebar, panels, tables, modals, and chart containers.
+  Why this approach:
+  - Keeps operational UI dense but readable for frequent admin actions.
+  - Separates admin visual language from resident-facing pages.
+*/
+
 /* ============================================
-   BIÑAN CITY HUB — ADMIN DASHBOARD STYLES
+   BIÃ‘AN CITY HUB â€” ADMIN DASHBOARD STYLES
    ============================================ */
 
 :root {

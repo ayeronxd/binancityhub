@@ -1,9 +1,19 @@
+﻿/*
+  File: main.css
+  What this file does:
+  - Styles the public/resident portal and tabbed content sections.
+  - Provides shared color/spacing tokens and component-level visuals.
+  Why this approach:
+  - Centralized design tokens prevent inconsistent styling.
+  - State-based classes simplify guest vs authenticated visibility.
+*/
+
 /* ============================================================
-   BIÑAN CITY HUB — MAIN SITE CSS
+   BIÃ‘AN CITY HUB â€” MAIN SITE CSS
    State-driven: .guest-only / .user-only + body.logged-in
    ============================================================ */
 
-/* ── VARIABLES ──────────────────────────────────────────── */
+/* â”€â”€ VARIABLES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 :root {
     --navy-deep: #07141f;
     --navy-dark: #0f2236;
@@ -36,7 +46,7 @@
     --t-gold: var(--gold);
 }
 
-/* ── RESET ──────────────────────────────────────────────── */
+/* â”€â”€ RESET â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 *,
 *::before,
 *::after {
@@ -79,8 +89,8 @@ button {
 
 /* ============================================================
    STATE: GUEST vs LOGGED-IN
-   .guest-only — visible by default (guests), hidden when logged in
-   .user-only  — hidden by default, visible only when logged in
+   .guest-only â€” visible by default (guests), hidden when logged in
+   .user-only  â€” hidden by default, visible only when logged in
    ============================================================ */
 .user-only {
     display: none !important;
@@ -103,7 +113,7 @@ body.logged-in .user-only.block-el {
     display: block !important;
 }
 
-/* ── TOPBAR ─────────────────────────────────────────────── */
+/* â”€â”€ TOPBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .topbar {
     position: fixed;
     top: 0;
@@ -457,7 +467,7 @@ body.logged-in .user-only.block-el {
     gap: 6px;
 }
 
-/* ── PAGE WRAPPER / TABS ─────────────────────────────────── */
+/* â”€â”€ PAGE WRAPPER / TABS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .page-wrapper {
     padding-top: calc(var(--nav-h) + 16px);
     min-height: calc(100vh - var(--status-h));
@@ -484,7 +494,7 @@ body.logged-in .user-only.block-el {
     }
 }
 
-/* ── ANALYTICS PORTAL LAYOUT ─────────────────────────────── */
+/* â”€â”€ ANALYTICS PORTAL LAYOUT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .portal-layout {
     display: grid;
     grid-template-columns: 1fr 295px;
@@ -690,7 +700,7 @@ body.logged-in .user-only.block-el {
     white-space: nowrap;
 }
 
-.pilot-chip {
+.scope-chip {
     display: inline-flex;
     align-items: center;
     background: var(--gold-dim);
@@ -946,7 +956,7 @@ body.logged-in .user-only.block-el {
     line-height: 1.6;
 }
 
-/* ── TAB CONTENT PAGES ────────────────────────────────────── */
+/* â”€â”€ TAB CONTENT PAGES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .tab-content-wrap {
     max-width: 1260px;
     margin: 0 auto;
@@ -1027,7 +1037,7 @@ body.logged-in .user-only.block-el {
     color: var(--text-muted);
 }
 
-/* ── FILTER BAR ───────────────────────────────────────────── */
+/* â”€â”€ FILTER BAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .glass-filter-bar {
     display: flex;
     gap: 10px;
@@ -1108,7 +1118,7 @@ body.logged-in .user-only.block-el {
     padding: 0 4px;
 }
 
-/* ── WORKER GRID ───────────────────────────────────────────── */
+/* â”€â”€ WORKER GRID â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .worker-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -1207,7 +1217,7 @@ body.logged-in .user-only.block-el {
     color: var(--gold);
 }
 
-/* ── DOCUMENT SERVICES ─────────────────────────────────────── */
+/* â”€â”€ DOCUMENT SERVICES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .doc-services-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -1404,14 +1414,14 @@ body.logged-in .user-only.block-el {
     margin-top: -14px;
 }
 
-/* ── COMMUNITY ─────────────────────────────────────────────── */
+/* â”€â”€ COMMUNITY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .community-layout {
     display: grid;
     grid-template-columns: 1fr 1.4fr;
     gap: 18px;
 }
 
-/* ── GLASS FIELDS ──────────────────────────────────────────── */
+/* â”€â”€ GLASS FIELDS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .glass-field {
     margin-bottom: 13px;
 }
@@ -1456,7 +1466,7 @@ body.logged-in .user-only.block-el {
     background: #0f2236;
 }
 
-/* ── MY PORTAL ─────────────────────────────────────────────── */
+/* â”€â”€ MY PORTAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .myportal-welcome {
     display: flex;
     align-items: center;
@@ -1555,7 +1565,7 @@ body.logged-in .user-only.block-el {
     gap: 16px;
 }
 
-/* ── BUTTONS ───────────────────────────────────────────────── */
+/* â”€â”€ BUTTONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .btn-gold {
     display: inline-flex;
     align-items: center;
@@ -1624,7 +1634,7 @@ body.logged-in .user-only.block-el {
     color: var(--text-muted);
 }
 
-/* ── MODALS ────────────────────────────────────────────────── */
+/* â”€â”€ MODALS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .modal-backdrop {
     position: fixed;
     inset: 0;
@@ -1756,7 +1766,7 @@ body.logged-in .user-only.block-el {
     right: 0;
 }
 
-/* ── STATUS BAR ─────────────────────────────────────────────── */
+/* â”€â”€ STATUS BAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .status-bar {
     position: fixed;
     bottom: 0;
@@ -1790,7 +1800,7 @@ body.logged-in .user-only.block-el {
     white-space: nowrap;
 }
 
-/* ── TOAST ─────────────────────────────────────────────────── */
+/* â”€â”€ TOAST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .portal-toast {
     position: fixed;
     bottom: 52px;
@@ -1819,7 +1829,7 @@ body.logged-in .user-only.block-el {
     transform: translateY(0);
 }
 
-/* ── SCROLLBAR ─────────────────────────────────────────────── */
+/* â”€â”€ SCROLLBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px
@@ -1838,7 +1848,7 @@ body.logged-in .user-only.block-el {
     background: rgba(212, 165, 116, 0.38)
 }
 
-/* ── RESPONSIVE ─────────────────────────────────────────────── */
+/* â”€â”€ RESPONSIVE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (max-width:1100px) {
     .portal-layout {
         grid-template-columns: 1fr;
@@ -1943,3 +1953,4 @@ body.logged-in .user-only.block-el {
         grid-template-columns: 1fr;
     }
 }
+

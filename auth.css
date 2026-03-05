@@ -1,5 +1,14 @@
+﻿/*
+  File: auth.css
+  What this file does:
+  - Styles login/signup forms, validation states, and feedback toasts.
+  Why this approach:
+  - Isolating auth styles reduces cross-page CSS conflicts.
+  - Strong state styles (error/success/focus) improve UX clarity.
+*/
+
 /* ============================================
-   BIÑAN CITY HUB — AUTH PAGE STYLES
+   BIÃ‘AN CITY HUB â€” AUTH PAGE STYLES
    ============================================ */
 
 :root {
@@ -768,3 +777,14 @@ body.auth-body {
         flex-direction: row;
     }
 }
+
+.auth-toast.success {
+    background: #27ae60;
+    box-shadow: 0 8px 30px rgba(39, 174, 96, 0.35);
+}
+
+.auth-toast.error {
+    background: #e74c3c;
+    box-shadow: 0 8px 30px rgba(231, 76, 60, 0.35);
+}
+

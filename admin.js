@@ -1,575 +1,787 @@
+﻿// =====================================
+// BINAN CITY HUB - ADMIN DASHBOARD JS
 // =====================================
-// BIÑAN CITY HUB — ADMIN DASHBOARD JS
-// =====================================
+// Purpose:
+// - Provide operational tools for super_admin and barangay_admin roles.
+// - Render management data directly from Supabase tables/views.
+// Why this design:
+// - Role checks happen before panel load.
+// - Barangay admins are automatically scope-filtered to assigned barangay.
 
-/* ===== DATA ===== */
-let barangays = [
-    { id: 1, name: 'Barangay Poblacion', captain: 'Hon. Maria Santos', users: 3892, status: 'active', added: 'Jan 1, 2026', notes: 'Pilot barangay' },
-    { id: 2, name: 'Barangay San Antonio', captain: 'Hon. Pedro Reyes', users: 0, status: 'pending', added: '—', notes: '' },
-    { id: 3, name: 'Barangay Biñan', captain: 'Hon. Ana Cruz', users: 0, status: 'pending', added: '—', notes: '' },
-    { id: 4, name: 'Barangay Canlalay', captain: '—', users: 0, status: 'pending', added: '—', notes: '' },
-    { id: 5, name: 'Barangay Dela Paz Norte', captain: '—', users: 0, status: 'pending', added: '—', notes: '' },
-    { id: 6, name: 'Barangay Dela Paz Sur', captain: '—', users: 0, status: 'pending', added: '—', notes: '' },
-    { id: 7, name: 'Barangay Ganado', captain: '—', users: 0, status: 'pending', added: '—', notes: '' },
-    { id: 8, name: 'Barangay Langkiwa', captain: '—', users: 0, status: 'pending', added: '—', notes: '' },
-    { id: 9, name: 'Barangay Loma', captain: '—', users: 0, status: 'pending', added: '—', notes: '' },
-    { id: 10, name: 'Barangay Santo Tomas', captain: '—', users: 0, status: 'pending', added: '—', notes: '' },
-];
+let supabaseClient = null;
+let currentUser = null;
+let currentProfile = null;
 
-const usersData = [
-    { id: 1, first: 'Juan', last: 'Dela Cruz', email: 'juan@email.com', phone: '09171234567', barangay: 'Poblacion', registered: 'Mar 1, 2026', status: 'active' },
-    { id: 2, first: 'Maria', last: 'Santos', email: 'maria@email.com', phone: '09201231234', barangay: 'Poblacion', registered: 'Feb 28, 2026', status: 'active' },
-    { id: 3, first: 'Carlos', last: 'Reyes', email: 'carlos@email.com', phone: '09175551234', barangay: 'Poblacion', registered: 'Feb 25, 2026', status: 'pending' },
-    { id: 4, first: 'Ana', last: 'Ferrer', email: 'ana@email.com', phone: '09209876543', barangay: 'Poblacion', registered: 'Feb 20, 2026', status: 'active' },
-    { id: 5, first: 'Miguel', last: 'Diaz', email: 'miguel@email.com', phone: '09178882211', barangay: 'Poblacion', registered: 'Feb 15, 2026', status: 'active' },
-];
+let barangays = [];
+let usersData = [];
+let docRequests = [];
+let announcements = [];
+let issueReports = [];
+let workersRegistry = [];
 
-const docRequests = [
-    { ref: 'BCL-2026-00847', name: 'Maria Dela Cruz', type: 'Barangay Clearance', barangay: 'Poblacion', date: 'Feb 28, 2026', status: 'Processing' },
-    { ref: 'BID-2026-00823', name: 'Juan Santos Reyes', type: 'Barangay ID', barangay: 'Poblacion', date: 'Feb 20, 2026', status: 'Completed' },
-    { ref: 'JSC-2026-00801', name: 'Ana Ferrer', type: 'Job Seeker Cert.', barangay: 'Poblacion', date: 'Feb 18, 2026', status: 'Completed' },
-    { ref: 'BCL-2026-00799', name: 'Carlos Reyes', type: 'Barangay Clearance', barangay: 'Poblacion', date: 'Feb 15, 2026', status: 'Pending' },
-    { ref: 'BID-2026-00790', name: 'Rosa Villegas', type: 'Barangay ID', barangay: 'Poblacion', date: 'Feb 10, 2026', status: 'Pending' },
-    { ref: 'JSC-2026-00784', name: 'Paolo Mendoza', type: 'Job Seeker Cert.', barangay: 'Poblacion', date: 'Feb 5, 2026', status: 'Rejected' },
-];
+// Admin bootstrap: secure gate -> data load -> panel render.
+document.addEventListener("DOMContentLoaded", async () => {
+  supabaseClient = window.getBchSupabaseClient ? window.getBchSupabaseClient() : null;
 
-let announcements = [
-    { id: 1, title: 'Community Health Drive — March 15, 2026', category: 'Health', barangay: 'Poblacion', content: 'Free medical checkups and health consultations will be held at the Barangay Hall. Schedule your appointment today!', date: 'March 10, 2026' },
-    { id: 2, title: 'Road Maintenance Schedule', category: 'Infrastructure', barangay: 'All', content: 'Secondary roads in Zone A and B will undergo maintenance from March 12–19. Please plan your routes accordingly.', date: 'March 8, 2026' },
-    { id: 3, title: 'Summer Youth Program Registration', category: 'Youth', barangay: 'All', content: 'Registration is open for our Summer Youth Program. Various skills training and sports activities for ages 13–17.', date: 'March 5, 2026' },
-    { id: 4, title: 'Barangay Fiesta Planning Committee Meeting', category: 'Event', barangay: 'Poblacion', content: 'All interested residents are invited to participate in the Fiesta planning. Meeting is scheduled for March 8 at 6 PM.', date: 'March 1, 2026' },
-];
+  setHeaderDate();
+  initSidebarNav();
+  initMobileSidebar();
+  initFormHandlers();
 
-const issueReports = [
-    { id: 1, category: 'Road Damage', location: 'Brgy. Poblacion, Zone 2', description: 'Pothole near the market entrance', reporter: 'Juan Dela Cruz', date: 'Mar 3, 2026', status: 'Pending' },
-    { id: 2, category: 'Street Light Problem', location: 'Main St., Poblacion', description: 'Street light has been off for 3 days', reporter: 'Maria Santos', date: 'Mar 2, 2026', status: 'Processing' },
-    { id: 3, category: 'Waste Management', location: 'Blk 5, Zone 1', description: 'Garbage not collected for 2 weeks', reporter: 'Anonymous', date: 'Mar 1, 2026', status: 'Pending' },
-    { id: 4, category: 'Drainage Problem', location: 'Near Barangay Hall', description: 'Clogged drainage causing flooding', reporter: 'Carlos Reyes', date: 'Feb 28, 2026', status: 'Completed' },
-];
+  const allowed = await enforceAdminAccess();
+  if (!allowed) return;
 
-const workersRegistry = [
-    { id: 1, name: 'Juan Cruz', specialty: 'Plumber', category: 'Blue Collar', phone: '09171234567', rating: 4.8, status: 'Active' },
-    { id: 2, name: 'Maria Santos', specialty: 'Tutor', category: 'White Collar', phone: '09209876543', rating: 4.9, status: 'Active' },
-    { id: 3, name: 'Carlos Reyes', specialty: 'Electrician', category: 'Blue Collar', phone: '09175551234', rating: 4.7, status: 'Active' },
-    { id: 4, name: 'Anna Ferrer', specialty: 'Accountant', category: 'White Collar', phone: '09205559876', rating: 4.9, status: 'Active' },
-    { id: 5, name: 'Miguel Diaz', specialty: 'Carpenter', category: 'Blue Collar', phone: '09178882211', rating: 4.6, status: 'Active' },
-];
+  await loadAdminData();
+  renderAllPanels();
+  initCharts();
 
-/* ===== INITIALIZATION ===== */
-document.addEventListener('DOMContentLoaded', () => {
-    setHeaderDate();
-    initSidebarNav();
-    initMobileSidebar();
-    renderOverviewTable();
-    renderBarangayTable();
-    renderUsersTable();
-    renderDocRequestsTable();
-    renderIssueReportsTable();
-    renderWorkersTable();
-    renderAnnouncementsGrid();
-    initCharts();
-    initFormHandlers();
-    console.log('Biñan City Hub — Admin Dashboard Initialized');
+  console.log("Binan City Hub - Admin Dashboard Initialized");
 });
 
-/* ===== DATE ===== */
-function setHeaderDate() {
-    const dateEl = document.getElementById('headerDate');
-    if (dateEl) {
-        const now = new Date();
-        dateEl.textContent = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    }
+// Rejects non-admin users early to avoid exposing management UI/data.
+async function enforceAdminAccess() {
+  if (!supabaseClient) {
+    showAdminToast("Supabase is not configured. Update supabase-config.js.");
+    return false;
+  }
+
+  const { data } = await supabaseClient.auth.getSession();
+  const user = data?.session?.user;
+  if (!user) {
+    window.location.href = "login.html";
+    return false;
+  }
+
+  currentUser = user;
+
+  const { data: profile } = await supabaseClient
+    .from("profiles")
+    .select("id,role,barangay")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  currentProfile = profile;
+
+  if (!profile || (profile.role !== "super_admin" && profile.role !== "barangay_admin")) {
+    window.location.href = "index.html";
+    return false;
+  }
+
+  return true;
 }
 
-/* ===== SIDEBAR NAVIGATION ===== */
+// Loads all admin datasets concurrently for responsive dashboard startup.
+async function loadAdminData() {
+  await Promise.all([
+    loadBarangays(),
+    loadResidents(),
+    loadDocRequests(),
+    loadAnnouncements(),
+    loadIssueReports(),
+    loadWorkers()
+  ]);
+}
+
+async function loadBarangays() {
+  const { data } = await supabaseClient
+    .from("v_barangay_analytics")
+    .select("id,name,captain,status,residents,docs,workers,notes,created_at")
+    .order("name", { ascending: true });
+
+  barangays = (data || []).map((b) => ({
+    id: b.id,
+    name: b.name,
+    captain: b.captain || "-",
+    users: Number(b.residents || 0),
+    status: b.status || "pending",
+    added: b.created_at ? formatDate(new Date(b.created_at)) : "-",
+    notes: b.notes || ""
+  }));
+}
+
+// Pulls resident profiles; barangay admins only see their own barangay scope.
+async function loadResidents() {
+  let query = supabaseClient
+    .from("profiles")
+    .select("id,full_name,email,phone,barangay,created_at,role")
+    .eq("role", "resident")
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (currentProfile?.role === "barangay_admin") {
+    query = query.eq("barangay", currentProfile.barangay);
+  }
+
+  const { data } = await query;
+
+  usersData = (data || []).map((u) => {
+    const parsed = parseName(u.full_name);
+    return {
+      id: u.id,
+      first: parsed.first,
+      last: parsed.last,
+      email: u.email,
+      phone: u.phone || "-",
+      barangay: u.barangay,
+      registered: formatDate(new Date(u.created_at)),
+      status: "active"
+    };
+  });
+}
+
+// Loads document requests and resolves resident names for table readability.
+async function loadDocRequests() {
+  let query = supabaseClient
+    .from("document_requests")
+    .select("id,resident_id,request_type,barangay,created_at,status")
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (currentProfile?.role === "barangay_admin") {
+    query = query.eq("barangay", currentProfile.barangay);
+  }
+
+  const { data } = await query;
+
+  const residentIds = [...new Set((data || []).map((r) => r.resident_id).filter(Boolean))];
+  const { data: profiles } = residentIds.length
+    ? await supabaseClient.from("profiles").select("id,full_name").in("id", residentIds)
+    : { data: [] };
+
+  const nameMap = new Map((profiles || []).map((p) => [p.id, p.full_name]));
+
+  docRequests = (data || []).map((r) => ({
+    id: r.id,
+    ref: String(r.id).slice(0, 8).toUpperCase(),
+    name: nameMap.get(r.resident_id) || "Resident",
+    type: r.request_type,
+    barangay: r.barangay,
+    date: formatDate(new Date(r.created_at)),
+    status: mapDocStatus(r.status)
+  }));
+}
+
+// Super admin sees all; barangay admin sees City-Wide + assigned barangay announcements.
+async function loadAnnouncements() {
+  let query = supabaseClient
+    .from("announcements")
+    .select("id,title,category,barangay_scope,content,published_at")
+    .order("published_at", { ascending: false })
+    .limit(100);
+
+  if (currentProfile?.role === "barangay_admin") {
+    query = query.or(`barangay_scope.eq.City-Wide,barangay_scope.eq.${currentProfile.barangay}`);
+  }
+
+  const { data } = await query;
+
+  announcements = (data || []).map((a) => ({
+    id: a.id,
+    title: a.title,
+    category: a.category || "General",
+    barangay: a.barangay_scope || "City-Wide",
+    content: a.content,
+    date: formatDate(new Date(a.published_at))
+  }));
+}
+
+async function loadIssueReports() {
+  let query = supabaseClient
+    .from("issue_reports")
+    .select("id,category,location,description,status,created_at,resident_id")
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (currentProfile?.role === "barangay_admin") {
+    query = query.eq("barangay", currentProfile.barangay);
+  }
+
+  const { data } = await query;
+
+  const residentIds = [...new Set((data || []).map((r) => r.resident_id).filter(Boolean))];
+  const { data: profiles } = residentIds.length
+    ? await supabaseClient.from("profiles").select("id,full_name").in("id", residentIds)
+    : { data: [] };
+
+  const nameMap = new Map((profiles || []).map((p) => [p.id, p.full_name]));
+
+  issueReports = (data || []).map((r) => ({
+    id: r.id,
+    category: r.category,
+    location: r.location,
+    description: r.description,
+    reporter: nameMap.get(r.resident_id) || "Resident",
+    date: formatDate(new Date(r.created_at)),
+    status: mapReportStatus(r.status)
+  }));
+}
+
+async function loadWorkers() {
+  let query = supabaseClient
+    .from("workers")
+    .select("id,full_name,service_category,category,contact_phone,rating_avg,is_active,barangay")
+    .order("full_name", { ascending: true })
+    .limit(200);
+
+  if (currentProfile?.role === "barangay_admin") {
+    query = query.eq("barangay", currentProfile.barangay);
+  }
+
+  const { data } = await query;
+
+  workersRegistry = (data || []).map((w) => ({
+    id: w.id,
+    name: w.full_name,
+    specialty: w.service_category,
+    category: w.category === "white-collar" ? "White Collar" : "Blue Collar",
+    phone: w.contact_phone || "-",
+    rating: Number(w.rating_avg || 0).toFixed(1),
+    status: w.is_active ? "Active" : "Pending"
+  }));
+}
+
+function renderAllPanels() {
+  renderOverviewTable();
+  renderBarangayTable();
+  renderUsersTable();
+  renderDocRequestsTable();
+  renderIssueReportsTable();
+  renderWorkersTable();
+  renderAnnouncementsGrid();
+}
+
+function setHeaderDate() {
+  const dateEl = document.getElementById("headerDate");
+  if (!dateEl) return;
+  dateEl.textContent = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+}
+
 function initSidebarNav() {
-    const navLinks = document.querySelectorAll('.admin-nav-link');
-    navLinks.forEach(link => {
-        link.addEventListener('click', function (e) {
-            e.preventDefault();
-            const panel = this.getAttribute('data-panel');
-            if (panel) showPanel(panel);
-        });
+  document.querySelectorAll(".admin-nav-link").forEach((link) => {
+    link.addEventListener("click", function (e) {
+      e.preventDefault();
+      const panel = this.getAttribute("data-panel");
+      if (panel) showPanel(panel);
     });
+  });
 }
 
 function showPanel(panelId) {
-    // Update panels
-    document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
-    const panel = document.getElementById('panel-' + panelId);
-    if (panel) panel.classList.add('active');
+  document.querySelectorAll(".admin-panel").forEach((p) => p.classList.remove("active"));
+  document.getElementById("panel-" + panelId)?.classList.add("active");
 
-    // Update nav links
-    document.querySelectorAll('.admin-nav-link').forEach(l => l.classList.remove('active'));
-    const activeLink = document.querySelector(`[data-panel="${panelId}"]`);
-    if (activeLink) activeLink.classList.add('active');
+  document.querySelectorAll(".admin-nav-link").forEach((l) => l.classList.remove("active"));
+  document.querySelector(`[data-panel="${panelId}"]`)?.classList.add("active");
 
-    // Update header title
-    const titles = {
-        overview: ['Overview', 'Biñan City Hub — Administrative Dashboard'],
-        barangays: ['Barangays', 'Manage and monitor all 24 barangays of Biñan City'],
-        users: ['Users / Residents', 'View and manage registered users'],
-        documents: ['Document Requests', 'Review and process document applications'],
-        announcements: ['Announcements', 'Manage official city and barangay announcements'],
-        reports: ['Issue Reports', 'Review community-submitted infrastructure reports'],
-        workers: ['Workers Registry', 'Manage the skilled worker directory'],
-        settings: ['Settings', 'System configuration and admin account'],
-    };
+  const titles = {
+    overview: ["Overview", "Biñan City Hub Administrative Dashboard"],
+    barangays: ["Barangays", "Manage and monitor all 24 barangays of Biñan City"],
+    users: ["Users / Residents", "View and manage registered users"],
+    documents: ["Document Requests", "Review and process document applications"],
+    announcements: ["Announcements", "Manage official city and barangay announcements"],
+    reports: ["Issue Reports", "Review community-submitted infrastructure reports"],
+    workers: ["Workers Registry", "Manage the skilled worker directory"],
+    settings: ["Settings", "System configuration and admin account"]
+  };
 
-    const t = titles[panelId] || ['Admin', ''];
-    const titleEl = document.getElementById('adminPanelTitle');
-    const subEl = document.getElementById('adminPanelSub');
-    if (titleEl) titleEl.textContent = t[0];
-    if (subEl) subEl.textContent = t[1];
+  const title = titles[panelId] || ["Admin", ""];
+  document.getElementById("adminPanelTitle").textContent = title[0];
+  document.getElementById("adminPanelSub").textContent = title[1];
 
-    // Close mobile sidebar
-    closeMobileSidebar();
+  closeMobileSidebar();
 }
 
-/* ===== MOBILE SIDEBAR ===== */
 function initMobileSidebar() {
-    const toggleBtn = document.getElementById('sidebarToggleBtn');
-    const closeBtn = document.getElementById('sidebarCloseBtn');
-    const overlay = document.getElementById('sidebarOverlay');
-
-    if (toggleBtn) toggleBtn.addEventListener('click', openMobileSidebar);
-    if (closeBtn) closeBtn.addEventListener('click', closeMobileSidebar);
-    if (overlay) overlay.addEventListener('click', closeMobileSidebar);
+  document.getElementById("sidebarToggleBtn")?.addEventListener("click", openMobileSidebar);
+  document.getElementById("sidebarCloseBtn")?.addEventListener("click", closeMobileSidebar);
+  document.getElementById("sidebarOverlay")?.addEventListener("click", closeMobileSidebar);
 }
 
 function openMobileSidebar() {
-    document.getElementById('adminSidebar').classList.add('open');
-    document.getElementById('sidebarOverlay').classList.add('show');
+  document.getElementById("adminSidebar")?.classList.add("open");
+  document.getElementById("sidebarOverlay")?.classList.add("show");
 }
 
 function closeMobileSidebar() {
-    const sidebar = document.getElementById('adminSidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    if (sidebar) sidebar.classList.remove('open');
-    if (overlay) overlay.classList.remove('show');
+  document.getElementById("adminSidebar")?.classList.remove("open");
+  document.getElementById("sidebarOverlay")?.classList.remove("show");
 }
 
-/* ===== RENDER TABLES ===== */
-
 function statusPill(status) {
-    const map = {
-        'Active': 'active', 'active': 'active',
-        'Pending': 'pending', 'pending': 'pending',
-        'Processing': 'processing',
-        'Completed': 'completed',
-        'Rejected': 'rejected',
-    };
-    const cls = map[status] || 'pending';
-    return `<span class="status-pill ${cls}">${status}</span>`;
+  const map = {
+    Active: "active",
+    Pending: "pending",
+    Processing: "processing",
+    Completed: "completed",
+    Rejected: "rejected"
+  };
+  const cls = map[status] || "pending";
+  return `<span class="status-pill ${cls}">${status}</span>`;
 }
 
 function renderOverviewTable() {
-    const tbody = document.getElementById('overviewRequestsBody');
-    if (!tbody) return;
-    tbody.innerHTML = docRequests.slice(0, 5).map((r, i) => `
-        <tr>
-            <td><code style="font-size:11px;color:var(--accent-gold)">${r.ref}</code></td>
-            <td><strong>${r.name}</strong></td>
-            <td>${r.type}</td>
-            <td>${r.barangay}</td>
-            <td>${r.date}</td>
-            <td>${statusPill(r.status)}</td>
-            <td>
-                ${r.status === 'Pending' ? `<button class="tbl-btn tbl-btn-approve" onclick="approveDoc('${r.ref}')"><i class="fas fa-check"></i> Approve</button>` : ''}
-                <button class="tbl-btn tbl-btn-view" onclick="showAdminToast('Viewing ${r.ref}')"><i class="fas fa-eye"></i></button>
-            </td>
-        </tr>
-    `).join('');
+  const tbody = document.getElementById("overviewRequestsBody");
+  if (!tbody) return;
+
+  tbody.innerHTML = docRequests.slice(0, 5).map((r) => `
+    <tr>
+      <td><code style="font-size:11px;color:var(--accent-gold)">${r.ref}</code></td>
+      <td><strong>${escapeHtml(r.name)}</strong></td>
+      <td>${escapeHtml(r.type)}</td>
+      <td>${escapeHtml(r.barangay)}</td>
+      <td>${escapeHtml(r.date)}</td>
+      <td>${statusPill(r.status)}</td>
+      <td>
+        ${r.status === "Pending" ? `<button class="tbl-btn tbl-btn-approve" onclick="approveDoc('${r.id}')"><i class="fas fa-check"></i> Approve</button>` : ""}
+        <button class="tbl-btn tbl-btn-view" onclick="showAdminToast('Viewing request ${r.ref}')"><i class="fas fa-eye"></i></button>
+      </td>
+    </tr>
+  `).join("");
 }
 
-function renderBarangayTable(filter = '') {
-    const tbody = document.getElementById('barangayTableBody');
-    if (!tbody) return;
-    const filtered = filter
-        ? barangays.filter(b => b.name.toLowerCase().includes(filter.toLowerCase()))
-        : barangays;
+function renderBarangayTable(filter = "") {
+  const tbody = document.getElementById("barangayTableBody");
+  if (!tbody) return;
 
-    tbody.innerHTML = filtered.map((b, i) => `
-        <tr>
-            <td>${i + 1}</td>
-            <td><strong>${b.name}</strong>${b.notes ? `<br><small style="color:var(--text-muted)">${b.notes}</small>` : ''}</td>
-            <td>${b.captain}</td>
-            <td>${b.users.toLocaleString()}</td>
-            <td>${statusPill(b.status === 'active' ? 'Active' : 'Pending')}</td>
-            <td>${b.added}</td>
-            <td style="display:flex;gap:6px;flex-wrap:wrap;">
-                <button class="tbl-btn tbl-btn-edit" onclick="openEditBarangayModal(${b.id})"><i class="fas fa-pen"></i></button>
-                ${b.status === 'pending' ? `<button class="tbl-btn tbl-btn-approve" onclick="activateBarangay(${b.id})"><i class="fas fa-circle-check"></i> Activate</button>` : ''}
-                <button class="tbl-btn tbl-btn-delete" onclick="deleteBarangay(${b.id})"><i class="fas fa-trash"></i></button>
-            </td>
-        </tr>
-    `).join('');
+  const filtered = filter
+    ? barangays.filter((b) => b.name.toLowerCase().includes(filter.toLowerCase()))
+    : barangays;
 
-    // Update pending count
-    const pendingCount = document.getElementById('pendingBrgyCount');
-    if (pendingCount) pendingCount.textContent = barangays.filter(b => b.status === 'pending').length;
+  tbody.innerHTML = filtered.map((b, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td><strong>${escapeHtml(b.name)}</strong>${b.notes ? `<br><small style="color:var(--text-muted)">${escapeHtml(b.notes)}</small>` : ""}</td>
+      <td>${escapeHtml(b.captain)}</td>
+      <td>${Number(b.users).toLocaleString()}</td>
+      <td>${statusPill(b.status === "active" ? "Active" : "Pending")}</td>
+      <td>${escapeHtml(b.added)}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="tbl-btn tbl-btn-edit" onclick="openEditBarangayModal('${b.id}')"><i class="fas fa-pen"></i></button>
+        ${b.status === "pending" ? `<button class="tbl-btn tbl-btn-approve" onclick="activateBarangay('${b.id}')"><i class="fas fa-circle-check"></i> Activate</button>` : ""}
+        <button class="tbl-btn tbl-btn-delete" onclick="deleteBarangay('${b.id}')"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>
+  `).join("");
+
+  const pendingCount = document.getElementById("pendingBrgyCount");
+  if (pendingCount) pendingCount.textContent = String(barangays.filter((b) => b.status === "pending").length);
 }
 
 function filterBarangays() {
-    const val = document.getElementById('barangaySearch').value;
-    renderBarangayTable(val);
+  renderBarangayTable(document.getElementById("barangaySearch").value || "");
 }
 
-function renderUsersTable(filter = '') {
-    const tbody = document.getElementById('usersTableBody');
-    if (!tbody) return;
-    const filtered = filter
-        ? usersData.filter(u => `${u.first} ${u.last} ${u.email}`.toLowerCase().includes(filter.toLowerCase()))
-        : usersData;
+function renderUsersTable(filter = "") {
+  const tbody = document.getElementById("usersTableBody");
+  if (!tbody) return;
 
-    tbody.innerHTML = filtered.map((u, i) => `
-        <tr>
-            <td>${i + 1}</td>
-            <td><strong>${u.first} ${u.last}</strong></td>
-            <td>${u.email}</td>
-            <td>${u.phone}</td>
-            <td>${u.barangay}</td>
-            <td>${u.registered}</td>
-            <td>${statusPill(u.status === 'active' ? 'Active' : 'Pending')}</td>
-            <td>
-                <button class="tbl-btn tbl-btn-view" onclick="showAdminToast('Viewing user: ${u.first} ${u.last}')"><i class="fas fa-eye"></i></button>
-                <button class="tbl-btn tbl-btn-delete" onclick="showAdminToast('User removed')"><i class="fas fa-trash"></i></button>
-            </td>
-        </tr>
-    `).join('');
+  const filtered = filter
+    ? usersData.filter((u) => `${u.first} ${u.last} ${u.email}`.toLowerCase().includes(filter.toLowerCase()))
+    : usersData;
 
-    const countEl = document.getElementById('userCount');
-    if (countEl) countEl.textContent = `${filtered.length} users`;
+  tbody.innerHTML = filtered.map((u, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td><strong>${escapeHtml(u.first)} ${escapeHtml(u.last)}</strong></td>
+      <td>${escapeHtml(u.email)}</td>
+      <td>${escapeHtml(u.phone)}</td>
+      <td>${escapeHtml(u.barangay)}</td>
+      <td>${escapeHtml(u.registered)}</td>
+      <td>${statusPill("Active")}</td>
+      <td>
+        <button class="tbl-btn tbl-btn-view" onclick="showAdminToast('Viewing user ${escapeHtml(u.first)} ${escapeHtml(u.last)}')"><i class="fas fa-eye"></i></button>
+      </td>
+    </tr>
+  `).join("");
+
+  const countEl = document.getElementById("userCount");
+  if (countEl) countEl.textContent = `${filtered.length} users`;
 }
 
 function filterUsers() {
-    const val = document.getElementById('userSearch').value;
-    renderUsersTable(val);
+  renderUsersTable(document.getElementById("userSearch").value || "");
 }
 
-function renderDocRequestsTable(typeFilter = '', statusFilter = '') {
-    const tbody = document.getElementById('docRequestsBody');
-    if (!tbody) return;
-    let filtered = [...docRequests];
-    if (typeFilter) filtered = filtered.filter(r => r.type === typeFilter);
-    if (statusFilter) filtered = filtered.filter(r => r.status === statusFilter);
+function renderDocRequestsTable(typeFilter = "", statusFilter = "") {
+  const tbody = document.getElementById("docRequestsBody");
+  if (!tbody) return;
 
-    tbody.innerHTML = filtered.map(r => `
-        <tr>
-            <td><code style="font-size:11px;color:var(--accent-gold)">${r.ref}</code></td>
-            <td><strong>${r.name}</strong></td>
-            <td>${r.type}</td>
-            <td>${r.barangay}</td>
-            <td>${r.date}</td>
-            <td>${statusPill(r.status)}</td>
-            <td style="display:flex;gap:5px;">
-                ${r.status === 'Pending' ? `<button class="tbl-btn tbl-btn-approve" onclick="approveDoc('${r.ref}')"><i class="fas fa-check"></i> Approve</button>` : ''}
-                <button class="tbl-btn tbl-btn-view"><i class="fas fa-eye"></i></button>
-                ${r.status !== 'Rejected' && r.status !== 'Completed' ? `<button class="tbl-btn tbl-btn-delete" onclick="showAdminToast('Request rejected')">Reject</button>` : ''}
-            </td>
-        </tr>
-    `).join('');
+  let filtered = [...docRequests];
+  if (typeFilter) filtered = filtered.filter((r) => r.type === typeFilter);
+  if (statusFilter) filtered = filtered.filter((r) => r.status === statusFilter);
+
+  tbody.innerHTML = filtered.map((r) => `
+    <tr>
+      <td><code style="font-size:11px;color:var(--accent-gold)">${r.ref}</code></td>
+      <td><strong>${escapeHtml(r.name)}</strong></td>
+      <td>${escapeHtml(r.type)}</td>
+      <td>${escapeHtml(r.barangay)}</td>
+      <td>${escapeHtml(r.date)}</td>
+      <td>${statusPill(r.status)}</td>
+      <td style="display:flex;gap:5px;">
+        ${r.status === "Pending" ? `<button class="tbl-btn tbl-btn-approve" onclick="approveDoc('${r.id}')"><i class="fas fa-check"></i> Approve</button>` : ""}
+        <button class="tbl-btn tbl-btn-view"><i class="fas fa-eye"></i></button>
+      </td>
+    </tr>
+  `).join("");
 }
 
 function filterDocuments() {
-    const typeVal = document.getElementById('docTypeFilter').value;
-    const statusVal = document.getElementById('docStatusFilter').value;
-    renderDocRequestsTable(typeVal, statusVal);
+  renderDocRequestsTable(
+    document.getElementById("docTypeFilter").value,
+    document.getElementById("docStatusFilter").value
+  );
 }
 
-function approveDoc(ref) {
-    showAdminToast(`✓ Document ${ref} approved and marked as Processing`);
-    renderOverviewTable();
-    renderDocRequestsTable();
+// Moves request status forward; policy-controlled in DB via RLS.
+async function approveDoc(id) {
+  const { error } = await supabaseClient
+    .from("document_requests")
+    .update({ status: "reviewing" })
+    .eq("id", id);
+
+  if (error) {
+    showAdminToast(error.message);
+    return;
+  }
+
+  await loadDocRequests();
+  renderOverviewTable();
+  renderDocRequestsTable();
+  showAdminToast("Document request marked as processing.");
 }
 
 function renderIssueReportsTable() {
-    const tbody = document.getElementById('issueReportsBody');
-    if (!tbody) return;
-    tbody.innerHTML = issueReports.map((r, i) => `
-        <tr>
-            <td>${i + 1}</td>
-            <td>${r.category}</td>
-            <td>${r.location}</td>
-            <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.description}</td>
-            <td>${r.reporter}</td>
-            <td>${r.date}</td>
-            <td>${statusPill(r.status)}</td>
-            <td>
-                ${r.status !== 'Completed' ? `<button class="tbl-btn tbl-btn-approve" onclick="showAdminToast('Report marked as resolved')">Resolve</button>` : ''}
-                <button class="tbl-btn tbl-btn-view"><i class="fas fa-eye"></i></button>
-            </td>
-        </tr>
-    `).join('');
+  const tbody = document.getElementById("issueReportsBody");
+  if (!tbody) return;
+
+  tbody.innerHTML = issueReports.map((r, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${escapeHtml(r.category)}</td>
+      <td>${escapeHtml(r.location)}</td>
+      <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(r.description)}</td>
+      <td>${escapeHtml(r.reporter)}</td>
+      <td>${escapeHtml(r.date)}</td>
+      <td>${statusPill(r.status)}</td>
+      <td>
+        <button class="tbl-btn tbl-btn-view"><i class="fas fa-eye"></i></button>
+      </td>
+    </tr>
+  `).join("");
 }
 
 function renderWorkersTable() {
-    const tbody = document.getElementById('workersAdminBody');
-    if (!tbody) return;
-    tbody.innerHTML = workersRegistry.map((w, i) => `
-        <tr>
-            <td>${i + 1}</td>
-            <td><strong>${w.name}</strong></td>
-            <td>${w.specialty}</td>
-            <td>${w.category}</td>
-            <td>${w.phone}</td>
-            <td>
-                <span style="color:#f39c12">★</span> ${w.rating}
-            </td>
-            <td>${statusPill(w.status)}</td>
-            <td>
-                <button class="tbl-btn tbl-btn-edit" onclick="showAdminToast('Edit worker feature coming soon')"><i class="fas fa-pen"></i></button>
-                <button class="tbl-btn tbl-btn-delete" onclick="showAdminToast('Worker removed')"><i class="fas fa-trash"></i></button>
-            </td>
-        </tr>
-    `).join('');
+  const tbody = document.getElementById("workersAdminBody");
+  if (!tbody) return;
+
+  tbody.innerHTML = workersRegistry.map((w, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td><strong>${escapeHtml(w.name)}</strong></td>
+      <td>${escapeHtml(w.specialty)}</td>
+      <td>${escapeHtml(w.category)}</td>
+      <td>${escapeHtml(w.phone)}</td>
+      <td><span style="color:#f39c12">★</span> ${escapeHtml(w.rating)}</td>
+      <td>${statusPill(w.status)}</td>
+      <td><button class="tbl-btn tbl-btn-edit" onclick="showAdminToast('Worker management is available via database records.')"><i class="fas fa-pen"></i></button></td>
+    </tr>
+  `).join("");
 }
 
 function renderAnnouncementsGrid() {
-    const grid = document.getElementById('announcementsAdminGrid');
-    if (!grid) return;
-    grid.innerHTML = announcements.map(a => `
-        <div class="ann-admin-card">
-            <div class="ann-card-tag">${a.category}</div>
-            <h5>${a.title}</h5>
-            <p>${a.content}</p>
-            <div class="ann-card-footer">
-                <span class="ann-card-date"><i class="fas fa-calendar-alt" style="color:var(--accent-gold)"></i> ${a.date}</span>
-                <div class="ann-card-actions">
-                    <button class="tbl-btn tbl-btn-edit" onclick="showAdminToast('Edit announcement feature coming soon')"><i class="fas fa-pen"></i></button>
-                    <button class="tbl-btn tbl-btn-delete" onclick="deleteAnnouncement(${a.id})"><i class="fas fa-trash"></i></button>
-                </div>
-            </div>
+  const grid = document.getElementById("announcementsAdminGrid");
+  if (!grid) return;
+
+  grid.innerHTML = announcements.map((a) => `
+    <div class="ann-admin-card">
+      <div class="ann-card-tag">${escapeHtml(a.category)}</div>
+      <h5>${escapeHtml(a.title)}</h5>
+      <p>${escapeHtml(a.content)}</p>
+      <div class="ann-card-footer">
+        <span class="ann-card-date"><i class="fas fa-calendar-alt" style="color:var(--accent-gold)"></i> ${escapeHtml(a.date)}</span>
+        <div class="ann-card-actions">
+          <button class="tbl-btn tbl-btn-delete" onclick="deleteAnnouncement('${a.id}')"><i class="fas fa-trash"></i></button>
         </div>
-    `).join('');
+      </div>
+    </div>
+  `).join("");
 }
 
-/* ===== BARANGAY CRUD ===== */
 function openAddBarangayModal() {
-    document.getElementById('addBarangayForm').reset();
-    document.getElementById('brgNameError').textContent = '';
-    openModal('addBarangayModalOverlay');
+  document.getElementById("addBarangayForm").reset();
+  document.getElementById("brgNameError").textContent = "";
+  openModal("addBarangayModalOverlay");
 }
 
 function openEditBarangayModal(id) {
-    const brgy = barangays.find(b => b.id === id);
-    if (!brgy) return;
-    document.getElementById('editBrgId').value = id;
-    document.getElementById('editBrgName').value = brgy.name;
-    document.getElementById('editBrgCaptain').value = brgy.captain === '—' ? '' : brgy.captain;
-    document.getElementById('editBrgStatus').value = brgy.status;
-    document.getElementById('editBrgNotes').value = brgy.notes;
-    openModal('editBarangayModalOverlay');
+  const brgy = barangays.find((b) => String(b.id) === String(id));
+  if (!brgy) return;
+
+  document.getElementById("editBrgId").value = brgy.id;
+  document.getElementById("editBrgName").value = brgy.name;
+  document.getElementById("editBrgCaptain").value = brgy.captain === "-" ? "" : brgy.captain;
+  document.getElementById("editBrgStatus").value = brgy.status;
+  document.getElementById("editBrgNotes").value = brgy.notes;
+  openModal("editBarangayModalOverlay");
 }
 
-function deleteBarangay(id) {
-    if (id === 1) {
-        showAdminToast('Cannot delete the active pilot barangay!');
-        return;
-    }
-    barangays = barangays.filter(b => b.id !== id);
-    renderBarangayTable();
-    showAdminToast('Barangay removed successfully');
+async function deleteBarangay(id) {
+  const { error } = await supabaseClient.from("barangays").delete().eq("id", id);
+  if (error) {
+    showAdminToast(error.message);
+    return;
+  }
+
+  await loadBarangays();
+  renderBarangayTable();
+  showAdminToast("Barangay removed successfully.");
 }
 
-function activateBarangay(id) {
-    const brgy = barangays.find(b => b.id === id);
-    if (brgy) {
-        brgy.status = 'active';
-        brgy.added = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        renderBarangayTable();
-        showAdminToast(`${brgy.name} activated successfully!`);
-    }
+async function activateBarangay(id) {
+  const { error } = await supabaseClient.from("barangays").update({ status: "active" }).eq("id", id);
+  if (error) {
+    showAdminToast(error.message);
+    return;
+  }
+
+  await loadBarangays();
+  renderBarangayTable();
+  showAdminToast("Barangay activated successfully.");
 }
 
-function deleteAnnouncement(id) {
-    announcements = announcements.filter(a => a.id !== id);
-    renderAnnouncementsGrid();
-    showAdminToast('Announcement deleted');
+async function deleteAnnouncement(id) {
+  const { error } = await supabaseClient.from("announcements").delete().eq("id", id);
+  if (error) {
+    showAdminToast(error.message);
+    return;
+  }
+
+  await loadAnnouncements();
+  renderAnnouncementsGrid();
+  showAdminToast("Announcement deleted.");
 }
 
 function openAddWorkerModal() {
-    showAdminToast('Add Worker form coming soon!');
+  showAdminToast("Add worker via database insert is ready. UI form can be added next.");
 }
 
-/* ===== FORM HANDLERS ===== */
+// Binds CRUD form submissions for barangays and announcements.
 function initFormHandlers() {
-    // Add Barangay
-    const addBrgyForm = document.getElementById('addBarangayForm');
-    if (addBrgyForm) {
-        addBrgyForm.addEventListener('submit', function (e) {
-            e.preventDefault();
-            const name = document.getElementById('brgName').value.trim();
-            const captain = document.getElementById('brgCaptain').value.trim();
-            const status = document.getElementById('brgStatus').value;
-            const notes = document.getElementById('brgNotes').value.trim();
+  const addBrgyForm = document.getElementById("addBarangayForm");
+  if (addBrgyForm) {
+    addBrgyForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-            if (!name) {
-                document.getElementById('brgNameError').textContent = 'Barangay name is required.';
-                return;
-            }
+      const name = document.getElementById("brgName").value.trim();
+      const captain = document.getElementById("brgCaptain").value.trim();
+      const status = document.getElementById("brgStatus").value;
+      const notes = document.getElementById("brgNotes").value.trim();
 
-            const newId = Math.max(...barangays.map(b => b.id)) + 1;
-            barangays.push({
-                id: newId,
-                name,
-                captain: captain || '—',
-                users: 0,
-                status,
-                added: status === 'active' ? new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—',
-                notes
-            });
+      if (!name) {
+        document.getElementById("brgNameError").textContent = "Barangay name is required.";
+        return;
+      }
 
-            renderBarangayTable();
-            closeModal('addBarangayModalOverlay');
-            showAdminToast(`${name} added successfully!`);
-        });
-    }
+      const { error } = await supabaseClient.from("barangays").insert({
+        name,
+        captain: captain || null,
+        status,
+        notes: notes || null
+      });
 
-    // Edit Barangay
-    const editBrgyForm = document.getElementById('editBarangayForm');
-    if (editBrgyForm) {
-        editBrgyForm.addEventListener('submit', function (e) {
-            e.preventDefault();
-            const id = parseInt(document.getElementById('editBrgId').value);
-            const brgy = barangays.find(b => b.id === id);
-            if (!brgy) return;
+      if (error) {
+        showAdminToast(error.message);
+        return;
+      }
 
-            brgy.name = document.getElementById('editBrgName').value.trim() || brgy.name;
-            brgy.captain = document.getElementById('editBrgCaptain').value.trim() || '—';
-            brgy.status = document.getElementById('editBrgStatus').value;
-            brgy.notes = document.getElementById('editBrgNotes').value.trim();
+      await loadBarangays();
+      renderBarangayTable();
+      closeModal("addBarangayModalOverlay");
+      showAdminToast(`${name} added successfully.`);
+    });
+  }
 
-            renderBarangayTable();
-            closeModal('editBarangayModalOverlay');
-            showAdminToast(`${brgy.name} updated successfully!`);
-        });
-    }
+  const editBrgyForm = document.getElementById("editBarangayForm");
+  if (editBrgyForm) {
+    editBrgyForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-    // Add Announcement
-    const addAnnForm = document.getElementById('addAnnouncementForm');
-    if (addAnnForm) {
-        addAnnForm.addEventListener('submit', function (e) {
-            e.preventDefault();
-            const title = document.getElementById('annTitle').value.trim();
-            const category = document.getElementById('annCategory').value;
-            const barangay = document.getElementById('annBarangay').value;
-            const content = document.getElementById('annContent').value.trim();
+      const id = document.getElementById("editBrgId").value;
+      const payload = {
+        name: document.getElementById("editBrgName").value.trim(),
+        captain: document.getElementById("editBrgCaptain").value.trim() || null,
+        status: document.getElementById("editBrgStatus").value,
+        notes: document.getElementById("editBrgNotes").value.trim() || null
+      };
 
-            if (!title || !content) return;
+      const { error } = await supabaseClient.from("barangays").update(payload).eq("id", id);
 
-            const newId = Math.max(...announcements.map(a => a.id)) + 1;
-            const now = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-            announcements.unshift({ id: newId, title, category, barangay, content, date: now });
+      if (error) {
+        showAdminToast(error.message);
+        return;
+      }
 
-            renderAnnouncementsGrid();
-            closeModal('addAnnouncementModalOverlay');
-            showAdminToast('Announcement published successfully!');
-        });
-    }
+      await loadBarangays();
+      renderBarangayTable();
+      closeModal("editBarangayModalOverlay");
+      showAdminToast("Barangay updated successfully.");
+    });
+  }
+
+  const addAnnForm = document.getElementById("addAnnouncementForm");
+  if (addAnnForm) {
+    addAnnForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const title = document.getElementById("annTitle").value.trim();
+      const category = document.getElementById("annCategory").value;
+      const barangay = document.getElementById("annBarangay").value;
+      const content = document.getElementById("annContent").value.trim();
+
+      if (!title || !content) return;
+
+      const scope = barangay === "All" ? "City-Wide" : barangay;
+      const { error } = await supabaseClient.from("announcements").insert({
+        title,
+        category,
+        barangay_scope: scope,
+        content,
+        published_at: new Date().toISOString(),
+        created_by: currentUser.id
+      });
+
+      if (error) {
+        showAdminToast(error.message);
+        return;
+      }
+
+      await loadAnnouncements();
+      renderAnnouncementsGrid();
+      closeModal("addAnnouncementModalOverlay");
+      showAdminToast("Announcement published successfully.");
+    });
+  }
 }
 
-/* ===== CHART INITIALIZATION ===== */
 function initCharts() {
-    // Document Requests Chart
-    const docCtx = document.getElementById('adminDocChart');
-    if (docCtx) {
-        new Chart(docCtx, {
-            type: 'bar',
-            data: {
-                labels: ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'],
-                datasets: [{
-                    label: 'Document Requests',
-                    data: [180, 220, 195, 260, 310, 282],
-                    backgroundColor: 'rgba(26, 58, 82, 0.8)',
-                    borderRadius: 8,
-                    borderSkipped: false,
-                }, {
-                    label: 'Completed',
-                    data: [160, 200, 175, 245, 290, 250],
-                    backgroundColor: 'rgba(212, 165, 116, 0.7)',
-                    borderRadius: 8,
-                    borderSkipped: false,
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { position: 'top' } },
-                scales: {
-                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
-                    x: { grid: { display: false } }
-                }
-            }
-        });
-    }
+  const docCtx = document.getElementById("adminDocChart");
+  if (docCtx) {
+    const monthly = lastSixMonths();
+    const total = monthly.map((m) => docRequests.filter((r) => r.date.includes(m.label)).length);
+    const completed = monthly.map((m) => docRequests.filter((r) => r.date.includes(m.label) && r.status === "Completed").length);
 
-    // Request Types Doughnut
-    const typeCtx = document.getElementById('adminTypeChart');
-    if (typeCtx) {
-        new Chart(typeCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Barangay Clearance', 'Barangay ID', 'Job Seeker Cert.'],
-                datasets: [{
-                    data: [45, 35, 20],
-                    backgroundColor: ['#1a3a52', '#d4a574', '#2c5282'],
-                    borderWidth: 3,
-                    borderColor: '#fff',
-                }]
-            },
-            options: {
-                responsive: true,
-                cutout: '65%',
-                plugins: {
-                    legend: { position: 'bottom', labels: { padding: 16, font: { size: 12 } } }
-                }
-            }
-        });
-    }
+    new Chart(docCtx, {
+      type: "bar",
+      data: {
+        labels: monthly.map((m) => m.label),
+        datasets: [
+          { label: "Document Requests", data: total, backgroundColor: "rgba(26, 58, 82, 0.8)", borderRadius: 8, borderSkipped: false },
+          { label: "Completed", data: completed, backgroundColor: "rgba(212, 165, 116, 0.7)", borderRadius: 8, borderSkipped: false }
+        ]
+      },
+      options: { responsive: true, plugins: { legend: { position: "top" } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+    });
+  }
+
+  const typeCtx = document.getElementById("adminTypeChart");
+  if (typeCtx) {
+    const typeMap = {};
+    docRequests.forEach((r) => { typeMap[r.type] = (typeMap[r.type] || 0) + 1; });
+
+    const labels = Object.keys(typeMap);
+    const values = Object.values(typeMap);
+
+    new Chart(typeCtx, {
+      type: "doughnut",
+      data: {
+        labels: labels.length ? labels : ["No Data"],
+        datasets: [{ data: values.length ? values : [1], backgroundColor: ["#1a3a52", "#d4a574", "#2c5282", "#4cde80"], borderWidth: 3, borderColor: "#fff" }]
+      },
+      options: { responsive: true, cutout: "65%", plugins: { legend: { position: "bottom" } } }
+    });
+  }
 }
 
-/* ===== MODAL CONTROLS ===== */
 function openModal(id) {
-    const overlay = document.getElementById(id);
-    if (overlay) {
-        overlay.classList.add('show');
-        overlay.style.display = 'flex';
-    }
+  const overlay = document.getElementById(id);
+  if (!overlay) return;
+  overlay.classList.add("show");
+  overlay.style.display = "flex";
 }
 
 function closeModal(id) {
-    const overlay = document.getElementById(id);
-    if (overlay) {
-        overlay.classList.remove('show');
-        overlay.style.display = 'none';
-    }
+  const overlay = document.getElementById(id);
+  if (!overlay) return;
+  overlay.classList.remove("show");
+  overlay.style.display = "none";
 }
 
 function openAddAnnouncementModal() {
-    document.getElementById('addAnnouncementForm').reset();
-    openModal('addAnnouncementModalOverlay');
+  document.getElementById("addAnnouncementForm")?.reset();
+  openModal("addAnnouncementModalOverlay");
 }
 
-// Close modal on overlay click
-document.querySelectorAll('.admin-modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', function (e) {
-        if (e.target === this) closeModal(this.id);
-    });
+document.querySelectorAll(".admin-modal-overlay").forEach((overlay) => {
+  overlay.addEventListener("click", function (e) {
+    if (e.target === this) closeModal(this.id);
+  });
 });
 
-/* ===== TOAST ===== */
 let toastTimer = null;
-
 function showAdminToast(msg) {
-    const toast = document.getElementById('adminToast');
-    const msgEl = document.getElementById('adminToastMsg');
-    if (!toast || !msgEl) return;
+  const toast = document.getElementById("adminToast");
+  const msgEl = document.getElementById("adminToastMsg");
+  if (!toast || !msgEl) return;
 
-    msgEl.textContent = msg;
-    toast.classList.remove('d-none');
+  msgEl.textContent = msg;
+  toast.classList.remove("d-none");
 
-    if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => {
-        toast.classList.add('d-none');
-    }, 3500);
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.add("d-none"), 3500);
 }
+
+function parseName(fullName) {
+  const parts = String(fullName || "").trim().split(/\s+/);
+  return { first: parts[0] || "Resident", last: parts.slice(1).join(" ") };
+}
+
+function mapDocStatus(status) {
+  const v = String(status || "").toLowerCase();
+  if (v === "submitted" || v === "pending") return "Pending";
+  if (v === "reviewing" || v === "processing") return "Processing";
+  if (v === "completed" || v === "approved") return "Completed";
+  if (v === "rejected") return "Rejected";
+  return "Pending";
+}
+
+function mapReportStatus(status) {
+  const v = String(status || "").toLowerCase();
+  if (v === "processing") return "Processing";
+  if (v === "resolved") return "Completed";
+  return "Pending";
+}
+
+function formatDate(d) {
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function lastSixMonths() {
+  const arr = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i -= 1) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    arr.push({ label: d.toLocaleDateString("en-US", { month: "short" }) });
+  }
+  return arr;
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
