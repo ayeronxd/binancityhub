@@ -11,6 +11,8 @@
 let supabaseClient = null;
 let currentUser = null;
 let currentProfile = null;
+let currentRole = "resident";
+let currentBarangayName = "";
 
 let barangays = [];
 let usersData = [];
@@ -18,8 +20,9 @@ let docRequests = [];
 let announcements = [];
 let issueReports = [];
 let workersRegistry = [];
+let portalSettings = null;
 
-// Admin bootstrap: secure gate -> data load -> panel render.
+// Admin bootstrap: secure gate -> role-aware UI -> scoped data load -> panel render.
 document.addEventListener("DOMContentLoaded", async () => {
   supabaseClient = window.getBchSupabaseClient ? window.getBchSupabaseClient() : null;
 
@@ -31,22 +34,27 @@ document.addEventListener("DOMContentLoaded", async () => {
   const allowed = await enforceAdminAccess();
   if (!allowed) return;
 
+  renderAdminIdentity();
+  applyRoleScopedUI();
+
   await loadAdminData();
+  renderSettingsFormValues();
   renderAllPanels();
   initCharts();
 
   console.log("Binan City Hub - Admin Dashboard Initialized");
 });
 
-// Rejects non-admin users early to avoid exposing management UI/data.
+// Rejects non-admin users early and resolves role/barangay from auth metadata.
 async function enforceAdminAccess() {
   if (!supabaseClient) {
     showAdminToast("Supabase is not configured. Update supabase-config.js.");
     return false;
   }
 
-  const { data } = await supabaseClient.auth.getSession();
-  const user = data?.session?.user;
+  // Required by design: read the authenticated user from Supabase Auth.
+  const { data: authData } = await supabaseClient.auth.getUser();
+  const user = authData?.user;
   if (!user) {
     window.location.href = "login.html";
     return false;
@@ -54,15 +62,33 @@ async function enforceAdminAccess() {
 
   currentUser = user;
 
+  // Metadata-first role resolution for unified dashboard behavior.
+  const metaRole = normalizeRole(user.user_metadata?.role);
+  const metaBarangay =
+    user.user_metadata?.barangay_name ||
+    user.user_metadata?.barangay ||
+    user.app_metadata?.barangay_name ||
+    user.app_metadata?.barangay ||
+    "";
+
+  // Profile fallback keeps compatibility with existing schema/RLS role storage.
   const { data: profile } = await supabaseClient
     .from("profiles")
-    .select("id,role,barangay")
+    .select("id,role,barangay,full_name,email")
     .eq("id", user.id)
     .maybeSingle();
 
-  currentProfile = profile;
+  currentProfile = profile || null;
+  currentRole = normalizeRole(metaRole || profile?.role);
+  currentBarangayName = String(metaBarangay || profile?.barangay || "").trim();
 
-  if (!profile || (profile.role !== "super_admin" && profile.role !== "barangay_admin")) {
+  if (currentRole !== "super_admin" && currentRole !== "barangay_admin") {
+    window.location.href = "index.html";
+    return false;
+  }
+
+  if (currentRole === "barangay_admin" && !currentBarangayName) {
+    showAdminToast("Barangay Admin account is missing barangay metadata.");
     window.location.href = "index.html";
     return false;
   }
@@ -70,6 +96,81 @@ async function enforceAdminAccess() {
   return true;
 }
 
+function normalizeRole(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isSuperAdmin() {
+  return currentRole === "super_admin";
+}
+
+function isBarangayAdmin() {
+  return currentRole === "barangay_admin";
+}
+
+function getScopedBarangay() {
+  return currentBarangayName || currentProfile?.barangay || "";
+}
+
+function looksLikeMissingColumn(error, columnName) {
+  const msg = String(error?.message || "").toLowerCase();
+  return msg.includes("column") && msg.includes(String(columnName || "").toLowerCase());
+}
+
+// Role-aware UI toggles keep one dashboard shell while switching operator context.
+function applyRoleScopedUI() {
+  const roleLabel = document.getElementById("adminRoleLabel");
+  const roleContext = document.getElementById("adminRoleContext");
+  const usersHeading = document.getElementById("usersPanelHeading");
+  const docsHeading = document.getElementById("docsPanelHeading");
+  const annHeading = document.getElementById("annPanelHeading");
+  const verifyHint = document.getElementById("residentVerifyHint");
+
+  const barangayNavItem = document.querySelector('.admin-nav-link[data-panel="barangays"]')?.closest("li");
+  const settingsNavItem = document.getElementById("navSettingsItem");
+  const settingsPanel = document.getElementById("panel-settings");
+  const settingsCityCard = document.getElementById("settingsCityCard");
+  const settingsPortalCard = document.getElementById("settingsPortalCard");
+
+  if (isSuperAdmin()) {
+    setText("adminPanelSub", "City-Wide Controller · All 24 barangays");
+    setText("roleModeTitle", "City-Wide Controller");
+    setText("roleModeDesc", "Global operations across all barangays and system users.");
+    if (roleLabel) roleLabel.textContent = "Super Admin";
+    if (roleContext) roleContext.textContent = "City-Wide";
+    if (usersHeading) usersHeading.textContent = "All System Users";
+    if (docsHeading) docsHeading.textContent = "City-Wide Document Queue";
+    if (annHeading) annHeading.textContent = "City-Wide News Hub";
+    if (verifyHint) verifyHint.textContent = "Verification controls are available in Barangay Admin scope.";
+
+    if (barangayNavItem) barangayNavItem.style.display = "";
+    if (settingsNavItem) settingsNavItem.style.display = "";
+    if (settingsPanel) settingsPanel.style.display = "";
+    if (settingsCityCard) settingsCityCard.style.display = "";
+    if (settingsPortalCard) settingsPortalCard.style.display = "";
+    return;
+  }
+
+  const scopedBarangay = getScopedBarangay();
+  setText("adminPanelSub", `Local Action Center · ${scopedBarangay}`);
+  setText("roleModeTitle", "Local Action Center");
+  setText("roleModeDesc", `Operations scoped to ${scopedBarangay}.`);
+  if (roleLabel) roleLabel.textContent = "Barangay Admin";
+  if (roleContext) roleContext.textContent = scopedBarangay;
+  if (usersHeading) usersHeading.textContent = `Resident Verification · ${scopedBarangay}`;
+  if (docsHeading) docsHeading.textContent = `Document Processing Queue · ${scopedBarangay}`;
+  if (annHeading) annHeading.textContent = `Local News Hub · ${scopedBarangay}`;
+  if (verifyHint) verifyHint.textContent = "Verify resident accounts for this barangay.";
+
+  // Barangay admins cannot access city-wide controllers or system settings.
+  if (barangayNavItem) barangayNavItem.style.display = "none";
+  if (settingsNavItem) settingsNavItem.style.display = "none";
+  if (settingsPanel) settingsPanel.style.display = "none";
+
+  // Keep account details editable while hiding city-only settings cards.
+  if (settingsCityCard) settingsCityCard.style.display = "none";
+  if (settingsPortalCard) settingsPortalCard.style.display = "none";
+}
 // Loads all admin datasets concurrently for responsive dashboard startup.
 async function loadAdminData() {
   await Promise.all([
@@ -78,8 +179,28 @@ async function loadAdminData() {
     loadDocRequests(),
     loadAnnouncements(),
     loadIssueReports(),
-    loadWorkers()
+    loadWorkers(),
+    loadPortalSettings()
   ]);
+}
+
+// Optional site configuration record; if table does not exist yet we keep form defaults.
+async function loadPortalSettings() {
+  const { data, error } = await supabaseClient
+    .from("portal_settings")
+    .select("city_name,province,contact_email,contact_phone,primary_barangay,launch_date,project_status")
+    .eq("id", 1)
+    .maybeSingle();
+
+  if (error) {
+    const msg = String(error.message || "").toLowerCase();
+    const missingTable = msg.includes("portal_settings") && msg.includes("does not exist");
+    if (!missingTable) showAdminToast(error.message);
+    portalSettings = null;
+    return;
+  }
+
+  portalSettings = data || null;
 }
 
 async function loadBarangays() {
@@ -97,51 +218,98 @@ async function loadBarangays() {
     added: b.created_at ? formatDate(new Date(b.created_at)) : "-",
     notes: b.notes || ""
   }));
+
+  if (isBarangayAdmin()) {
+    const scoped = getScopedBarangay().toLowerCase();
+    barangays = barangays.filter((b) => String(b.name || "").toLowerCase() === scoped);
+  }
 }
 
-// Pulls resident profiles; barangay admins only see their own barangay scope.
+// Pulls system users (super_admin) or scoped residents (barangay_admin).
 async function loadResidents() {
-  let query = supabaseClient
-    .from("profiles")
-    .select("id,full_name,email,phone,barangay,created_at,role")
-    .eq("role", "resident")
-    .order("created_at", { ascending: false })
-    .limit(200);
+  const scopedBarangay = getScopedBarangay();
 
-  if (currentProfile?.role === "barangay_admin") {
-    query = query.eq("barangay", currentProfile.barangay);
+  const buildProfilesQuery = (barangayColumn, includeVerified = true) => {
+    let query = supabaseClient
+      .from("profiles")
+      .select(includeVerified
+        ? "id,full_name,email,phone,barangay,created_at,role,is_verified"
+        : "id,full_name,email,phone,barangay,created_at,role")
+      .order("created_at", { ascending: false });
+
+    if (isBarangayAdmin()) {
+      query = query.eq("role", "resident");
+      if (barangayColumn) query = query.eq(barangayColumn, scopedBarangay);
+    }
+
+    return query;
+  };
+
+  // Primary implementation requested: barangay_name scope for barangay admin.
+  let { data, error } = await buildProfilesQuery(isBarangayAdmin() ? "barangay_name" : null, true);
+
+  // Schema compatibility fallback: older schema may still use `barangay` and/or omit `is_verified`.
+  if (error && isBarangayAdmin() && looksLikeMissingColumn(error, "barangay_name")) {
+    ({ data, error } = await buildProfilesQuery("barangay", true));
   }
-
-  const { data } = await query;
+  if (error && looksLikeMissingColumn(error, "is_verified")) {
+    ({ data, error } = await buildProfilesQuery(isBarangayAdmin() ? "barangay_name" : null, false));
+    if (error && isBarangayAdmin() && looksLikeMissingColumn(error, "barangay_name")) {
+      ({ data, error } = await buildProfilesQuery("barangay", false));
+    }
+  }
+  if (error) {
+    showAdminToast(error.message);
+    usersData = [];
+    return;
+  }
 
   usersData = (data || []).map((u) => {
     const parsed = parseName(u.full_name);
+    const resolvedBarangay = u.barangay || "-";
+    const isVerified = Boolean(u.is_verified);
+
     return {
       id: u.id,
       first: parsed.first,
       last: parsed.last,
       email: u.email,
       phone: u.phone || "-",
-      barangay: u.barangay,
+      barangay: resolvedBarangay,
       registered: formatDate(new Date(u.created_at)),
-      status: "active"
+      role: u.role,
+      isVerified,
+      status: isVerified ? "Verified" : "Pending Verification"
     };
   });
 }
 
 // Loads document requests and resolves resident names for table readability.
 async function loadDocRequests() {
-  let query = supabaseClient
-    .from("document_requests")
-    .select("id,resident_id,request_type,barangay,created_at,status")
-    .order("created_at", { ascending: false })
-    .limit(200);
+  const scopedBarangay = getScopedBarangay();
 
-  if (currentProfile?.role === "barangay_admin") {
-    query = query.eq("barangay", currentProfile.barangay);
+  const buildDocQuery = (barangayColumn) => {
+    let query = supabaseClient
+      .from("document_requests")
+      .select("id,resident_id,request_type,barangay,created_at,status")
+      .order("created_at", { ascending: false });
+
+    if (isBarangayAdmin() && barangayColumn) {
+      query = query.eq(barangayColumn, scopedBarangay);
+    }
+
+    return query;
+  };
+
+  let { data, error } = await buildDocQuery(isBarangayAdmin() ? "barangay_name" : null);
+  if (error && isBarangayAdmin() && looksLikeMissingColumn(error, "barangay_name")) {
+    ({ data, error } = await buildDocQuery("barangay"));
   }
-
-  const { data } = await query;
+  if (error) {
+    showAdminToast(error.message);
+    docRequests = [];
+    return;
+  }
 
   const residentIds = [...new Set((data || []).map((r) => r.resident_id).filter(Boolean))];
   const { data: profiles } = residentIds.length
@@ -155,13 +323,13 @@ async function loadDocRequests() {
     ref: String(r.id).slice(0, 8).toUpperCase(),
     name: nameMap.get(r.resident_id) || "Resident",
     type: r.request_type,
-    barangay: r.barangay,
+    barangay: r.barangay || "-",
     date: formatDate(new Date(r.created_at)),
     status: mapDocStatus(r.status)
   }));
 }
 
-// Super admin sees all; barangay admin sees City-Wide + assigned barangay announcements.
+// Super admin sees all; barangay admin sees city-wide + scoped local announcements.
 async function loadAnnouncements() {
   let query = supabaseClient
     .from("announcements")
@@ -169,11 +337,17 @@ async function loadAnnouncements() {
     .order("published_at", { ascending: false })
     .limit(100);
 
-  if (currentProfile?.role === "barangay_admin") {
-    query = query.or(`barangay_scope.eq.City-Wide,barangay_scope.eq.${currentProfile.barangay}`);
+  if (isBarangayAdmin()) {
+    const scopedBarangay = getScopedBarangay();
+    query = query.or(`barangay_scope.eq.City-Wide,barangay_scope.eq.${scopedBarangay}`);
   }
 
-  const { data } = await query;
+  const { data, error } = await query;
+  if (error) {
+    showAdminToast(error.message);
+    announcements = [];
+    return;
+  }
 
   announcements = (data || []).map((a) => ({
     id: a.id,
@@ -186,17 +360,30 @@ async function loadAnnouncements() {
 }
 
 async function loadIssueReports() {
-  let query = supabaseClient
-    .from("issue_reports")
-    .select("id,category,location,description,status,created_at,resident_id")
-    .order("created_at", { ascending: false })
-    .limit(200);
+  const scopedBarangay = getScopedBarangay();
 
-  if (currentProfile?.role === "barangay_admin") {
-    query = query.eq("barangay", currentProfile.barangay);
+  const buildReportsQuery = (barangayColumn) => {
+    let query = supabaseClient
+      .from("issue_reports")
+      .select("id,category,location,description,status,created_at,resident_id,barangay")
+      .order("created_at", { ascending: false });
+
+    if (isBarangayAdmin() && barangayColumn) {
+      query = query.eq(barangayColumn, scopedBarangay);
+    }
+
+    return query;
+  };
+
+  let { data, error } = await buildReportsQuery(isBarangayAdmin() ? "barangay_name" : null);
+  if (error && isBarangayAdmin() && looksLikeMissingColumn(error, "barangay_name")) {
+    ({ data, error } = await buildReportsQuery("barangay"));
   }
-
-  const { data } = await query;
+  if (error) {
+    showAdminToast(error.message);
+    issueReports = [];
+    return;
+  }
 
   const residentIds = [...new Set((data || []).map((r) => r.resident_id).filter(Boolean))];
   const { data: profiles } = residentIds.length
@@ -217,30 +404,88 @@ async function loadIssueReports() {
 }
 
 async function loadWorkers() {
-  let query = supabaseClient
-    .from("workers")
-    .select("id,full_name,service_category,category,contact_phone,rating_avg,is_active,barangay")
-    .order("full_name", { ascending: true })
-    .limit(200);
+  const scopedBarangay = getScopedBarangay();
 
-  if (currentProfile?.role === "barangay_admin") {
-    query = query.eq("barangay", currentProfile.barangay);
+  const buildWorkersQuery = (barangayColumn) => {
+    let query = supabaseClient
+      .from("workers")
+      .select("id,full_name,service_category,category,contact_phone,contact_email,rating_avg,is_active,barangay")
+      .order("full_name", { ascending: true });
+
+    if (isBarangayAdmin() && barangayColumn) {
+      query = query.eq(barangayColumn, scopedBarangay);
+    }
+
+    return query;
+  };
+
+  let { data, error } = await buildWorkersQuery(isBarangayAdmin() ? "barangay_name" : null);
+  if (error && isBarangayAdmin() && looksLikeMissingColumn(error, "barangay_name")) {
+    ({ data, error } = await buildWorkersQuery("barangay"));
   }
-
-  const { data } = await query;
+  if (error) {
+    showAdminToast(error.message);
+    workersRegistry = [];
+    return;
+  }
 
   workersRegistry = (data || []).map((w) => ({
     id: w.id,
     name: w.full_name,
     specialty: w.service_category,
-    category: w.category === "white-collar" ? "White Collar" : "Blue Collar",
+    barangay: w.barangay || "",
     phone: w.contact_phone || "-",
+    email: w.contact_email || "",
     rating: Number(w.rating_avg || 0).toFixed(1),
     status: w.is_active ? "Active" : "Pending"
   }));
 }
 
+function renderAdminIdentity() {
+  const fullName =
+    currentProfile?.full_name ||
+    currentUser?.user_metadata?.full_name ||
+    currentUser?.user_metadata?.name ||
+    "Administrator";
+
+  // Use auth email first to avoid stale profile.email values.
+  const email = currentUser?.email || currentProfile?.email || "-";
+
+  setText("adminSidebarName", fullName);
+  setText("adminSidebarEmail", email);
+
+  const adminNameInput = document.getElementById("settingsAdminName");
+  const adminEmailInput = document.getElementById("settingsAdminEmail");
+  if (adminNameInput) adminNameInput.value = fullName;
+  if (adminEmailInput) adminEmailInput.value = email;
+
+  renderSettingsFormValues();
+}
+
+// Keeps settings cards database-driven instead of static placeholder values.
+function renderSettingsFormValues() {
+  const cityName = document.getElementById("settingsCityName");
+  const province = document.getElementById("settingsProvince");
+  const contactEmail = document.getElementById("settingsContactEmail");
+  const contactPhone = document.getElementById("settingsContactPhone");
+  const primaryBarangay = document.getElementById("settingsPrimaryBarangay");
+  const launchDate = document.getElementById("settingsLaunchDate");
+  const projectStatus = document.getElementById("settingsProjectStatus");
+
+  if (cityName) cityName.value = portalSettings?.city_name || "Biñan City";
+  if (province) province.value = portalSettings?.province || "Laguna";
+  if (contactEmail) contactEmail.value = portalSettings?.contact_email || "hub@binan.gov.ph";
+  if (contactPhone) contactPhone.value = portalSettings?.contact_phone || "(049) 123-4567";
+  if (primaryBarangay) primaryBarangay.value = portalSettings?.primary_barangay || "Barangay Poblacion";
+  if (launchDate) launchDate.value = portalSettings?.launch_date || "2026-01-01";
+  if (projectStatus) projectStatus.value = portalSettings?.project_status || "Active";
+}
+
 function renderAllPanels() {
+  renderOverviewStats();
+  renderSidebarBadges();
+  renderBarangaySummary();
+  renderNotifIndicator();
   renderOverviewTable();
   renderBarangayTable();
   renderUsersTable();
@@ -250,6 +495,53 @@ function renderAllPanels() {
   renderAnnouncementsGrid();
 }
 
+function renderOverviewStats() {
+  const residents = usersData.filter((u) => u.role === "resident").length;
+  const requests = docRequests.length;
+  const workers = workersRegistry.length;
+  const pendingDocs = docRequests.filter((r) => r.status === "Pending" || r.status === "Processing").length;
+  const resolvedReports = issueReports.filter((r) => r.status === "Completed").length;
+  const pendingReports = issueReports.filter((r) => r.status === "Pending" || r.status === "Processing").length;
+  const activeWorkers = workersRegistry.filter((w) => w.status === "Active").length;
+
+  setText("statResidents", residents.toLocaleString());
+  setText("statDocRequests", requests.toLocaleString());
+  setText("statWorkers", workers.toLocaleString());
+  setText("statPendingReports", pendingReports.toLocaleString());
+
+  setText("statResidentsTrend", isSuperAdmin() ? "City-wide resident count" : "Scoped resident count");
+  setText("statDocTrend", `${pendingDocs} pending`);
+  setText("statWorkersTrend", `${activeWorkers} active`);
+  setText("statReportsTrend", `${resolvedReports} resolved`);
+}
+
+function renderSidebarBadges() {
+  const pendingDocs = docRequests.filter((r) => r.status === "Pending" || r.status === "Processing").length;
+  const pendingIssues = issueReports.filter((r) => r.status === "Pending" || r.status === "Processing").length;
+
+  setText("navBarangayCount", String(barangays.length));
+  setText("navDocPendingCount", String(pendingDocs));
+  setText("navIssuePendingCount", String(pendingIssues));
+}
+
+function renderBarangaySummary() {
+  const active = barangays.filter((b) => b.status === "active").length;
+  const pending = barangays.filter((b) => b.status !== "active").length;
+
+  setText("activeBrgyCount", String(active));
+  setText("pendingBrgyCount", String(pending));
+  setText("totalBrgyCount", String(barangays.length));
+}
+
+function renderNotifIndicator() {
+  const dot = document.getElementById("notifDot");
+  if (!dot) return;
+
+  const hasPending =
+    docRequests.some((r) => r.status === "Pending" || r.status === "Processing") ||
+    issueReports.some((r) => r.status === "Pending" || r.status === "Processing");
+  dot.style.display = hasPending ? "inline-flex" : "none";
+}
 function setHeaderDate() {
   const dateEl = document.getElementById("headerDate");
   if (!dateEl) return;
@@ -267,6 +559,12 @@ function initSidebarNav() {
 }
 
 function showPanel(panelId) {
+  // Defense in depth: block direct function calls to restricted panels.
+  if (isBarangayAdmin() && (panelId === "barangays" || panelId === "settings")) {
+    panelId = "overview";
+    showAdminToast("This section is available only to Super Admin accounts.");
+  }
+
   document.querySelectorAll(".admin-panel").forEach((p) => p.classList.remove("active"));
   document.getElementById("panel-" + panelId)?.classList.add("active");
 
@@ -274,8 +572,8 @@ function showPanel(panelId) {
   document.querySelector(`[data-panel="${panelId}"]`)?.classList.add("active");
 
   const titles = {
-    overview: ["Overview", "Biñan City Hub Administrative Dashboard"],
-    barangays: ["Barangays", "Manage and monitor all 24 barangays of Biñan City"],
+    overview: ["Overview", "Bi\u00f1an City Hub Administrative Dashboard"],
+    barangays: ["Barangays", "Manage and monitor all 24 barangays of Bi\u00f1an City"],
     users: ["Users / Residents", "View and manage registered users"],
     documents: ["Document Requests", "Review and process document applications"],
     announcements: ["Announcements", "Manage official city and barangay announcements"],
@@ -313,6 +611,10 @@ function statusPill(status) {
     Pending: "pending",
     Processing: "processing",
     Completed: "completed",
+    Approved: "active",
+    Archived: "completed",
+    Verified: "active",
+    "Pending Verification": "pending",
     Rejected: "rejected"
   };
   const cls = map[status] || "pending";
@@ -332,7 +634,7 @@ function renderOverviewTable() {
       <td>${escapeHtml(r.date)}</td>
       <td>${statusPill(r.status)}</td>
       <td>
-        ${r.status === "Pending" ? `<button class="tbl-btn tbl-btn-approve" onclick="approveDoc('${r.id}')"><i class="fas fa-check"></i> Approve</button>` : ""}
+        ${r.status === "Pending" ? `<button class="tbl-btn tbl-btn-approve" onclick="setDocumentStatus('${r.id}','approved')"><i class="fas fa-check"></i> Approve</button>` : ""}
         <button class="tbl-btn tbl-btn-view" onclick="showAdminToast('Viewing request ${r.ref}')"><i class="fas fa-eye"></i></button>
       </td>
     </tr>
@@ -375,24 +677,36 @@ function renderUsersTable(filter = "") {
   const tbody = document.getElementById("usersTableBody");
   if (!tbody) return;
 
-  const filtered = filter
-    ? usersData.filter((u) => `${u.first} ${u.last} ${u.email}`.toLowerCase().includes(filter.toLowerCase()))
-    : usersData;
+  const roleScoped = isSuperAdmin()
+    ? usersData
+    : usersData.filter((u) => u.role === "resident");
 
-  tbody.innerHTML = filtered.map((u, i) => `
+  const filtered = filter
+    ? roleScoped.filter((u) => `${u.first} ${u.last} ${u.email}`.toLowerCase().includes(filter.toLowerCase()))
+    : roleScoped;
+
+  tbody.innerHTML = filtered.map((u, i) => {
+    const fullName = `${escapeHtml(u.first)} ${escapeHtml(u.last)}`;
+    const verifyAction = isBarangayAdmin() && !u.isVerified
+      ? `<button class="tbl-btn tbl-btn-approve" onclick="verifyResident('${u.id}')"><i class="fas fa-check"></i> Verify</button>`
+      : "";
+
+    return `
     <tr>
       <td>${i + 1}</td>
-      <td><strong>${escapeHtml(u.first)} ${escapeHtml(u.last)}</strong></td>
+      <td><strong>${fullName}</strong></td>
       <td>${escapeHtml(u.email)}</td>
       <td>${escapeHtml(u.phone)}</td>
       <td>${escapeHtml(u.barangay)}</td>
       <td>${escapeHtml(u.registered)}</td>
-      <td>${statusPill("Active")}</td>
-      <td>
-        <button class="tbl-btn tbl-btn-view" onclick="showAdminToast('Viewing user ${escapeHtml(u.first)} ${escapeHtml(u.last)}')"><i class="fas fa-eye"></i></button>
+      <td>${escapeHtml(formatRoleLabel(u.role))}</td>
+      <td>${statusPill(u.status)}</td>
+      <td style="display:flex;gap:5px;flex-wrap:wrap;">
+        ${verifyAction}
+        <button class="tbl-btn tbl-btn-view" onclick="showAdminToast('Viewing user ${fullName}')"><i class="fas fa-eye"></i></button>
       </td>
-    </tr>
-  `).join("");
+    </tr>`;
+  }).join("");
 
   const countEl = document.getElementById("userCount");
   if (countEl) countEl.textContent = `${filtered.length} users`;
@@ -410,7 +724,11 @@ function renderDocRequestsTable(typeFilter = "", statusFilter = "") {
   if (typeFilter) filtered = filtered.filter((r) => r.type === typeFilter);
   if (statusFilter) filtered = filtered.filter((r) => r.status === statusFilter);
 
-  tbody.innerHTML = filtered.map((r) => `
+  tbody.innerHTML = filtered.map((r) => {
+    const showQueueActions = isBarangayAdmin() || isSuperAdmin();
+    const canProcess = ["Pending", "Processing"].includes(r.status);
+
+    return `
     <tr>
       <td><code style="font-size:11px;color:var(--accent-gold)">${r.ref}</code></td>
       <td><strong>${escapeHtml(r.name)}</strong></td>
@@ -418,12 +736,13 @@ function renderDocRequestsTable(typeFilter = "", statusFilter = "") {
       <td>${escapeHtml(r.barangay)}</td>
       <td>${escapeHtml(r.date)}</td>
       <td>${statusPill(r.status)}</td>
-      <td style="display:flex;gap:5px;">
-        ${r.status === "Pending" ? `<button class="tbl-btn tbl-btn-approve" onclick="approveDoc('${r.id}')"><i class="fas fa-check"></i> Approve</button>` : ""}
-        <button class="tbl-btn tbl-btn-view"><i class="fas fa-eye"></i></button>
+      <td style="display:flex;gap:5px;flex-wrap:wrap;">
+        ${showQueueActions && canProcess ? `<button class="tbl-btn tbl-btn-approve" onclick="setDocumentStatus('${r.id}','approved')"><i class="fas fa-check"></i> Approve</button>` : ""}
+        ${showQueueActions && canProcess ? `<button class="tbl-btn tbl-btn-delete" onclick="setDocumentStatus('${r.id}','rejected')"><i class="fas fa-xmark"></i> Reject</button>` : ""}
+        ${showQueueActions ? `<button class="tbl-btn tbl-btn-view" onclick="setDocumentStatus('${r.id}','completed')"><i class="fas fa-box-archive"></i> Archive</button>` : ""}
       </td>
-    </tr>
-  `).join("");
+    </tr>`;
+  }).join("");
 }
 
 function filterDocuments() {
@@ -433,11 +752,11 @@ function filterDocuments() {
   );
 }
 
-// Moves request status forward; policy-controlled in DB via RLS.
-async function approveDoc(id) {
+// Moves request status through approve/reject/archive queue; policy-controlled in DB via RLS.
+async function setDocumentStatus(id, status) {
   const { error } = await supabaseClient
     .from("document_requests")
-    .update({ status: "reviewing" })
+    .update({ status })
     .eq("id", id);
 
   if (error) {
@@ -446,47 +765,186 @@ async function approveDoc(id) {
   }
 
   await loadDocRequests();
-  renderOverviewTable();
-  renderDocRequestsTable();
-  showAdminToast("Document request marked as processing.");
+  renderAllPanels();
+
+  const label = status === "approved" ? "approved" : status === "rejected" ? "rejected" : "archived";
+  showAdminToast(`Document request ${label}.`);
+}
+
+async function verifyResident(profileId) {
+  const { error } = await supabaseClient
+    .from("profiles")
+    .update({ is_verified: true })
+    .eq("id", profileId);
+
+  if (error) {
+    if (looksLikeMissingColumn(error, "is_verified")) {
+      showAdminToast("Add `is_verified` to profiles table to enable resident verification.");
+      return;
+    }
+
+    showAdminToast(error.message);
+    return;
+  }
+
+  await loadResidents();
+  renderAllPanels();
+  showAdminToast("Resident verified successfully.");
+}
+
+function populateIssueBarangayFilter() {
+  const filter = document.getElementById("issueBarangayFilter");
+  if (!filter) return;
+
+  if (isBarangayAdmin()) {
+    filter.innerHTML = `<option value="${escapeHtml(getScopedBarangay())}">${escapeHtml(getScopedBarangay())}</option>`;
+    filter.value = getScopedBarangay();
+    return;
+  }
+
+  const previous = filter.value;
+  const uniqueBarangays = [...new Set(issueReports.map((r) => String(r.barangay || "-").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+
+  filter.innerHTML = `<option value="">All Barangays</option>${uniqueBarangays
+    .map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
+    .join("")}`;
+
+  if (previous && uniqueBarangays.includes(previous)) {
+    filter.value = previous;
+  }
+}
+
+function filterIssueReports() {
+  renderIssueReportsTable();
 }
 
 function renderIssueReportsTable() {
   const tbody = document.getElementById("issueReportsBody");
   if (!tbody) return;
 
-  tbody.innerHTML = issueReports.map((r, i) => `
+  const term = (document.getElementById("issueSearch")?.value || "").trim().toLowerCase();
+  const category = (document.getElementById("issueCategoryFilter")?.value || "").trim();
+  const barangayFilter = (document.getElementById("issueBarangayFilter")?.value || "").trim();
+
+  let filtered = [...issueReports];
+
+  if (term) {
+    filtered = filtered.filter((r) => {
+      const blob = `${r.category} ${r.location} ${r.description} ${r.reporter} ${r.barangay}`.toLowerCase();
+      return blob.includes(term);
+    });
+  }
+
+  if (category) filtered = filtered.filter((r) => r.category === category);
+  if (barangayFilter) filtered = filtered.filter((r) => String(r.barangay) === barangayFilter);
+
+  tbody.innerHTML = filtered.map((r, i) => {
+    const canDelete = r.status === "Completed";
+    const deleteBtn = canDelete
+      ? `<button class="tbl-btn tbl-btn-delete" onclick="deleteIssueReport('${r.id}')"><i class="fas fa-trash"></i> Delete</button>`
+      : "";
+
+    const actionButtons = isBarangayAdmin()
+      ? `${r.status !== "Processing" && r.status !== "Completed" ? `<button class="tbl-btn tbl-btn-approve" onclick="setIssueStatus('${r.id}','processing')"><i class="fas fa-play"></i> Process</button>` : ""}
+         ${r.status !== "Completed" ? `<button class="tbl-btn tbl-btn-view" onclick="setIssueStatus('${r.id}','resolved')"><i class="fas fa-circle-check"></i> Resolve</button>` : ""}
+         ${deleteBtn}`
+      : `${canDelete ? deleteBtn : `<button class="tbl-btn tbl-btn-view" onclick="showAdminToast('Super Admin view is read-only for issue status.')"><i class="fas fa-eye"></i></button>`}`;
+
+    return `
     <tr>
       <td>${i + 1}</td>
       <td>${escapeHtml(r.category)}</td>
       <td>${escapeHtml(r.location)}</td>
-      <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(r.description)}</td>
+      <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(r.description)}</td>
+      <td>${escapeHtml(r.barangay || "-")}</td>
       <td>${escapeHtml(r.reporter)}</td>
       <td>${escapeHtml(r.date)}</td>
       <td>${statusPill(r.status)}</td>
-      <td>
-        <button class="tbl-btn tbl-btn-view"><i class="fas fa-eye"></i></button>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">${actionButtons}</td>
+    </tr>
+  `;
+  }).join("");
+}
+
+async function setIssueStatus(id, status) {
+  if (!isBarangayAdmin()) {
+    showAdminToast("Only the assigned Barangay Admin can update issue status.");
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from("issue_reports")
+    .update({ status })
+    .eq("id", id);
+
+  if (error) {
+    showAdminToast(error.message);
+    return;
+  }
+
+  await loadIssueReports();
+  renderAllPanels();
+  showAdminToast(status === "resolved" ? "Issue marked as resolved." : "Issue moved to processing.");
+}
+
+async function deleteIssueReport(id) {
+  const record = issueReports.find((r) => String(r.id) === String(id));
+  if (!record) return;
+
+  if (record.status !== "Completed") {
+    showAdminToast("Only resolved issues can be deleted.");
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from("issue_reports")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    showAdminToast(error.message);
+    return;
+  }
+
+  await loadIssueReports();
+  renderAllPanels();
+  showAdminToast("Resolved issue removed from the queue.");
+}
+function renderWorkersTable(filter = "") {
+  const tbody = document.getElementById("workersAdminBody");
+  if (!tbody) return;
+
+  const filtered = filter
+    ? workersRegistry.filter((w) => `${w.name} ${w.specialty} ${w.phone}`.toLowerCase().includes(filter.toLowerCase()))
+    : workersRegistry;
+
+  tbody.innerHTML = filtered.map((w, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td><strong>${escapeHtml(w.name)}</strong></td>
+      <td>${escapeHtml(w.specialty)}</td>
+      <td>${escapeHtml(w.barangay || "-")}</td>
+      <td>${escapeHtml(w.phone)}</td>
+      <td><span style="color:#f39c12">&#9733;</span> ${escapeHtml(w.rating)}</td>
+      <td>${statusPill(w.status)}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="tbl-btn tbl-btn-edit" onclick="openEditWorkerModal('${w.id}')"><i class="fas fa-pen"></i></button>
+        <button class="tbl-btn tbl-btn-delete" onclick="deleteWorker('${w.id}')"><i class="fas fa-trash"></i></button>
       </td>
     </tr>
   `).join("");
 }
 
-function renderWorkersTable() {
-  const tbody = document.getElementById("workersAdminBody");
-  if (!tbody) return;
+function filterWorkers() {
+  renderWorkersTable(document.getElementById("workerSearch")?.value || "");
+}
 
-  tbody.innerHTML = workersRegistry.map((w, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td><strong>${escapeHtml(w.name)}</strong></td>
-      <td>${escapeHtml(w.specialty)}</td>
-      <td>${escapeHtml(w.category)}</td>
-      <td>${escapeHtml(w.phone)}</td>
-      <td><span style="color:#f39c12">★</span> ${escapeHtml(w.rating)}</td>
-      <td>${statusPill(w.status)}</td>
-      <td><button class="tbl-btn tbl-btn-edit" onclick="showAdminToast('Worker management is available via database records.')"><i class="fas fa-pen"></i></button></td>
-    </tr>
-  `).join("");
+function canManageWorkerRecord(workerBarangay) {
+  if (isSuperAdmin()) return true;
+  const scoped = String(getScopedBarangay() || "").trim().toLowerCase();
+  const target = String(workerBarangay || "").trim().toLowerCase();
+  return scoped && scoped === target;
 }
 
 function renderAnnouncementsGrid() {
@@ -534,7 +992,7 @@ async function deleteBarangay(id) {
   }
 
   await loadBarangays();
-  renderBarangayTable();
+  renderAllPanels();
   showAdminToast("Barangay removed successfully.");
 }
 
@@ -546,7 +1004,7 @@ async function activateBarangay(id) {
   }
 
   await loadBarangays();
-  renderBarangayTable();
+  renderAllPanels();
   showAdminToast("Barangay activated successfully.");
 }
 
@@ -558,12 +1016,111 @@ async function deleteAnnouncement(id) {
   }
 
   await loadAnnouncements();
-  renderAnnouncementsGrid();
+  renderAllPanels();
   showAdminToast("Announcement deleted.");
 }
 
 function openAddWorkerModal() {
-  showAdminToast("Add worker via database insert is ready. UI form can be added next.");
+  const form = document.getElementById("addWorkerForm");
+  if (form) {
+    form.reset();
+    form.dataset.mode = "add";
+    delete form.dataset.workerId;
+  }
+
+  const modalTitle = document.querySelector("#addWorkerModal .admin-modal-header h4");
+  const submitButton = document.querySelector("#addWorkerForm button[type='submit']");
+  if (modalTitle) modalTitle.innerHTML = "<i class=\"fas fa-briefcase\"></i> Add Worker";
+  if (submitButton) submitButton.innerHTML = "<i class=\"fas fa-plus\"></i> Add Worker";
+
+  populateWorkerBarangayOptions("");
+
+  openModal("addWorkerModalOverlay");
+}
+
+function populateWorkerBarangayOptions(selectedBarangay = "") {
+  const barangaySelect = document.getElementById("workerBarangay");
+  if (!barangaySelect) return;
+
+  const sourceBarangays = barangays.some((b) => String(b.status).toLowerCase() === "active")
+    ? barangays.filter((b) => String(b.status).toLowerCase() === "active")
+    : barangays;
+
+  const options = sourceBarangays
+    .map((b) => `<option value="${escapeHtml(b.name)}">${escapeHtml(b.name)}</option>`)
+    .join("");
+  barangaySelect.innerHTML = `<option value="">Select Barangay</option>${options}`;
+
+  if (isBarangayAdmin()) {
+    barangaySelect.value = getScopedBarangay() || "";
+    barangaySelect.setAttribute("disabled", "disabled");
+    return;
+  }
+
+  barangaySelect.removeAttribute("disabled");
+  if (selectedBarangay) barangaySelect.value = selectedBarangay;
+}
+
+function openEditWorkerModal(id) {
+  const worker = workersRegistry.find((w) => String(w.id) === String(id));
+  if (!worker) {
+    showAdminToast("Worker record not found.");
+    return;
+  }
+  if (!canManageWorkerRecord(worker.barangay)) {
+    showAdminToast("You can edit workers only within your assigned barangay.");
+    return;
+  }
+
+  const form = document.getElementById("addWorkerForm");
+  if (!form) return;
+
+  form.dataset.mode = "edit";
+  form.dataset.workerId = String(worker.id);
+
+  document.getElementById("workerFullName").value = worker.name || "";
+  document.getElementById("workerSpecialty").value = worker.specialty || "";
+  document.getElementById("workerPhone").value = worker.phone === "-" ? "" : (worker.phone || "");
+  document.getElementById("workerEmail").value = worker.email || "";
+  document.getElementById("workerStatus").value = worker.status === "Active" ? "active" : "pending";
+
+  populateWorkerBarangayOptions(worker.barangay || "");
+
+  const modalTitle = document.querySelector("#addWorkerModal .admin-modal-header h4");
+  const submitButton = document.querySelector("#addWorkerForm button[type='submit']");
+  if (modalTitle) modalTitle.innerHTML = "<i class=\"fas fa-pen\"></i> Edit Worker";
+  if (submitButton) submitButton.innerHTML = "<i class=\"fas fa-save\"></i> Save Changes";
+
+  openModal("addWorkerModalOverlay");
+}
+
+async function deleteWorker(id) {
+  const worker = workersRegistry.find((w) => String(w.id) === String(id));
+  if (!worker) {
+    showAdminToast("Worker record not found.");
+    return;
+  }
+  if (!canManageWorkerRecord(worker.barangay)) {
+    showAdminToast("You can delete workers only within your assigned barangay.");
+    return;
+  }
+
+  const confirmed = window.confirm(`Delete worker "${worker.name}" from registry?`);
+  if (!confirmed) return;
+
+  const { error } = await supabaseClient
+    .from("workers")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    showAdminToast(error.message);
+    return;
+  }
+
+  await loadWorkers();
+  renderAllPanels();
+  showAdminToast("Worker deleted successfully.");
 }
 
 // Binds CRUD form submissions for barangays and announcements.
@@ -596,7 +1153,7 @@ function initFormHandlers() {
       }
 
       await loadBarangays();
-      renderBarangayTable();
+      renderAllPanels();
       closeModal("addBarangayModalOverlay");
       showAdminToast(`${name} added successfully.`);
     });
@@ -623,7 +1180,7 @@ function initFormHandlers() {
       }
 
       await loadBarangays();
-      renderBarangayTable();
+      renderAllPanels();
       closeModal("editBarangayModalOverlay");
       showAdminToast("Barangay updated successfully.");
     });
@@ -641,7 +1198,7 @@ function initFormHandlers() {
 
       if (!title || !content) return;
 
-      const scope = barangay === "All" ? "City-Wide" : barangay;
+      const scope = isBarangayAdmin() ? getScopedBarangay() : (barangay === "All" ? "City-Wide" : barangay);
       const { error } = await supabaseClient.from("announcements").insert({
         title,
         category,
@@ -657,13 +1214,193 @@ function initFormHandlers() {
       }
 
       await loadAnnouncements();
-      renderAnnouncementsGrid();
+      renderAllPanels();
       closeModal("addAnnouncementModalOverlay");
       showAdminToast("Announcement published successfully.");
     });
   }
-}
 
+  const addWorkerForm = document.getElementById("addWorkerForm");
+  if (addWorkerForm) {
+    addWorkerForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const mode = addWorkerForm.dataset.mode || "add";
+      const workerId = addWorkerForm.dataset.workerId || "";
+      const fullName = document.getElementById("workerFullName").value.trim();
+      const specialty = document.getElementById("workerSpecialty").value.trim();
+      const selectedBarangay = document.getElementById("workerBarangay").value;
+      const barangay = isBarangayAdmin() ? (getScopedBarangay() || "") : selectedBarangay;
+      const phone = document.getElementById("workerPhone").value.trim();
+      const email = document.getElementById("workerEmail").value.trim();
+      const status = document.getElementById("workerStatus").value;
+
+      if (!fullName || !specialty || !barangay) {
+        showAdminToast("Full name, specialty, and barangay are required.");
+        return;
+      }
+
+      const payload = {
+        full_name: fullName,
+        service_category: specialty,
+        category: "blue-collar",
+        barangay,
+        contact_phone: phone || null,
+        contact_email: email || null,
+        is_active: status === "active",
+        created_by: currentUser.id
+      };
+
+      let error = null;
+      if (mode === "edit" && workerId) {
+        const existing = workersRegistry.find((w) => String(w.id) === String(workerId));
+        if (existing && !canManageWorkerRecord(existing.barangay)) {
+          showAdminToast("You can edit workers only within your assigned barangay.");
+          return;
+        }
+
+        const updatePayload = { ...payload };
+        delete updatePayload.created_by;
+
+        ({ error } = await supabaseClient
+          .from("workers")
+          .update(updatePayload)
+          .eq("id", workerId));
+      } else {
+        ({ error } = await supabaseClient.from("workers").insert(payload));
+      }
+
+      if (error) {
+        showAdminToast(error.message);
+        return;
+      }
+
+      await loadWorkers();
+      renderAllPanels();
+      closeModal("addWorkerModalOverlay");
+      showAdminToast(mode === "edit" ? "Worker updated successfully." : "Worker added successfully.");
+    });
+  }
+
+  // Super Admin city configuration save handler.
+  const citySettingsForm = document.getElementById("citySettingsForm");
+  if (citySettingsForm) {
+    citySettingsForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      if (!isSuperAdmin()) {
+        showAdminToast("Only Super Admin can update city settings.");
+        return;
+      }
+
+      const payload = {
+        id: 1,
+        city_name: document.getElementById("settingsCityName")?.value.trim() || "Biñan City",
+        province: document.getElementById("settingsProvince")?.value.trim() || "Laguna",
+        contact_email: document.getElementById("settingsContactEmail")?.value.trim() || null,
+        contact_phone: document.getElementById("settingsContactPhone")?.value.trim() || null
+      };
+
+      const { error } = await supabaseClient.from("portal_settings").upsert(payload, { onConflict: "id" });
+      if (error) {
+        const msg = String(error.message || "").toLowerCase();
+        if (msg.includes("portal_settings") && msg.includes("does not exist")) {
+          showAdminToast("Create table portal_settings first, then save again.");
+          return;
+        }
+        showAdminToast(error.message);
+        return;
+      }
+
+      await loadPortalSettings();
+      renderSettingsFormValues();
+      showAdminToast("City settings updated.");
+    });
+  }
+
+  // Super Admin portal configuration save handler.
+  const portalSettingsForm = document.getElementById("portalSettingsForm");
+  if (portalSettingsForm) {
+    portalSettingsForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      if (!isSuperAdmin()) {
+        showAdminToast("Only Super Admin can update portal settings.");
+        return;
+      }
+
+      const payload = {
+        id: 1,
+        primary_barangay: document.getElementById("settingsPrimaryBarangay")?.value.trim() || null,
+        launch_date: document.getElementById("settingsLaunchDate")?.value || null,
+        project_status: document.getElementById("settingsProjectStatus")?.value || "Active"
+      };
+
+      const { error } = await supabaseClient.from("portal_settings").upsert(payload, { onConflict: "id" });
+      if (error) {
+        const msg = String(error.message || "").toLowerCase();
+        if (msg.includes("portal_settings") && msg.includes("does not exist")) {
+          showAdminToast("Create table portal_settings first, then save again.");
+          return;
+        }
+        showAdminToast(error.message);
+        return;
+      }
+
+      await loadPortalSettings();
+      renderSettingsFormValues();
+      showAdminToast("Portal settings updated.");
+    });
+  }
+
+  // Profile/account update for both admin roles.
+  const adminAccountForm = document.getElementById("adminAccountForm");
+  if (adminAccountForm) {
+    adminAccountForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const fullName = document.getElementById("settingsAdminName")?.value.trim();
+      const newPassword = document.getElementById("settingsAdminPassword")?.value || "";
+
+      if (!fullName) {
+        showAdminToast("Admin name is required.");
+        return;
+      }
+
+      const profilePayload = { full_name: fullName };
+      const { error: profileError } = await supabaseClient
+        .from("profiles")
+        .update(profilePayload)
+        .eq("id", currentUser.id);
+
+      if (profileError) {
+        showAdminToast(profileError.message);
+        return;
+      }
+
+      if (newPassword) {
+        const { error: pwdError } = await supabaseClient.auth.updateUser({ password: newPassword });
+        if (pwdError) {
+          showAdminToast(pwdError.message);
+          return;
+        }
+      }
+
+      const { data: refreshed } = await supabaseClient
+        .from("profiles")
+        .select("id,role,barangay,full_name,email")
+        .eq("id", currentUser.id)
+        .maybeSingle();
+
+      currentProfile = refreshed || currentProfile;
+      renderAdminIdentity();
+      const pwdInput = document.getElementById("settingsAdminPassword");
+      if (pwdInput) pwdInput.value = "";
+
+      showAdminToast(newPassword ? "Account and password updated." : "Account updated.");
+    });
+  }
+}
 function initCharts() {
   const docCtx = document.getElementById("adminDocChart");
   if (docCtx) {
@@ -719,6 +1456,18 @@ function closeModal(id) {
 
 function openAddAnnouncementModal() {
   document.getElementById("addAnnouncementForm")?.reset();
+
+  const barangayField = document.getElementById("annBarangay");
+  if (barangayField) {
+    if (isBarangayAdmin()) {
+      barangayField.innerHTML = `<option value="${escapeHtml(getScopedBarangay())}">${escapeHtml(getScopedBarangay())}</option>`;
+      barangayField.value = getScopedBarangay();
+      barangayField.setAttribute("disabled", "disabled");
+    } else {
+      barangayField.removeAttribute("disabled");
+    }
+  }
+
   openModal("addAnnouncementModalOverlay");
 }
 
@@ -741,6 +1490,19 @@ function showAdminToast(msg) {
   toastTimer = setTimeout(() => toast.classList.add("d-none"), 3500);
 }
 
+
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+
+function formatRoleLabel(role) {
+  const value = String(role || "resident").toLowerCase();
+  if (value === "super_admin") return "Super Admin";
+  if (value === "barangay_admin") return "Barangay Admin";
+  return "Resident";
+}
+
 function parseName(fullName) {
   const parts = String(fullName || "").trim().split(/\s+/);
   return { first: parts[0] || "Resident", last: parts.slice(1).join(" ") };
@@ -750,7 +1512,8 @@ function mapDocStatus(status) {
   const v = String(status || "").toLowerCase();
   if (v === "submitted" || v === "pending") return "Pending";
   if (v === "reviewing" || v === "processing") return "Processing";
-  if (v === "completed" || v === "approved") return "Completed";
+  if (v === "approved") return "Approved";
+  if (v === "completed" || v === "archived") return "Archived";
   if (v === "rejected") return "Rejected";
   return "Pending";
 }
@@ -784,4 +1547,59 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

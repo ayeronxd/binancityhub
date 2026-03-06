@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BiÃ±an City Hub â€” Smart City Portal</title>
+    <title>Biñan City Hub - Smart City Portal</title>
     <meta name="description"
-        content="BiÃ±an City Hub â€” live barangay analytics, skilled labor directory, official announcements, and document services for all residents.">
+        content="Biñan City Hub - live barangay analytics, skilled labor directory, official announcements, and document services for all residents.">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -35,7 +35,7 @@
             <a class="topbar-brand" href="#">
                 <div class="brand-icon-box"><i class="fas fa-city"></i></div>
                 <div class="brand-text">
-                    <span class="brand-name">BiÃ±an City Hub</span>
+                    <span class="brand-name">Biñan City Hub</span>
                     <span class="brand-sub">Official Smart City Portal</span>
                 </div>
             </a>
@@ -79,7 +79,7 @@
                 <button class="user-nav-pill" onclick="switchTab('myportal')">
                     <div class="unp-avatar"><i class="fas fa-user"></i></div>
                     <div class="unp-info">
-                        <span class="unp-name" id="topbarUserName">â€”</span>
+                        <span class="unp-name" id="topbarUserName">-</span>
                         <span class="unp-role">Resident</span>
                     </div>
                 </button>
@@ -112,7 +112,7 @@
                 <a href="login.html#signup" class="mob-signup-link">Sign Up Free</a>
             </div>
             <div class="user-only mob-user-info" id="mobUserInfo">
-                <span class="mob-user-name" id="mobUserName">â€”</span>
+                <span class="mob-user-name" id="mobUserName">-</span>
                 <button onclick="doLogout()" class="mob-logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
             </div>
         </div>
@@ -138,7 +138,7 @@
                             <div class="sc-body">
                                 <span class="sc-label">Total Residents</span>
                                 <span class="sc-value counter" data-target="3892">0</span>
-                                <span class="sc-trend up"><i class="fas fa-arrow-up"></i> +5.2% this month</span>
+                                <span class="sc-trend neutral" id="trendResidents"><i class="fas fa-minus"></i> Loading trend...</span>
                             </div>
                         </div>
                         <div class="stat-card">
@@ -146,7 +146,7 @@
                             <div class="sc-body">
                                 <span class="sc-label">Documents Processed</span>
                                 <span class="sc-value counter" data-target="1247">0</span>
-                                <span class="sc-trend up"><i class="fas fa-arrow-up"></i> +12% this month</span>
+                                <span class="sc-trend neutral" id="trendDocs"><i class="fas fa-minus"></i> Loading trend...</span>
                             </div>
                         </div>
                         <div class="stat-card">
@@ -154,7 +154,7 @@
                             <div class="sc-body">
                                 <span class="sc-label">Registered Workers</span>
                                 <span class="sc-value counter" data-target="456">0</span>
-                                <span class="sc-trend neutral"><i class="fas fa-minus"></i> Stable</span>
+                                <span class="sc-trend neutral" id="trendWorkers"><i class="fas fa-minus"></i> Loading trend...</span>
                             </div>
                         </div>
                         <div class="stat-card">
@@ -162,7 +162,7 @@
                             <div class="sc-body">
                                 <span class="sc-label">Open Issue Reports</span>
                                 <span class="sc-value counter" data-target="78">0</span>
-                                <span class="sc-trend down"><i class="fas fa-arrow-up"></i> Needs attention</span>
+                                <span class="sc-trend neutral" id="trendIssues"><i class="fas fa-minus"></i> Loading trend...</span>
                             </div>
                         </div>
                     </div>
@@ -173,7 +173,7 @@
                             <div class="gc-header">
                                 <div>
                                     <h4><i class="fas fa-chart-line"></i> Document Request Trends</h4>
-                                    <span class="gc-sub">Monthly volume â€” Barangay Poblacion</span>
+                                    <span class="gc-sub">Monthly volume - Barangay Poblacion</span>
                                 </div>
                                 <span class="live-chip"><span class="live-dot sm"></span> Live</span>
                             </div>
@@ -193,12 +193,12 @@
                         <div class="gc-header">
                             <div>
                                 <h4><i class="fas fa-map-marker-alt"></i> Barangay Coverage</h4>
-                                <span class="gc-sub">All 24 barangays of BiÃ±an City</span>
+                                <span class="gc-sub">All 24 barangays of Biñan City</span>
                             </div>
                             <span class="scope-chip">Primary Service Area: Poblacion</span>
                         </div>
                         <div class="table-responsive">
-                            <table class="portal-table">
+                            <table class="portal-table" id="barangayCoverageTable">
                                 <thead>
                                     <tr>
                                         <th>Barangay</th>
@@ -245,7 +245,7 @@
                                 <span class="qd-ico"><i class="fas fa-id-card"></i></span>
                                 <div>
                                     <strong>Barangay ID</strong>
-                                    <span>2â€“3 days â€¢ Free</span>
+                                    <span>2-3 days - Free</span>
                                 </div>
                                 <i class="fas fa-chevron-right qd-arr"></i>
                             </button>
@@ -253,7 +253,7 @@
                                 <span class="qd-ico"><i class="fas fa-certificate"></i></span>
                                 <div>
                                     <strong>Barangay Clearance</strong>
-                                    <span>1â€“2 days â€¢ Free</span>
+                                    <span>1-2 days - Free</span>
                                 </div>
                                 <i class="fas fa-chevron-right qd-arr"></i>
                             </button>
@@ -261,7 +261,7 @@
                                 <span class="qd-ico"><i class="fas fa-graduation-cap"></i></span>
                                 <div>
                                     <strong>Job Seeker Cert.</strong>
-                                    <span>Same day â€¢ Free</span>
+                                    <span>Same day - Free</span>
                                 </div>
                                 <i class="fas fa-chevron-right qd-arr"></i>
                             </button>
@@ -290,10 +290,10 @@
                     <div>
                         <h2><i class="fas fa-briefcase"></i> Skilled Worker Directory</h2>
                         <p>Browse <strong id="workerCount">0</strong> verified workers from Barangay Poblacion.
-                            <span class="guest-only">Guest access â€” <strong>login</strong> to view contact details and
+                            <span class="guest-only">Guest access - <strong>login</strong> to view contact details and
                                 connect.</span>
                             <span class="user-only" style="color:var(--t-green)"><i class="fas fa-circle-check"></i>
-                                Logged in â€” call or email directly.</span>
+                                Logged in - call or email directly.</span>
                         </p>
                     </div>
                 </div>
@@ -303,9 +303,7 @@
                         <input type="text" id="workerSearch" placeholder="Search by name or skill...">
                     </div>
                     <select id="categoryFilter" class="filter-select">
-                        <option value="">All Categories</option>
-                        <option value="blue-collar">ðŸ”§ Blue Collar</option>
-                        <option value="white-collar">ðŸ’¼ White Collar</option>
+                        <option value="">All Barangays</option>
                     </select>
                     <select id="specialtyFilter" class="filter-select">
                         <option value="">All Specialties</option>
@@ -330,14 +328,14 @@
                 <div class="tab-page-header">
                     <div>
                         <h2><i class="fas fa-file-alt"></i> Document Request Services</h2>
-                        <p>Official barangay documents available online. Browse requirements freely â€”
+                        <p>Official barangay documents available online. Browse requirements freely -
                             <span class="guest-only">login to apply.</span>
                             <span class="user-only" style="color:var(--t-green)"><i class="fas fa-circle-check"></i>
-                                You're logged in â€” click Apply Now to submit.</span>
+                                You're logged in - click Apply Now to submit.</span>
                         </p>
                     </div>
                 </div>
-                <!-- Guest notice â€” only shown to guests -->
+                <!-- Guest notice - only shown to guests -->
                 <div class="guest-notice guest-only">
                     <div class="gn-icon"><i class="fas fa-eye"></i></div>
                     <div class="gn-text">
@@ -355,7 +353,7 @@
                             <p>Official photo identification for barangay residents. Required for various government
                                 transactions.</p>
                             <div class="dsc-tags">
-                                <span class="dsc-tag"><i class="fas fa-clock"></i> 2â€“3 business days</span>
+                                <span class="dsc-tag"><i class="fas fa-clock"></i> 2-3 business days</span>
                                 <span class="dsc-tag"><i class="fas fa-tag"></i> Free</span>
                             </div>
                             <div class="dsc-reqs">
@@ -363,14 +361,14 @@
                                 <ul>
                                     <li>Valid government-issued ID</li>
                                     <li>Proof of barangay residency</li>
-                                    <li>1 recent 2Ã—2 ID photo</li>
+                                    <li>1 recent 2x2 ID photo</li>
                                 </ul>
                             </div>
                         </div>
                         <button class="btn-apply" onclick="handleDocAction('Barangay ID')">
                             <span><i class="fas fa-file-pen"></i> Apply Now</span>
                             <span class="apply-hint guest-only">Login required</span>
-                            <span class="apply-hint user-only" style="color:var(--t-green)">Logged in âœ“</span>
+                            <span class="apply-hint user-only" style="color:var(--t-green)">Logged in ✓</span>
                         </button>
                     </div>
 
@@ -381,7 +379,7 @@
                             <p>Character clearance certificate. Required for employment, business permits, and loans.
                             </p>
                             <div class="dsc-tags">
-                                <span class="dsc-tag"><i class="fas fa-clock"></i> 1â€“2 business days</span>
+                                <span class="dsc-tag"><i class="fas fa-clock"></i> 1-2 business days</span>
                                 <span class="dsc-tag"><i class="fas fa-tag"></i> Free</span>
                             </div>
                             <div class="dsc-reqs">
@@ -396,7 +394,7 @@
                         <button class="btn-apply" onclick="handleDocAction('Barangay Clearance')">
                             <span><i class="fas fa-file-pen"></i> Apply Now</span>
                             <span class="apply-hint guest-only">Login required</span>
-                            <span class="apply-hint user-only" style="color:var(--t-green)">Logged in âœ“</span>
+                            <span class="apply-hint user-only" style="color:var(--t-green)">Logged in ✓</span>
                         </button>
                     </div>
 
@@ -421,7 +419,7 @@
                         <button class="btn-apply" onclick="handleDocAction('Job Seeker Cert.')">
                             <span><i class="fas fa-file-pen"></i> Apply Now</span>
                             <span class="apply-hint guest-only">Login required</span>
-                            <span class="apply-hint user-only" style="color:var(--t-green)">Logged in âœ“</span>
+                            <span class="apply-hint user-only" style="color:var(--t-green)">Logged in ✓</span>
                         </button>
                     </div>
                 </div>
@@ -458,7 +456,7 @@
                         Account</a>
                 </div>
 
-                <!-- My Applications quick view â€” logged-in only -->
+                <!-- My Applications quick view - logged-in only -->
                 <div class="glass-card user-only" style="margin-top:20px" id="docMyAppsCard">
                     <div class="gc-header">
                         <h4><i class="fas fa-clock-rotate-left"></i> My Recent Applications</h4>
@@ -491,7 +489,7 @@
                         <h2><i class="fas fa-newspaper"></i> Community Reports &amp; News</h2>
                         <p>Read official announcements. <span class="guest-only">Login to submit issue reports.</span>
                             <span class="user-only" style="color:var(--t-green)"><i class="fas fa-circle-check"></i>
-                                Logged in â€” submit reports directly.</span>
+                                Logged in - submit reports directly.</span>
                         </p>
                     </div>
                 </div>
@@ -557,7 +555,7 @@
                                 <h4><i class="fas fa-list-check"></i> Recent Reports Status</h4>
                             </div>
                             <div class="table-responsive" style="padding:8px">
-                                <table class="portal-table">
+                                <table class="portal-table" id="recentReportsTable">
                                     <thead>
                                         <tr>
                                             <th>Category</th>
@@ -603,28 +601,28 @@
                         <div class="sc-icon blue"><i class="fas fa-folder-open"></i></div>
                         <div class="sc-body">
                             <span class="sc-label">My Applications</span>
-                            <span class="sc-value">3</span>
+                            <span class="sc-value" id="portalStatApplications">0</span>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="sc-icon gold"><i class="fas fa-hourglass-half"></i></div>
                         <div class="sc-body">
                             <span class="sc-label">Pending</span>
-                            <span class="sc-value">1</span>
+                            <span class="sc-value" id="portalStatPending">0</span>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="sc-icon green"><i class="fas fa-circle-check"></i></div>
                         <div class="sc-body">
                             <span class="sc-label">Completed</span>
-                            <span class="sc-value">2</span>
+                            <span class="sc-value" id="portalStatCompleted">0</span>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="sc-icon navy"><i class="fas fa-briefcase"></i></div>
                         <div class="sc-body">
                             <span class="sc-label">Workers Browsed</span>
-                            <span class="sc-value">12</span>
+                            <span class="sc-value" id="portalStatWorkersBrowsed">0</span>
                         </div>
                     </div>
                 </div>
@@ -671,8 +669,8 @@
                             <div class="pm-row"><label>Name</label><span id="profileName">â€”</span></div>
                             <div class="pm-row"><label>Email</label><span id="profileEmail">â€”</span></div>
                             <div class="pm-row"><label>Barangay</label><span id="profileBarangay">â€”</span></div>
-                            <div class="pm-row"><label>Member since</label><span>March 2026</span></div>
-                            <button class="btn-gold" style="margin-top:16px;font-size:13px;padding:10px 20px">
+                            <div class="pm-row"><label>Member since</label><span id="profileMemberSince">-</span></div>
+                            <button id="profileEditBtn" type="button" class="btn-gold" style="margin-top:16px;font-size:13px;padding:10px 20px">
                                 <i class="fas fa-pen"></i> Edit Profile
                             </button>
                         </div>
@@ -767,6 +765,35 @@
         </div>
     </div>
 
+
+    <!-- ===== PROFILE MODAL (logged-in) ===== -->
+    <div class="modal-backdrop" id="profileModal">
+        <div class="login-modal" style="max-width:440px">
+            <button class="modal-x" onclick="closeProfileModal()"><i class="fas fa-times"></i></button>
+            <div class="modal-ico gold-ico"><i class="fas fa-user-pen"></i></div>
+            <h3>Edit Profile</h3>
+            <p style="margin-bottom:20px">Update your resident profile details.</p>
+            <form id="profileEditForm" style="text-align:left">
+                <div class="glass-field">
+                    <label>Full Name</label>
+                    <input type="text" id="profileEditFullName" class="glass-input" required>
+                </div>
+                <div class="glass-field">
+                    <label>Email</label>
+                    <input type="email" id="profileEditEmail" class="glass-input" readonly>
+                </div>
+                <div class="glass-field">
+                    <label>Barangay</label>
+                    <input type="text" id="profileEditBarangay" class="glass-input" required>
+                </div>
+                <div class="glass-field">
+                    <label>Phone</label>
+                    <input type="text" id="profileEditPhone" class="glass-input" placeholder="09xxxxxxxxx">
+                </div>
+                <button type="submit" class="btn-gold w-full"><i class="fas fa-save"></i> Save Profile</button>
+            </form>
+        </div>
+    </div>
     <!-- ===== SUCCESS TOAST ===== -->
     <div class="portal-toast" id="portalToast">
         <i class="fas fa-check-circle"></i>
@@ -779,6 +806,10 @@
 </body>
 
 </html>
+
+
+
+
 
 
 

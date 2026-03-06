@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard â€” BiÃ±an City Hub</title>
+    <title>Admin Dashboard - Biñan City Hub</title>
     <meta name="description"
-        content="BiÃ±an City Hub Administrator Dashboard â€” manage barangays, users, documents, and city data.">
+        content="Biñan City Hub Administrator Dashboard - manage barangays, users, documents, and city data.">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
@@ -38,7 +38,7 @@
             <div class="admin-logo">
                 <div class="admin-logo-icon"><i class="fas fa-city"></i></div>
                 <div>
-                    <span class="admin-logo-name">BiÃ±an City Hub</span>
+                    <span class="admin-logo-name">Biñan City Hub</span>
                     <span class="admin-logo-sub">Admin Panel</span>
                 </div>
             </div>
@@ -58,7 +58,7 @@
                 <li>
                     <a href="#" class="admin-nav-link" data-panel="barangays">
                         <i class="fas fa-map-marker-alt"></i> <span>Barangays</span>
-                        <span class="nav-badge">1</span>
+                        <span class="nav-badge" id="navBarangayCount">0</span>
                     </a>
                 </li>
                 <li>
@@ -69,7 +69,7 @@
                 <li>
                     <a href="#" class="admin-nav-link" data-panel="documents">
                         <i class="fas fa-file-alt"></i> <span>Document Requests</span>
-                        <span class="nav-badge pending">12</span>
+                        <span class="nav-badge pending" id="navDocPendingCount">0</span>
                     </a>
                 </li>
             </ul>
@@ -84,7 +84,7 @@
                 <li>
                     <a href="#" class="admin-nav-link" data-panel="reports">
                         <i class="fas fa-triangle-exclamation"></i> <span>Issue Reports</span>
-                        <span class="nav-badge pending">78</span>
+                        <span class="nav-badge pending" id="navIssuePendingCount">0</span>
                     </a>
                 </li>
                 <li>
@@ -96,8 +96,8 @@
 
             <div class="admin-nav-label">System</div>
             <ul>
-                <li>
-                    <a href="#" class="admin-nav-link" data-panel="settings">
+                <li id="navSettingsItem">
+                    <a href="#" class="admin-nav-link" data-panel="settings" id="navSettingsLink">
                         <i class="fas fa-gear"></i> <span>Settings</span>
                     </a>
                 </li>
@@ -108,8 +108,8 @@
             <div class="admin-user-info">
                 <div class="admin-user-avatar"><i class="fas fa-user-shield"></i></div>
                 <div>
-                    <div class="admin-user-name">Administrator</div>
-                    <div class="admin-user-email">admin@binan.gov.ph</div>
+                    <div class="admin-user-name" id="adminSidebarName">Administrator</div>
+                    <div class="admin-user-email" id="adminSidebarEmail">admin@binan.gov.ph</div>
                 </div>
             </div>
             <a href="index.html" class="admin-logout-btn">
@@ -132,13 +132,13 @@
                 </button>
                 <div>
                     <h1 id="adminPanelTitle">Overview</h1>
-                    <p id="adminPanelSub">BiÃ±an City Hub â€” Administrative Dashboard</p>
+                    <p id="adminPanelSub">Biñan City Hub - Administrative Dashboard</p>
                 </div>
             </div>
             <div class="admin-header-right">
                 <div class="admin-notif-btn">
                     <i class="fas fa-bell"></i>
-                    <span class="notif-dot"></span>
+                    <span class="notif-dot" id="notifDot"></span>
                 </div>
                 <div class="admin-header-date">
                     <i class="fas fa-calendar-alt"></i>
@@ -155,38 +155,48 @@
 
             <!-- ===== OVERVIEW PANEL ===== -->
             <div class="admin-panel active" id="panel-overview">
+                <div class="admin-table-card mb-3">
+                    <div class="table-card-header">
+                        <h4 id="roleModeTitle">City-Wide Controller</h4>
+                        <div class="d-flex gap-2">
+                            <span class="table-count-badge" id="adminRoleLabel">Super Admin</span>
+                            <span class="table-count-badge" id="adminRoleContext">City-Wide</span>
+                        </div>
+                    </div>
+                    <div class="px-4 pb-3 text-muted" id="roleModeDesc">Global operations across all barangays and system users.</div>
+                </div>
                 <!-- Stat Cards -->
                 <div class="stat-cards-row">
                     <div class="stat-card">
                         <div class="stat-card-icon blue"><i class="fas fa-users"></i></div>
                         <div class="stat-card-info">
                             <span class="stat-label">Total Residents</span>
-                            <span class="stat-value">3,892</span>
-                            <span class="stat-trend up"><i class="fas fa-arrow-up"></i> +5.2%</span>
+                            <span class="stat-value" id="statResidents">0</span>
+                            <span class="stat-trend neutral" id="statResidentsTrend"><i class="fas fa-database"></i> Live from database</span>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-card-icon gold"><i class="fas fa-file-circle-check"></i></div>
                         <div class="stat-card-info">
                             <span class="stat-label">Document Requests</span>
-                            <span class="stat-value">1,247</span>
-                            <span class="stat-trend up"><i class="fas fa-arrow-up"></i> +12%</span>
+                            <span class="stat-value" id="statDocRequests">0</span>
+                            <span class="stat-trend neutral" id="statDocTrend"><i class="fas fa-clock"></i> 0 pending</span>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-card-icon green"><i class="fas fa-briefcase"></i></div>
                         <div class="stat-card-info">
                             <span class="stat-label">Registered Workers</span>
-                            <span class="stat-value">456</span>
-                            <span class="stat-trend neutral"><i class="fas fa-minus"></i> Stable</span>
+                            <span class="stat-value" id="statWorkers">0</span>
+                            <span class="stat-trend neutral" id="statWorkersTrend"><i class="fas fa-check-circle"></i> 0 active</span>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-card-icon red"><i class="fas fa-triangle-exclamation"></i></div>
                         <div class="stat-card-info">
                             <span class="stat-label">Pending Reports</span>
-                            <span class="stat-value">78</span>
-                            <span class="stat-trend down"><i class="fas fa-arrow-up"></i> Needs attention</span>
+                            <span class="stat-value" id="statPendingReports">0</span>
+                            <span class="stat-trend neutral" id="statReportsTrend"><i class="fas fa-clipboard-check"></i> 0 resolved</span>
                         </div>
                     </div>
                 </div>
@@ -195,7 +205,7 @@
                 <div class="charts-row">
                     <div class="admin-chart-card large">
                         <div class="chart-header">
-                            <h4>Document Requests â€” Monthly</h4>
+                            <h4>Document Requests - Monthly</h4>
                             <span class="chart-period">Last 6 months</span>
                         </div>
                         <canvas id="adminDocChart" height="100"></canvas>
@@ -253,7 +263,7 @@
                     <div class="brgy-summary-item active-brgy-summary">
                         <i class="fas fa-circle-check"></i>
                         <div>
-                            <strong>1</strong>
+                            <strong id="activeBrgyCount">0</strong>
                             <span>Active</span>
                         </div>
                     </div>
@@ -267,7 +277,7 @@
                     <div class="brgy-summary-item total-brgy-summary">
                         <i class="fas fa-map"></i>
                         <div>
-                            <strong>24</strong>
+                            <strong id="totalBrgyCount">0</strong>
                             <span>Total Barangays</span>
                         </div>
                     </div>
@@ -276,7 +286,7 @@
                 <!-- Barangays Table -->
                 <div class="admin-table-card">
                     <div class="table-card-header">
-                        <h4>All Barangays â€” BiÃ±an City</h4>
+                        <h4>All Barangays - Biñan City</h4>
                     </div>
                     <div class="table-responsive">
                         <table class="admin-table" id="barangayTable">
@@ -321,7 +331,8 @@
 
                 <div class="admin-table-card">
                     <div class="table-card-header">
-                        <h4>Registered Users</h4>
+                        <h4 id="usersPanelHeading">All System Users</h4>
+                        <small id="residentVerifyHint" class="text-muted">Verification controls are available in Barangay Admin scope.</small>
                         <span class="table-count-badge" id="userCount">0 users</span>
                     </div>
                     <div class="table-responsive">
@@ -334,6 +345,7 @@
                                     <th>Phone</th>
                                     <th>Barangay</th>
                                     <th>Registered</th>
+                                    <th>Role</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -365,7 +377,8 @@
                             <option value="">All Statuses</option>
                             <option value="Pending">Pending</option>
                             <option value="Processing">Processing</option>
-                            <option value="Completed">Completed</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Archived">Archived</option>
                             <option value="Rejected">Rejected</option>
                         </select>
                     </div>
@@ -373,7 +386,7 @@
 
                 <div class="admin-table-card">
                     <div class="table-card-header">
-                        <h4>All Document Requests</h4>
+                        <h4 id="docsPanelHeading">City-Wide Document Queue</h4>
                     </div>
                     <div class="table-responsive">
                         <table class="admin-table">
@@ -399,6 +412,7 @@
             <!-- ===== ANNOUNCEMENTS PANEL ===== -->
             <div class="admin-panel" id="panel-announcements">
                 <div class="panel-toolbar">
+                    <h4 id="annPanelHeading" class="mb-0 me-3">City-Wide News Hub</h4>
                     <button class="btn-admin-primary" onclick="openAddAnnouncementModal()">
                         <i class="fas fa-plus"></i> New Announcement
                     </button>
@@ -410,25 +424,29 @@
             </div>
 
             <!-- ===== ISSUE REPORTS PANEL ===== -->
-            <div class="admin-panel" id="panel-reports">
+                        <div class="admin-panel" id="panel-reports">
                 <div class="panel-toolbar">
                     <div class="toolbar-search">
                         <i class="fas fa-search"></i>
-                        <input type="text" placeholder="Search reports...">
+                        <input type="text" id="issueSearch" placeholder="Search reports..." oninput="filterIssueReports()">
                     </div>
-                    <select class="admin-select">
+                    <select class="admin-select" id="issueCategoryFilter" onchange="filterIssueReports()">
                         <option value="">All Categories</option>
                         <option>Road Damage</option>
                         <option>Water Supply Issue</option>
                         <option>Waste Management</option>
                         <option>Street Light Problem</option>
                         <option>Drainage Problem</option>
+                        <option>Other</option>
+                    </select>
+                    <select class="admin-select" id="issueBarangayFilter" onchange="filterIssueReports()">
+                        <option value="">All Barangays</option>
                     </select>
                 </div>
 
                 <div class="admin-table-card">
                     <div class="table-card-header">
-                        <h4>Community Issue Reports</h4>
+                        <h4 id="reportsPanelHeading">Community Issue Reports</h4>
                     </div>
                     <div class="table-responsive">
                         <table class="admin-table">
@@ -438,6 +456,7 @@
                                     <th>Category</th>
                                     <th>Location</th>
                                     <th>Description</th>
+                                    <th>Barangay</th>
                                     <th>Reported By</th>
                                     <th>Date</th>
                                     <th>Status</th>
@@ -457,7 +476,7 @@
                 <div class="panel-toolbar">
                     <div class="toolbar-search">
                         <i class="fas fa-search"></i>
-                        <input type="text" placeholder="Search workers...">
+                        <input type="text" id="workerSearch" placeholder="Search workers..." oninput="filterWorkers()">
                     </div>
                     <button class="btn-admin-primary" onclick="openAddWorkerModal()">
                         <i class="fas fa-plus"></i> Add Worker
@@ -474,7 +493,7 @@
                                     <th>#</th>
                                     <th>Name</th>
                                     <th>Specialty</th>
-                                    <th>Category</th>
+                                    <th>Barangay</th>
                                     <th>Phone</th>
                                     <th>Rating</th>
                                     <th>Status</th>
@@ -489,69 +508,71 @@
                 </div>
             </div>
 
-            <!-- ===== SETTINGS PANEL ===== -->
+                        <!-- ===== SETTINGS PANEL ===== -->
             <div class="admin-panel" id="panel-settings">
                 <div class="settings-grid">
-                    <div class="settings-card">
+                    <div class="settings-card" id="settingsCityCard">
                         <h4><i class="fas fa-city"></i> City Information</h4>
-                        <form>
+                        <form id="citySettingsForm">
                             <div class="settings-field">
                                 <label>City Name</label>
-                                <input type="text" class="admin-input" value="BiÃ±an City">
+                                <input type="text" class="admin-input" id="settingsCityName" value="Biñan City" required>
                             </div>
                             <div class="settings-field">
                                 <label>Province</label>
-                                <input type="text" class="admin-input" value="Laguna">
+                                <input type="text" class="admin-input" id="settingsProvince" value="Laguna" required>
                             </div>
                             <div class="settings-field">
                                 <label>Contact Email</label>
-                                <input type="email" class="admin-input" value="hub@binan.gov.ph">
+                                <input type="email" class="admin-input" id="settingsContactEmail" value="hub@binan.gov.ph" required>
                             </div>
                             <div class="settings-field">
                                 <label>Contact Phone</label>
-                                <input type="text" class="admin-input" value="(049) 123-4567">
+                                <input type="text" class="admin-input" id="settingsContactPhone" value="(049) 123-4567">
                             </div>
-                            <button type="button" class="btn-admin-primary mt-3">Save Changes</button>
+                            <button type="submit" class="btn-admin-primary mt-3">Save Changes</button>
                         </form>
                     </div>
-                    <div class="settings-card">
+
+                    <div class="settings-card" id="settingsPortalCard">
                         <h4><i class="fas fa-map"></i> Portal Information</h4>
-                        <form>
+                        <form id="portalSettingsForm">
                             <div class="settings-field">
                                 <label>Primary Barangay</label>
-                                <input type="text" class="admin-input" value="Barangay Poblacion">
+                                <input type="text" class="admin-input" id="settingsPrimaryBarangay" value="Barangay Poblacion" required>
                             </div>
                             <div class="settings-field">
                                 <label>Portal Launch Date</label>
-                                <input type="date" class="admin-input" value="2026-01-01">
+                                <input type="date" class="admin-input" id="settingsLaunchDate" value="2026-01-01">
                             </div>
                             <div class="settings-field">
                                 <label>Project Status</label>
-                                <select class="admin-select admin-input">
+                                <select class="admin-select admin-input" id="settingsProjectStatus">
                                     <option>Active</option>
                                     <option>Planning</option>
                                     <option>Expansion</option>
                                 </select>
                             </div>
-                            <button type="button" class="btn-admin-primary mt-3">Save Changes</button>
+                            <button type="submit" class="btn-admin-primary mt-3">Save Changes</button>
                         </form>
                     </div>
-                    <div class="settings-card">
+
+                    <div class="settings-card" id="settingsAccountCard">
                         <h4><i class="fas fa-shield-halved"></i> Admin Account</h4>
-                        <form>
+                        <form id="adminAccountForm">
                             <div class="settings-field">
                                 <label>Admin Name</label>
-                                <input type="text" class="admin-input" value="System Administrator">
+                                <input type="text" class="admin-input" id="settingsAdminName" value="System Administrator" required>
                             </div>
                             <div class="settings-field">
                                 <label>Admin Email</label>
-                                <input type="email" class="admin-input" value="admin@binan.gov.ph">
+                                <input type="email" class="admin-input" id="settingsAdminEmail" value="admin@binan.gov.ph" readonly>
                             </div>
                             <div class="settings-field">
                                 <label>New Password</label>
-                                <input type="password" class="admin-input" placeholder="Leave blank to keep current">
+                                <input type="password" class="admin-input" id="settingsAdminPassword" placeholder="Leave blank to keep current">
                             </div>
-                            <button type="button" class="btn-admin-primary mt-3">Update Account</button>
+                            <button type="submit" class="btn-admin-primary mt-3">Update Account</button>
                         </form>
                     </div>
                 </div>
@@ -696,6 +717,57 @@
         </div>
     </div>
 
+
+    <!-- Add Worker Modal -->
+    <div class="admin-modal-overlay" id="addWorkerModalOverlay">
+        <div class="admin-modal" id="addWorkerModal">
+            <div class="admin-modal-header">
+                <h4><i class="fas fa-briefcase"></i> Add Worker</h4>
+                <button class="admin-modal-close" onclick="closeModal('addWorkerModalOverlay')"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <div class="admin-modal-body">
+                <form id="addWorkerForm">
+                    <div class="modal-field">
+                        <label>Full Name *</label>
+                        <input type="text" class="admin-input" id="workerFullName" placeholder="e.g. Juan Dela Cruz" required>
+                    </div>
+                    <div class="modal-field">
+                        <label>Service Specialty *</label>
+                        <input type="text" class="admin-input" id="workerSpecialty" placeholder="e.g. Plumbing" required>
+                    </div>
+                    <div class="modal-field">
+                        <label>Barangay *</label>
+                        <select class="admin-select admin-input" id="workerBarangay" required>
+                            <option value="">Select Barangay</option>
+                        </select>
+                    </div>
+                    <div class="modal-field">
+                        <label>Phone</label>
+                        <input type="text" class="admin-input" id="workerPhone" placeholder="09XXXXXXXXX">
+                    </div>
+                    <div class="modal-field">
+                        <label>Email</label>
+                        <input type="email" class="admin-input" id="workerEmail" placeholder="worker@email.com">
+                    </div>
+                    <div class="modal-field">
+                        <label>Status</label>
+                        <select class="admin-select admin-input" id="workerStatus">
+                            <option value="active" selected>Active</option>
+                            <option value="pending">Pending</option>
+                        </select>
+                    </div>
+                    <div class="admin-modal-footer">
+                        <button type="button" class="btn-admin-secondary"
+                            onclick="closeModal('addWorkerModalOverlay')">Cancel</button>
+                        <button type="submit" class="btn-admin-primary">
+                            <i class="fas fa-plus"></i> Add Worker
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
     <!-- Toast notification communicates result of database-backed admin actions. -->
     <!-- Toast notification -->
     <div class="admin-toast d-none" id="adminToast">
@@ -711,6 +783,27 @@
 </body>
 
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

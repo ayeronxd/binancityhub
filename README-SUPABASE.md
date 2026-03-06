@@ -1,4 +1,4 @@
-﻿# Binan City Hub - Supabase Migration
+# Binan City Hub - Supabase Migration
 
 This project now reads operational data and analytics from Supabase instead of hardcoded arrays.
 
@@ -35,3 +35,8 @@ This project now reads operational data and analytics from Supabase instead of h
 ## Notes
 - If Supabase keys are not configured, the UI shows a configuration warning and avoids fake records.
 - RLS enforces public read-only access for announcements/workers and authenticated inserts for resident services.
+
+## Role Metadata (Required for Unified Admin)
+- Store role in Supabase Auth user metadata: `role` (`super_admin` or `barangay_admin`).
+- Store barangay scope in metadata: `barangay_name` (example: `Poblacion`).
+- `admin.js` reads metadata via `supabase.auth.getUser()` and applies barangay filtering using `.eq('barangay_name', userBarangay)` with fallback to `barangay` for legacy schemas.

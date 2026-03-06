@@ -97,7 +97,7 @@ button {
 }
 
 body.logged-in .user-only {
-    display: flex !important;
+    display: unset !important;
 }
 
 body.logged-in .guest-only {
@@ -745,6 +745,41 @@ body.logged-in .user-only.block-el {
 
 .portal-table tbody tr:hover td {
     background: rgba(255, 255, 255, 0.022);
+}
+
+/* Table alignment hardening for analytics/community sections. */
+#barangayCoverageTable,
+#recentReportsTable {
+    table-layout: fixed;
+}
+
+#barangayCoverageTable th,
+#barangayCoverageTable td,
+#recentReportsTable th,
+#recentReportsTable td {
+    vertical-align: middle;
+}
+
+#barangayCoverageTable th:nth-child(1),
+#barangayCoverageTable td:nth-child(1),
+#recentReportsTable th:nth-child(1),
+#recentReportsTable td:nth-child(1),
+#recentReportsTable th:nth-child(2),
+#recentReportsTable td:nth-child(2) {
+    text-align: left;
+}
+
+#barangayCoverageTable th:nth-child(n+2),
+#barangayCoverageTable td:nth-child(n+2),
+#recentReportsTable th:nth-child(3),
+#recentReportsTable td:nth-child(3),
+#recentReportsTable th:nth-child(4),
+#recentReportsTable td:nth-child(4) {
+    text-align: center;
+}
+
+#recentReportsTable td {
+    overflow-wrap: anywhere;
 }
 
 .tpill {
@@ -1953,4 +1988,16 @@ body.logged-in .user-only.block-el {
         grid-template-columns: 1fr;
     }
 }
+
+
+
+/* Logged-in display corrections per element type */
+body.logged-in #userTopbarActions { display: flex !important; }
+body.logged-in #mobUserInfo { display: flex !important; }
+body.logged-in .tnav-link.user-only { display: inline-flex !important; }
+body.logged-in li.user-only { display: list-item !important; }
+body.logged-in .apply-hint.user-only { display: inline !important; }
+body.logged-in .glass-card.user-only { display: block !important; }
+body.logged-in #reportForm.user-only { display: block !important; }
+
 

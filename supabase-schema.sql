@@ -213,6 +213,29 @@ using (
 create policy "super_admin_manage_profiles" on public.profiles for all to authenticated
 using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'super_admin'))
 with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'super_admin'));
+-- Resident verification support for barangay admins
+alter table public.profiles add column if not exists is_verified boolean not null default false;
+
+drop policy if exists barangay_admin_verify_residents on public.profiles;
+create policy "barangay_admin_verify_residents" on public.profiles for update to authenticated
+using (
+  role = 'resident'
+  and exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid()
+      and p.role = 'barangay_admin'
+      and p.barangay = public.profiles.barangay
+  )
+)
+with check (
+  role = 'resident'
+  and exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid()
+      and p.role = 'barangay_admin'
+      and p.barangay = public.profiles.barangay
+  )
+);
 
 -- Document requests
 create policy "resident_insert_own_doc_requests" on public.document_requests for insert to authenticated
@@ -282,10 +305,64 @@ using (
   )
 );
 
+
+-- Only assigned barangay admins can update issue status in their own barangay.
+drop policy if exists barangay_admin_update_issue_reports on public.issue_reports;
+create policy "barangay_admin_update_issue_reports" on public.issue_reports for update to authenticated
+using (
+  exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid()
+      and p.role = 'barangay_admin'
+      and p.barangay = coalesce(public.issue_reports.barangay, p.barangay)
+  )
+)
+with check (
+  exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid()
+      and p.role = 'barangay_admin'
+      and p.barangay = coalesce(public.issue_reports.barangay, p.barangay)
+  )
+);
 -- Workers and announcements management
-create policy "admin_manage_workers" on public.workers for all to authenticated
-using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('super_admin','barangay_admin')))
-with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('super_admin','barangay_admin')));
+drop policy if exists admin_manage_workers on public.workers;
+drop policy if exists super_admin_manage_workers on public.workers;
+drop policy if exists barangay_admin_manage_workers on public.workers;
+
+create policy "super_admin_manage_workers" on public.workers for all to authenticated
+using (
+  exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid()
+      and p.role = 'super_admin'
+  )
+)
+with check (
+  exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid()
+      and p.role = 'super_admin'
+  )
+);
+
+create policy "barangay_admin_manage_workers" on public.workers for all to authenticated
+using (
+  exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid()
+      and p.role = 'barangay_admin'
+      and p.barangay = coalesce(public.workers.barangay, p.barangay)
+  )
+)
+with check (
+  exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid()
+      and p.role = 'barangay_admin'
+      and p.barangay = coalesce(public.workers.barangay, p.barangay)
+  )
+);
 
 create policy "admin_manage_announcements" on public.announcements for all to authenticated
 using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('super_admin','barangay_admin')))
@@ -294,7 +371,6 @@ with check (exists (select 1 from public.profiles p where p.id = auth.uid() and 
 create policy "admin_manage_barangays" on public.barangays for all to authenticated
 using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'super_admin'))
 with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'super_admin'));
-
 -- Allow reading analytics view
 grant select on public.v_barangay_analytics to anon, authenticated;
 
@@ -328,3 +404,30 @@ values
 on conflict (name) do nothing;
 
 
+
+
+
+
+
+-- Resolved issue cleanup policies
+DROP POLICY IF EXISTS super_admin_delete_resolved_issue_reports ON public.issue_reports;
+CREATE POLICY "super_admin_delete_resolved_issue_reports" ON public.issue_reports FOR DELETE TO authenticated
+USING (
+  status = 'resolved'
+  AND EXISTS (
+    SELECT 1 FROM public.profiles p
+    WHERE p.id = auth.uid() AND p.role = 'super_admin'
+  )
+);
+
+DROP POLICY IF EXISTS barangay_admin_delete_resolved_issue_reports ON public.issue_reports;
+CREATE POLICY "barangay_admin_delete_resolved_issue_reports" ON public.issue_reports FOR DELETE TO authenticated
+USING (
+  status = 'resolved'
+  AND EXISTS (
+    SELECT 1 FROM public.profiles p
+    WHERE p.id = auth.uid()
+      AND p.role = 'barangay_admin'
+      AND p.barangay = coalesce(public.issue_reports.barangay, p.barangay)
+  )
+);

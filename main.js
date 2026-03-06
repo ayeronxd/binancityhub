@@ -9,6 +9,7 @@
 // - Role and ownership controls are enforced by RLS, not only by frontend checks.
 
 const BCH_USER_KEY = "bch_user";
+const BCH_WORKER_BROWSE_PREFIX = "bch_worker_browse_";
 
 // Session user from Supabase Auth. Null means guest mode.
 let currentUser = null;
@@ -27,7 +28,13 @@ let analyticsData = {
   totals: { residents: 0, docs: 0, workers: 0, unresolvedReports: 0 },
   docTrend: { labels: [], id: [], clearance: [], seeker: [] },
   docType: { labels: [], values: [] },
-  skills: { labels: [], values: [] }
+  skills: { labels: [], values: [] },
+  kpiTrends: {
+    residents: { cls: "neutral", icon: "minus", text: "No data yet" },
+    docs: { cls: "neutral", icon: "minus", text: "No data yet" },
+    workers: { cls: "neutral", icon: "minus", text: "No data yet" },
+    issues: { cls: "neutral", icon: "minus", text: "No data yet" }
+  }
 };
 
 // Boot order intentionally loads auth first, then data, then renders.
@@ -40,11 +47,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupWorkerFilters();
   setupReportForm();
   setupApplyForm();
+  setupProfileForm();
   setupStatusBarClock();
-  checkUrlHash();
 
   await initAuthState();
+  checkUrlHash();
   await loadPortalData();
+  populateWorkerFilters();
 
   animateCounters();
   renderAnalyticsCharts();
@@ -61,6 +70,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderUserApplications();
     renderPortalAnnouncementsMini();
     renderDocRecentApps();
+    renderPortalStatCards();
   }
 });
 
@@ -87,21 +97,24 @@ async function initAuthState() {
 
   const { data: profile } = await supabaseClient
     .from("profiles")
-    .select("id,full_name,email,barangay,role")
+    .select("id,full_name,email,phone,barangay,barangay_name,role,created_at")
     .eq("id", currentUser.id)
     .maybeSingle();
 
   currentProfile = profile || null;
   const parsedName = parseFullName(profile?.full_name || currentUser.user_metadata?.full_name || "Resident");
 
+  const resolvedBarangay = profile?.barangay_name || profile?.barangay || currentUser.user_metadata?.barangay_name || currentUser.user_metadata?.barangay || "Barangay Poblacion";
   const viewUser = {
     firstName: parsedName.firstName,
     lastName: parsedName.lastName,
     email: profile?.email || currentUser.email,
-    barangay: profile?.barangay || currentUser.user_metadata?.barangay || "Barangay Poblacion"
+    barangay: resolvedBarangay,
+    memberSince: profile?.created_at
   };
 
   applyLoggedInUI(viewUser);
+  closeLoginModal();
 }
 
 // Loads all portal modules in parallel for faster first render.
@@ -128,7 +141,7 @@ async function loadPortalData() {
 async function loadWorkers() {
   const { data } = await supabaseClient
     .from("workers")
-    .select("id,full_name,service_category,category,contact_phone,contact_email,rating_avg,reviews_count,is_active")
+    .select("id,full_name,service_category,category,barangay,contact_phone,contact_email,rating_avg,reviews_count,is_active")
     .eq("is_active", true)
     .order("full_name", { ascending: true });
 
@@ -136,6 +149,7 @@ async function loadWorkers() {
     id: row.id,
     name: row.full_name,
     specialty: row.service_category,
+    barangay: row.barangay || "Unassigned",
     category: row.category || "blue-collar",
     phone: row.contact_phone || "N/A",
     email: row.contact_email || "N/A",
@@ -162,12 +176,36 @@ async function loadAnnouncements() {
 
 // Aggregates top cards + barangay table from SQL view/table counts.
 async function loadBarangaysAndMetrics() {
-  const [barangaysRes, profilesCount, docsCount, workersCount, reportsCount] = await Promise.all([
+  const { previousStart, currentStart, nextStart } = monthBoundaries();
+
+  const [
+    barangaysRes,
+    profilesCount,
+    docsCount,
+    workersCount,
+    reportsCount,
+    residentsCurrentMonth,
+    residentsPreviousMonth,
+    docsCurrentMonth,
+    docsPreviousMonth,
+    workersCurrentMonth,
+    workersPreviousMonth,
+    issuesCurrentMonth,
+    issuesPreviousMonth
+  ] = await Promise.all([
     supabaseClient.from("v_barangay_analytics").select("name,residents,docs,workers,status").order("name", { ascending: true }),
     supabaseClient.from("profiles").select("id", { count: "exact", head: true }).eq("role", "resident"),
-    supabaseClient.from("document_requests").select("id", { count: "exact", head: true }),
+    supabaseClient.from("document_requests").select("id", { count: "exact", head: true }).in("status", ["approved", "completed", "archived"]),
     supabaseClient.from("workers").select("id", { count: "exact", head: true }).eq("is_active", true),
-    supabaseClient.from("issue_reports").select("id", { count: "exact", head: true }).neq("status", "resolved")
+    supabaseClient.from("issue_reports").select("id", { count: "exact", head: true }).neq("status", "resolved"),
+    supabaseClient.from("profiles").select("id", { count: "exact", head: true }).eq("role", "resident").gte("created_at", currentStart.toISOString()).lt("created_at", nextStart.toISOString()),
+    supabaseClient.from("profiles").select("id", { count: "exact", head: true }).eq("role", "resident").gte("created_at", previousStart.toISOString()).lt("created_at", currentStart.toISOString()),
+    supabaseClient.from("document_requests").select("id", { count: "exact", head: true }).in("status", ["approved", "completed", "archived"]).gte("created_at", currentStart.toISOString()).lt("created_at", nextStart.toISOString()),
+    supabaseClient.from("document_requests").select("id", { count: "exact", head: true }).in("status", ["approved", "completed", "archived"]).gte("created_at", previousStart.toISOString()).lt("created_at", currentStart.toISOString()),
+    supabaseClient.from("workers").select("id", { count: "exact", head: true }).eq("is_active", true).gte("created_at", currentStart.toISOString()).lt("created_at", nextStart.toISOString()),
+    supabaseClient.from("workers").select("id", { count: "exact", head: true }).eq("is_active", true).gte("created_at", previousStart.toISOString()).lt("created_at", currentStart.toISOString()),
+    supabaseClient.from("issue_reports").select("id", { count: "exact", head: true }).gte("created_at", currentStart.toISOString()).lt("created_at", nextStart.toISOString()),
+    supabaseClient.from("issue_reports").select("id", { count: "exact", head: true }).gte("created_at", previousStart.toISOString()).lt("created_at", currentStart.toISOString())
   ]);
 
   barangaysData = (barangaysRes.data || []).map((b) => ({
@@ -185,10 +223,21 @@ async function loadBarangaysAndMetrics() {
     unresolvedReports: reportsCount.count || 0
   };
 
+  analyticsData.kpiTrends = {
+    residents: buildMoMTrend(residentsCurrentMonth.count || 0, residentsPreviousMonth.count || 0),
+    docs: buildMoMTrend(docsCurrentMonth.count || 0, docsPreviousMonth.count || 0),
+    workers: buildMoMTrend(workersCurrentMonth.count || 0, workersPreviousMonth.count || 0),
+    issues: buildMoMTrend(issuesCurrentMonth.count || 0, issuesPreviousMonth.count || 0, {
+      lowerIsBetter: true,
+      labelSuffix: "reports vs last month"
+    })
+  };
+
   setCounterTargetByIndex(0, analyticsData.totals.residents);
   setCounterTargetByIndex(1, analyticsData.totals.docs);
   setCounterTargetByIndex(2, analyticsData.totals.workers);
   setCounterTargetByIndex(3, analyticsData.totals.unresolvedReports);
+  renderAnalyticsTrends();
 }
 
 async function loadIssueReports() {
@@ -265,6 +314,76 @@ async function loadChartData() {
   analyticsData.skills.values = topSkills.map((i) => i[1]);
 }
 
+function monthBoundaries() {
+  const now = new Date();
+  const currentStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const previousStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const nextStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  return { previousStart, currentStart, nextStart };
+}
+
+function buildMoMTrend(currentValue, previousValue, options = {}) {
+  const lowerIsBetter = Boolean(options.lowerIsBetter);
+  const labelSuffix = options.labelSuffix || "vs last month";
+
+  if (currentValue === 0 && previousValue === 0) {
+    return { cls: "neutral", icon: "minus", text: "No activity yet" };
+  }
+
+  if (previousValue === 0) {
+    return {
+      cls: lowerIsBetter ? "down" : "up",
+      icon: "arrow-up",
+      text: `${currentValue} this month`
+    };
+  }
+
+  const delta = currentValue - previousValue;
+  const pct = (delta / previousValue) * 100;
+  if (Math.abs(pct) < 0.5) {
+    return { cls: "neutral", icon: "minus", text: "Stable vs last month" };
+  }
+
+  const isIncrease = pct > 0;
+  const good = lowerIsBetter ? !isIncrease : isIncrease;
+  const cls = good ? "up" : "down";
+  const icon = isIncrease ? "arrow-up" : "arrow-down";
+  const sign = isIncrease ? "+" : "-";
+  const rounded = Math.abs(pct) >= 10 ? Math.round(Math.abs(pct)) : Number(Math.abs(pct).toFixed(1));
+
+  return { cls, icon, text: `${sign}${rounded}% ${labelSuffix}` };
+}
+
+function setTrendBadge(id, trend) {
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  const cls = trend?.cls || "neutral";
+  const icon = trend?.icon || "minus";
+  const text = trend?.text || "No data yet";
+
+  el.classList.remove("up", "down", "neutral");
+  el.classList.add("sc-trend", cls);
+  el.innerHTML = `<i class="fas fa-${icon}"></i> ${escapeHtml(text)}`;
+}
+
+function renderAnalyticsTrends() {
+  setTrendBadge("trendResidents", analyticsData.kpiTrends.residents);
+  setTrendBadge("trendDocs", analyticsData.kpiTrends.docs);
+  setTrendBadge("trendWorkers", analyticsData.kpiTrends.workers);
+  setTrendBadge("trendIssues", analyticsData.kpiTrends.issues);
+}
+
+function resetAnalyticsTrendsToDefault() {
+  analyticsData.kpiTrends = {
+    residents: { cls: "neutral", icon: "minus", text: "No data yet" },
+    docs: { cls: "neutral", icon: "minus", text: "No data yet" },
+    workers: { cls: "neutral", icon: "minus", text: "No data yet" },
+    issues: { cls: "neutral", icon: "minus", text: "No data yet" }
+  };
+  renderAnalyticsTrends();
+}
+
 async function loadUserApplications() {
   if (!currentUser || !supabaseClient) return;
 
@@ -296,6 +415,9 @@ function applyLoggedInUI(user) {
   setText("profileName", `${user.firstName || ""} ${user.lastName || ""}`.trim() || firstName);
   setText("profileEmail", user.email || "-");
   setText("profileBarangay", user.barangay || "Barangay Poblacion");
+
+  const memberSince = user.memberSince ? new Date(user.memberSince).toLocaleDateString("en-PH", { month: "long", year: "numeric" }) : "-";
+  setText("profileMemberSince", memberSince);
 }
 
 async function doLogout() {
@@ -307,6 +429,7 @@ async function doLogout() {
 
   currentUser = null;
   currentProfile = null;
+  renderPortalStatCards();
   document.body.classList.remove("logged-in");
   switchTab("analytics");
   showToast("Logged out successfully.");
@@ -317,9 +440,14 @@ async function doLogout() {
 function checkUrlHash() {
   const hash = window.location.hash.replace("#", "");
   const validTabs = ["analytics", "workers", "documents", "community", "myportal"];
-  if (hash && validTabs.includes(hash)) {
-    switchTab(hash);
+  if (!hash || !validTabs.includes(hash)) return;
+
+  // Avoid stale guest modal when session is already authenticated.
+  if (hash === "myportal" && currentUser) {
+    closeLoginModal();
   }
+
+  switchTab(hash);
 }
 
 function setupTopbarScroll() {
@@ -511,7 +639,14 @@ function renderTopWorkersSidebar() {
   const el = document.getElementById("topWorkersList");
   if (!el) return;
 
-  const top = [...workersData].sort((a, b) => b.rating - a.rating).slice(0, 5);
+  const top = [...workersData]
+    .sort((a, b) => {
+      const scoreA = Number(a.reviews || 0) > 0 ? Number(a.rating || 0) : -1;
+      const scoreB = Number(b.reviews || 0) > 0 ? Number(b.rating || 0) : -1;
+      return scoreB - scoreA;
+    })
+    .slice(0, 5);
+
   el.innerHTML = top.map((w) => `
     <div class="top-worker-item" onclick="handleWorkerContact('${escapeAttr(w.name)}','${escapeAttr(w.specialty)}','${escapeAttr(w.phone)}','${escapeAttr(w.email)}')">
       <div class="tw-avatar"><i class="fas fa-user"></i></div>
@@ -519,7 +654,7 @@ function renderTopWorkersSidebar() {
         <span class="tw-name">${escapeHtml(w.name)}</span>
         <span class="tw-spec">${escapeHtml(w.specialty)}</span>
       </div>
-      <span class="tw-rating">${Number(w.rating || 0).toFixed(1)}</span>
+      <span class="tw-rating">${Number(w.reviews || 0) > 0 ? Number(w.rating || 0).toFixed(1) : "-"}</span>
     </div>
   `).join("");
 }
@@ -539,8 +674,8 @@ function renderWorkers(workers) {
         <div class="worker-avatar"><i class="fas fa-user"></i></div>
         <p class="worker-name">${escapeHtml(w.name)}</p>
         <p class="worker-specialty">${escapeHtml(w.specialty)}</p>
-        <span class="worker-category">${w.category === "blue-collar" ? "Blue Collar" : "White Collar"}</span>
-        <div class="worker-rating">${Number(w.rating || 0).toFixed(1)} · <span style="color:rgba(255,255,255,0.3)">${Number(w.reviews || 0)} reviews</span></div>
+        <span class="worker-category">${escapeHtml(w.barangay || "Unassigned Barangay")}</span>
+        <div class="worker-rating">${Number(w.reviews || 0) > 0 ? `${Number(w.rating || 0).toFixed(1)} · <span style="color:rgba(255,255,255,0.3)">${Number(w.reviews || 0)} reviews</span>` : "<span style='color:rgba(255,255,255,0.45)'>No ratings yet</span>"}</div>
       </div>
       <div class="worker-contact">
         <button class="btn-contact" onclick="handleWorkerContact('${escapeAttr(w.name)}','${escapeAttr(w.specialty)}','${escapeAttr(w.phone)}','${escapeAttr(w.email)}')"><i class="fas fa-phone"></i> Call</button>
@@ -562,6 +697,39 @@ function setupWorkerFilters() {
   });
 }
 
+function populateWorkerFilters() {
+  const barangayFilter = document.getElementById("categoryFilter");
+  const specialtyFilter = document.getElementById("specialtyFilter");
+  if (!barangayFilter || !specialtyFilter) return;
+
+  const activeBarangays = [...new Set(
+    barangaysData
+      .filter((b) => String(b.status || "").toLowerCase() === "active")
+      .map((b) => String(b.name || "").trim())
+      .filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b));
+
+  const fallbackBarangays = [...new Set(workersData.map((w) => String(w.barangay || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+  const barangayOptions = activeBarangays.length ? activeBarangays : fallbackBarangays;
+
+  const prevBarangay = barangayFilter.value;
+  barangayFilter.innerHTML = `<option value="">All Barangays</option>${barangayOptions
+    .map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
+    .join("")}`;
+  if (prevBarangay && barangayOptions.includes(prevBarangay)) barangayFilter.value = prevBarangay;
+
+  const specialties = [...new Set(workersData.map((w) => String(w.specialty || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+  const prevSpecialty = specialtyFilter.value;
+  specialtyFilter.innerHTML = `<option value="">All Specialties</option>${specialties
+    .map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
+    .join("")}`;
+  if (prevSpecialty && specialties.some((s) => s.toLowerCase() === prevSpecialty.toLowerCase())) {
+    specialtyFilter.value = prevSpecialty;
+  }
+}
+
 function applyWorkerFilters() {
   const term = (document.getElementById("workerSearch")?.value || "").toLowerCase();
   const cat = document.getElementById("categoryFilter")?.value || "";
@@ -569,7 +737,7 @@ function applyWorkerFilters() {
 
   const filtered = workersData.filter((w) => {
     const ms = w.name.toLowerCase().includes(term) || w.specialty.toLowerCase().includes(term);
-    const mc = !cat || w.category === cat;
+    const mc = !cat || String(w.barangay || "").toLowerCase() === String(cat).toLowerCase();
     const msp = !spec || w.specialty.toLowerCase() === spec.toLowerCase();
     return ms && mc && msp;
   });
@@ -588,6 +756,8 @@ function handleWorkerContact(name, specialty, phone, email) {
   setText("contactSpec", specialty);
   setText("contactPhoneTxt", phone);
   setText("contactEmailTxt", email);
+  incrementWorkerBrowseCount();
+  renderPortalStatCards();
 
   const phoneEl = document.getElementById("contactPhone");
   const emailEl = document.getElementById("contactEmail");
@@ -634,6 +804,87 @@ function closeApplyModal() {
   document.getElementById("applyForm")?.reset();
 }
 
+// Profile editor keeps resident details editable from My Portal.
+function setupProfileForm() {
+  document.getElementById("profileEditBtn")?.addEventListener("click", () => {
+    if (!currentUser) {
+      requireLogin("portal");
+      return;
+    }
+    openProfileModal();
+  });
+
+  document.getElementById("profileEditForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    if (!currentUser || !supabaseClient) {
+      showToast("Please login to update your profile.");
+      return;
+    }
+
+    const fullName = document.getElementById("profileEditFullName")?.value.trim() || "";
+    const barangay = document.getElementById("profileEditBarangay")?.value.trim() || "";
+    const phone = document.getElementById("profileEditPhone")?.value.trim() || null;
+
+    if (!fullName || !barangay) {
+      showToast("Full name and barangay are required.");
+      return;
+    }
+
+    let payload = { full_name: fullName, barangay, phone };
+    let { error } = await supabaseClient.from("profiles").update(payload).eq("id", currentUser.id);
+
+    if (error && String(error.message || "").toLowerCase().includes("column") && String(error.message || "").toLowerCase().includes("barangay")) {
+      payload = { full_name: fullName, barangay_name: barangay, phone };
+      ({ error } = await supabaseClient.from("profiles").update(payload).eq("id", currentUser.id));
+    }
+
+    if (error) {
+      showToast(error.message);
+      return;
+    }
+
+    const { data: refreshed } = await supabaseClient
+      .from("profiles")
+      .select("id,full_name,email,phone,barangay,barangay_name,role,created_at")
+      .eq("id", currentUser.id)
+      .maybeSingle();
+
+    currentProfile = refreshed || currentProfile;
+
+    const parsedName = parseFullName(currentProfile?.full_name || fullName);
+    const resolvedBarangay = currentProfile?.barangay_name || currentProfile?.barangay || barangay;
+    applyLoggedInUI({
+      firstName: parsedName.firstName,
+      lastName: parsedName.lastName,
+      email: currentProfile?.email || currentUser.email,
+      barangay: resolvedBarangay,
+      memberSince: currentProfile?.created_at
+    });
+
+    closeProfileModal();
+    showToast("Profile updated successfully.");
+  });
+}
+
+function openProfileModal() {
+  const nameInput = document.getElementById("profileEditFullName");
+  const emailInput = document.getElementById("profileEditEmail");
+  const barangayInput = document.getElementById("profileEditBarangay");
+  const phoneInput = document.getElementById("profileEditPhone");
+
+  if (nameInput) nameInput.value = currentProfile?.full_name || [currentUser?.user_metadata?.full_name, currentUser?.user_metadata?.name].find(Boolean) || "";
+  if (emailInput) emailInput.value = currentUser?.email || currentProfile?.email || "";
+  if (barangayInput) barangayInput.value = currentProfile?.barangay_name || currentProfile?.barangay || currentUser?.user_metadata?.barangay_name || currentUser?.user_metadata?.barangay || "";
+  if (phoneInput) phoneInput.value = currentProfile?.phone || "";
+
+  document.getElementById("profileModal")?.classList.add("open");
+}
+
+function closeProfileModal() {
+  document.getElementById("profileModal")?.classList.remove("open");
+}
+
 // Resident document request submit handler (insert -> refresh tracker).
 function setupApplyForm() {
   document.getElementById("applyForm")?.addEventListener("submit", async (e) => {
@@ -662,6 +913,7 @@ function setupApplyForm() {
     await loadUserApplications();
     renderUserApplications();
     renderDocRecentApps();
+    renderPortalStatCards();
     showToast(`${applyModalDocName} application submitted.`);
   });
 }
@@ -772,6 +1024,8 @@ document.addEventListener("click", (e) => {
   if (e.target.id === "loginModal") closeLoginModal();
   if (e.target.id === "applyModal") closeApplyModal();
   if (e.target.id === "contactModal") closeContactModal();
+  if (e.target.id === "profileModal") closeProfileModal();
+
 });
 
 document.addEventListener("keydown", (e) => {
@@ -779,6 +1033,7 @@ document.addEventListener("keydown", (e) => {
   closeLoginModal();
   closeApplyModal();
   closeContactModal();
+  closeProfileModal();
   closeMobile();
 });
 
@@ -897,5 +1152,68 @@ function resetAnalyticsCountersToZero() {
   setCounterTargetByIndex(1, 0);
   setCounterTargetByIndex(2, 0);
   setCounterTargetByIndex(3, 0);
+  resetAnalyticsTrendsToDefault();
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function getWorkerBrowseStorageKey() {
+  if (!currentUser?.id) return "";
+  return `${BCH_WORKER_BROWSE_PREFIX}${currentUser.id}`;
+}
+
+function getWorkerBrowseCount() {
+  try {
+    const key = getWorkerBrowseStorageKey();
+    if (!key) return 0;
+    return Math.max(0, parseInt(localStorage.getItem(key) || "0", 10) || 0);
+  } catch (_err) {
+    return 0;
+  }
+}
+
+function incrementWorkerBrowseCount() {
+  try {
+    const key = getWorkerBrowseStorageKey();
+    if (!key) return;
+    const next = getWorkerBrowseCount() + 1;
+    localStorage.setItem(key, String(next));
+  } catch (_err) {
+    // noop: localStorage may be disabled in strict browser mode
+  }
+}
+
+function renderPortalStatCards() {
+  const totalApps = userApplications.length;
+  const pending = userApplications.filter((a) => a.status === "Pending" || a.status === "Processing").length;
+  const completed = userApplications.filter((a) => a.status === "Completed").length;
+  const workersBrowsed = currentUser ? getWorkerBrowseCount() : 0;
+
+  setText("portalStatApplications", String(totalApps));
+  setText("portalStatPending", String(pending));
+  setText("portalStatCompleted", String(completed));
+  setText("portalStatWorkersBrowsed", String(workersBrowsed));
+}
+
+
+
+
 
