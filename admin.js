@@ -932,10 +932,11 @@ function renderIssueReportsTable() {
       : "";
 
     const actionButtons = isBarangayAdmin()
-      ? `${r.status !== "Processing" && r.status !== "Completed" ? `<button class="tbl-btn tbl-btn-approve" onclick="setIssueStatus('${r.id}','processing')"><i class="fas fa-play"></i> Process</button>` : ""}
+      ? `<button class="tbl-btn tbl-btn-view" onclick="showIssueDetails('${r.id}')"><i class="fas fa-eye"></i> View</button>
+         ${r.status !== "Processing" && r.status !== "Completed" ? `<button class="tbl-btn tbl-btn-approve" onclick="setIssueStatus('${r.id}','processing')"><i class="fas fa-play"></i> Process</button>` : ""}
          ${r.status !== "Completed" ? `<button class="tbl-btn tbl-btn-view" onclick="setIssueStatus('${r.id}','resolved')"><i class="fas fa-circle-check"></i> Resolve</button>` : ""}
          ${deleteBtn}`
-      : `${canDelete ? deleteBtn : `<button class="tbl-btn tbl-btn-view" onclick="showAdminToast('Super Admin view is read-only for issue status.')"><i class="fas fa-eye"></i></button>`}`;
+      : `${canDelete ? deleteBtn : `<button class="tbl-btn tbl-btn-view" onclick="showIssueDetails('${r.id}')"><i class="fas fa-eye"></i> View</button>`}`;
 
     return `
     <tr>
@@ -997,6 +998,27 @@ async function deleteIssueReport(id) {
   renderAllPanels();
   showAdminToast("Resolved issue removed from the queue.");
 }
+
+function showIssueDetails(id) {
+  const issue = issueReports.find((r) => String(r.id) === String(id));
+  if (!issue) {
+    showAdminToast("Issue not found.");
+    return;
+  }
+
+  // Populate modal fields with issue data
+  document.getElementById("issueCategory").textContent = escapeHtml(issue.category || "-");
+  document.getElementById("issueLocation").textContent = escapeHtml(issue.location || "-");
+  document.getElementById("issueDescription").textContent = issue.description || "-";
+  document.getElementById("issueBarangay").textContent = escapeHtml(issue.barangay || "-");
+  document.getElementById("issueReporter").textContent = escapeHtml(issue.reporter || "-");
+  document.getElementById("issueDate").textContent = escapeHtml(issue.date || "-");
+  document.getElementById("issueStatus").textContent = escapeHtml(issue.status || "-");
+
+  // Open the modal
+  openModal("viewIssueModalOverlay");
+}
+
 function renderWorkersTable(filter = "") {
   const tbody = document.getElementById("workersAdminBody");
   if (!tbody) return;

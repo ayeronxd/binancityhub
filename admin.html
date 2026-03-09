@@ -809,6 +809,52 @@
             </div>
         </div>
     </div>
+
+    <!-- View Issue Details Modal -->
+    <div class="admin-modal-overlay" id="viewIssueModalOverlay">
+        <div class="admin-modal" id="viewIssueModal">
+            <div class="admin-modal-header">
+                <h4><i class="fas fa-triangle-exclamation"></i> Issue Report Details</h4>
+                <button class="admin-modal-close" onclick="closeModal('viewIssueModalOverlay')"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <div class="admin-modal-body">
+                <div class="modal-field">
+                    <label>Category</label>
+                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500" id="issueCategory">-</div>
+                </div>
+                <div class="modal-field">
+                    <label>Location</label>
+                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500" id="issueLocation">-</div>
+                </div>
+                <div class="modal-field">
+                    <label>Description</label>
+                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500;white-space:pre-wrap;word-break:break-word;max-height:150px;overflow-y:auto" id="issueDescription">-</div>
+                </div>
+                <div class="modal-field">
+                    <label>Barangay</label>
+                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500" id="issueBarangay">-</div>
+                </div>
+                <div class="modal-field">
+                    <label>Reported By</label>
+                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500" id="issueReporter">-</div>
+                </div>
+                <div class="modal-field">
+                    <label>Date Reported</label>
+                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500" id="issueDate">-</div>
+                </div>
+                <div class="modal-field">
+                    <label>Status</label>
+                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500" id="issueStatus">-</div>
+                </div>
+                <div class="admin-modal-footer">
+                    <button type="button" class="btn-admin-secondary"
+                        onclick="closeModal('viewIssueModalOverlay')">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast notification communicates result of database-backed admin actions. -->
     <!-- Toast notification -->
     <div class="admin-toast d-none" id="adminToast">
