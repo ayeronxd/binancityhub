@@ -54,6 +54,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   checkUrlHash();
   await loadPortalData();
   populateWorkerFilters();
+  populateReportBarangayOptions();
 
   animateCounters();
   renderAnalyticsCharts();
@@ -97,14 +98,14 @@ async function initAuthState() {
 
   const { data: profile } = await supabaseClient
     .from("profiles")
-    .select("id,full_name,email,phone,barangay,barangay_name,role,created_at")
+    .select("id,full_name,email,phone,barangay,role,created_at")
     .eq("id", currentUser.id)
     .maybeSingle();
 
   currentProfile = profile || null;
   const parsedName = parseFullName(profile?.full_name || currentUser.user_metadata?.full_name || "Resident");
 
-  const resolvedBarangay = profile?.barangay_name || profile?.barangay || currentUser.user_metadata?.barangay_name || currentUser.user_metadata?.barangay || "Barangay Poblacion";
+  const resolvedBarangay = profile?.barangay || currentUser.user_metadata?.barangay || "Barangay Poblacion";
   const viewUser = {
     firstName: parsedName.firstName,
     lastName: parsedName.lastName,
@@ -846,14 +847,14 @@ function setupProfileForm() {
 
     const { data: refreshed } = await supabaseClient
       .from("profiles")
-      .select("id,full_name,email,phone,barangay,barangay_name,role,created_at")
+      .select("id,full_name,email,phone,barangay,role,created_at")
       .eq("id", currentUser.id)
       .maybeSingle();
 
     currentProfile = refreshed || currentProfile;
 
     const parsedName = parseFullName(currentProfile?.full_name || fullName);
-    const resolvedBarangay = currentProfile?.barangay_name || currentProfile?.barangay || barangay;
+    const resolvedBarangay = currentProfile?.barangay || barangay;
     applyLoggedInUI({
       firstName: parsedName.firstName,
       lastName: parsedName.lastName,
@@ -875,7 +876,7 @@ function openProfileModal() {
 
   if (nameInput) nameInput.value = currentProfile?.full_name || [currentUser?.user_metadata?.full_name, currentUser?.user_metadata?.name].find(Boolean) || "";
   if (emailInput) emailInput.value = currentUser?.email || currentProfile?.email || "";
-  if (barangayInput) barangayInput.value = currentProfile?.barangay_name || currentProfile?.barangay || currentUser?.user_metadata?.barangay_name || currentUser?.user_metadata?.barangay || "";
+  if (barangayInput) barangayInput.value = currentProfile?.barangay || currentUser?.user_metadata?.barangay || "";
   if (phoneInput) phoneInput.value = currentProfile?.phone || "";
 
   document.getElementById("profileModal")?.classList.add("open");
@@ -898,7 +899,7 @@ function setupApplyForm() {
     const purpose = document.getElementById("applyPurpose")?.value || "General request";
     const { error } = await supabaseClient.from("document_requests").insert({
       resident_id: currentUser.id,
-      barangay: currentProfile?.barangay || "Barangay Poblacion",
+      barangay: currentProfile?.barangay || currentUser?.user_metadata?.barangay || "Barangay Poblacion",
       request_type: applyModalDocName,
       purpose,
       status: "submitted"
@@ -959,9 +960,15 @@ function setupReportForm() {
       return;
     }
 
+    const barangay = document.getElementById("reportBarangay")?.value;
     const category = document.getElementById("reportCategory")?.value || "General";
     const location = document.getElementById("reportLocation")?.value || "Not specified";
     const description = document.getElementById("reportDescription")?.value || "";
+
+    if (!barangay) {
+      showToast("Please select a barangay.");
+      return;
+    }
 
     const { error } = await supabaseClient.from("issue_reports").insert({
       resident_id: currentUser.id,
@@ -969,7 +976,7 @@ function setupReportForm() {
       location,
       description,
       status: "pending",
-      barangay: currentProfile?.barangay || "Barangay Poblacion"
+      barangay
     });
 
     if (error) {
@@ -979,10 +986,40 @@ function setupReportForm() {
 
     e.target.reset();
     await loadIssueReports();
+    populateReportBarangayOptions();
     renderReportsTable();
     showToast("Issue report submitted successfully.");
   });
 }
+
+async function populateReportBarangayOptions() {
+  if (!supabaseClient) return;
+
+  const select = document.getElementById("reportBarangay");
+  if (!select) return;
+
+  const { data } = await supabaseClient
+    .from("barangays")
+    .select("name")
+    .eq("status", "active")
+    .order("name", { ascending: true });
+
+  if (!data?.length) return;
+
+  const currentValue = select.value;
+  select.innerHTML = '<option value="">Select barangay...</option>';
+  data.forEach((item) => {
+    const display = item.name;
+    const value = display;
+
+    select.insertAdjacentHTML("beforeend", `<option value="${value}">${display}</option>`);
+  });
+
+  if (currentValue) {
+    select.value = currentValue;
+  }
+}
+
 
 function renderReportsTable() {
   const tbody = document.getElementById("reportsTableBody");

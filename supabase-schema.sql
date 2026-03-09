@@ -193,6 +193,9 @@ alter table public.issue_reports enable row level security;
 create policy "public_read_workers" on public.workers for select using (is_active = true);
 create policy "public_read_announcements" on public.announcements for select using (true);
 create policy "public_read_barangays" on public.barangays for select using (true);
+create policy "public_read_profiles" on public.profiles for select using (true);
+create policy "public_read_document_requests" on public.document_requests for select using (true);
+create policy "public_read_issue_reports" on public.issue_reports for select using (true);
 
 -- Profiles
 create policy "profiles_select_own" on public.profiles for select to authenticated using (id = auth.uid());

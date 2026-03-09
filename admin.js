@@ -398,6 +398,7 @@ async function loadIssueReports() {
     location: r.location,
     description: r.description,
     reporter: nameMap.get(r.resident_id) || "Resident",
+    barangay: r.barangay,
     date: formatDate(new Date(r.created_at)),
     status: mapReportStatus(r.status)
   }));
