@@ -48,6 +48,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupReportForm();
   setupApplyForm();
   setupProfileForm();
+  setupChangePasswordForm();
   setupStatusBarClock();
 
   await initAuthState();
@@ -886,6 +887,77 @@ function closeProfileModal() {
   document.getElementById("profileModal")?.classList.remove("open");
 }
 
+function showChangePasswordForm() {
+  closeProfileModal();
+  document.getElementById("changePasswordModal")?.classList.add("open");
+  document.getElementById("changePasswordForm")?.reset();
+}
+
+function closeChangePasswordModal() {
+  document.getElementById("changePasswordModal")?.classList.remove("open");
+}
+
+function setupChangePasswordForm() {
+  document.getElementById("changePasswordForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    if (!currentUser || !supabaseClient) {
+      showToast("Please login to change password.");
+      return;
+    }
+
+    const currentPassword = document.getElementById("currentPassword")?.value || "";
+    const newPassword = document.getElementById("newPassword")?.value || "";
+    const confirmPassword = document.getElementById("confirmNewPassword")?.value || "";
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      showToast("All password fields are required.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      showToast("New passwords do not match.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      showToast("New password must be at least 6 characters.");
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      showToast("New password must be different from current password.");
+      return;
+    }
+
+    // First, verify the current password by attempting to sign in
+    const { error: signInError } = await supabaseClient.auth.signInWithPassword({
+      email: currentUser.email,
+      password: currentPassword
+    });
+
+    if (signInError) {
+      showToast("Current password is incorrect.");
+      return;
+    }
+
+    // If verification succeeds, update the password
+    const { error: updateError } = await supabaseClient.auth.updateUser({
+      password: newPassword
+    });
+
+    if (updateError) {
+      showToast(updateError.message || "Failed to update password.");
+      return;
+    }
+
+    // Clear the form and close modal
+    document.getElementById("changePasswordForm")?.reset();
+    closeChangePasswordModal();
+    showToast("Password changed successfully.");
+  });
+}
+
 // Resident document request submit handler (insert -> refresh tracker).
 function setupApplyForm() {
   document.getElementById("applyForm")?.addEventListener("submit", async (e) => {
@@ -1062,6 +1134,7 @@ document.addEventListener("click", (e) => {
   if (e.target.id === "applyModal") closeApplyModal();
   if (e.target.id === "contactModal") closeContactModal();
   if (e.target.id === "profileModal") closeProfileModal();
+  if (e.target.id === "changePasswordModal") closeChangePasswordModal();
 
 });
 
@@ -1071,6 +1144,7 @@ document.addEventListener("keydown", (e) => {
   closeApplyModal();
   closeContactModal();
   closeProfileModal();
+  closeChangePasswordModal();
   closeMobile();
 });
 

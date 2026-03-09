@@ -583,6 +583,47 @@
 
     <!-- ======= MODALS ======= -->
 
+    <!-- Notifications Modal -->
+    <div class="admin-modal-overlay" id="notificationsModalOverlay">
+        <div class="admin-modal" id="notificationsModal" style="max-width: 600px;">
+            <div class="admin-modal-header">
+                <h4><i class="fas fa-bell"></i> Notifications</h4>
+                <button class="admin-modal-close" onclick="closeModal('notificationsModalOverlay')"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <div class="admin-modal-body" style="max-height: 500px; overflow-y: auto;">
+                <!-- Recent Issues Section -->
+                <div class="notif-section">
+                    <h5 style="color: var(--primary-navy); margin-bottom: 12px; font-weight: 600;">
+                        <i class="fas fa-triangle-exclamation" style="color: var(--accent-gold); margin-right: 8px;"></i>
+                        Recent Issue Reports
+                    </h5>
+                    <div id="notifRecentIssues" style="margin-bottom: 20px;">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Documents Section -->
+                <div class="notif-section">
+                    <h5 style="color: var(--primary-navy); margin-bottom: 12px; font-weight: 600;">
+                        <i class="fas fa-file-alt" style="color: var(--accent-gold); margin-right: 8px;"></i>
+                        Pending Document Requests
+                    </h5>
+                    <div id="notifPendingDocs">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div style="text-align: center; color: var(--text-muted); font-size: 13px; margin-top: 16px;">
+                    <p>Last updated: <span id="notifLastUpdated">Just now</span></p>
+                </div>
+            </div>
+            <div class="admin-modal-footer">
+                <button type="button" class="btn-admin-secondary" onclick="closeModal('notificationsModalOverlay')">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Add Barangay Modal -->
     <div class="admin-modal-overlay" id="addBarangayModalOverlay">
         <div class="admin-modal" id="addBarangayModal">

@@ -590,15 +590,12 @@
                     <div class="mpw-main">
                         <div class="mpw-avatar"><i class="fas fa-user"></i></div>
                         <div>
-                            <h2>Good day, <span id="portalWelcomeName" class="gold-name">Resident</span> ðŸ‘‹</h2>
-                            <p>Welcome to your BiÃ±an City Hub portal. Here's your summary.</p>
+                            <h2>Good day, <span id="portalWelcomeName" class="gold-name">Resident</span></h2>
+                            <p>Welcome to your Biñan City Hub portal. Here's your summary.</p>
                             <p class="mpw-brgy"><i class="fas fa-map-marker-alt"></i> <span
                                     id="portalUserBarangay">â€”</span></p>
                         </div>
                     </div>
-                    <button class="btn-gold" onclick="openApplyModal('Barangay ID')">
-                        <i class="fas fa-file-pen"></i> Request Document
-                    </button>
                 </div>
 
                 <!-- User Stat Cards -->
@@ -637,13 +634,9 @@
                 <div class="glass-card" style="margin-bottom:18px">
                     <div class="gc-header">
                         <h4><i class="fas fa-clock-rotate-left"></i> Recent Applications</h4>
-                        <button class="btn-gold" style="font-size:12px;padding:7px 14px"
-                            onclick="openApplyModal('Barangay ID')">
-                            <i class="fas fa-plus"></i> New Request
-                        </button>
                     </div>
                     <div class="table-responsive">
-                        <table class="portal-table">
+                        <table class="portal-table" id="userApplicationsTable">
                             <thead>
                                 <tr>
                                     <th>Document Type</th>
@@ -692,9 +685,9 @@
     <div class="status-bar">
         <div class="sb-left">
             <span class="live-dot"></span>
-            <span>BiÃ±an City Hub â€” Live Portal</span>
+            <span>Biñan City Hub - Live Portal</span>
             <span class="sb-sep">|</span>
-            <span>Barangay Poblacion • City-Wide Portal</span>
+            <span>City-Wide Portal</span>
         </div>
         <div class="sb-right" id="statusBarTime"></div>
     </div>
@@ -797,6 +790,39 @@
                     <input type="text" id="profileEditPhone" class="glass-input" placeholder="09xxxxxxxxx">
                 </div>
                 <button type="submit" class="btn-gold w-full"><i class="fas fa-save"></i> Save Profile</button>
+            </form>
+            <div style="text-align:center;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1)">
+                <button type="button" class="btn-change-pwd" onclick="showChangePasswordForm()" style="background:none;border:none;color:var(--gold);font-size:13px;font-weight:700;cursor:pointer;padding:0">
+                    <i class="fas fa-key"></i> Change Password
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CHANGE PASSWORD MODAL ===== -->
+    <div class="modal-backdrop" id="changePasswordModal">
+        <div class="login-modal" style="max-width:440px">
+            <button class="modal-x" onclick="closeChangePasswordModal()"><i class="fas fa-times"></i></button>
+            <div class="modal-ico gold-ico"><i class="fas fa-key"></i></div>
+            <h3>Change Password</h3>
+            <p style="margin-bottom:20px">Enter your current password and set a new one.</p>
+            <form id="changePasswordForm" style="text-align:left">
+                <div class="glass-field">
+                    <label>Current Password</label>
+                    <input type="password" id="currentPassword" class="glass-input" placeholder="Enter current password" required>
+                </div>
+                <div style="text-align:center;margin-bottom:12px">
+                    <a href="login.html#forgot" style="font-size:12px;color:var(--gold);text-decoration:none">Forgot password?</a>
+                </div>
+                <div class="glass-field">
+                    <label>New Password</label>
+                    <input type="password" id="newPassword" class="glass-input" placeholder="Enter new password" required>
+                </div>
+                <div class="glass-field">
+                    <label>Confirm New Password</label>
+                    <input type="password" id="confirmNewPassword" class="glass-input" placeholder="Confirm new password" required>
+                </div>
+                <button type="submit" class="btn-gold w-full"><i class="fas fa-save"></i> Update Password</button>
             </form>
         </div>
     </div>

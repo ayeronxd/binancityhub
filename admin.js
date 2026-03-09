@@ -29,6 +29,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setHeaderDate();
   initSidebarNav();
   initMobileSidebar();
+  initNotificationButton();
   initFormHandlers();
 
   const allowed = await enforceAdminAccess();
@@ -543,6 +544,90 @@ function renderNotifIndicator() {
     issueReports.some((r) => r.status === "Pending" || r.status === "Processing");
   dot.style.display = hasPending ? "inline-flex" : "none";
 }
+
+// Render and display the notifications modal with recent issues and pending documents
+function renderNotifications() {
+  const recentIssuesDiv = document.getElementById("notifRecentIssues");
+  const pendingDocsDiv = document.getElementById("notifPendingDocs");
+  const lastUpdatedSpan = document.getElementById("notifLastUpdated");
+  
+  if (!recentIssuesDiv || !pendingDocsDiv) return;
+
+  // Get recent issue reports (last 5, sorted by date)
+  const recentIssues = issueReports
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 5);
+
+  // Get pending document requests (status = Pending or Processing)
+  const pendingDocs = docRequests.filter((r) => r.status === "Pending" || r.status === "Processing");
+
+  // Render recent issues
+  if (recentIssues.length === 0) {
+    recentIssuesDiv.innerHTML = '<div style="color: var(--text-muted); font-size: 13px; padding: 12px; background: var(--light-bg); border-radius: 6px;"><i class="fas fa-check-circle" style="color: var(--accent-gold); margin-right: 6px;"></i>No recent issues</div>';
+  } else {
+    recentIssuesDiv.innerHTML = recentIssues.map((issue) => `
+      <div style="padding: 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; background: #f8fafb;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+          <strong style="color: var(--primary-navy);">${escapeHtml(issue.category)}</strong>
+          ${statusPill(issue.status)}
+        </div>
+        <p style="margin: 0; font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">
+          <strong>Location:</strong> ${escapeHtml(issue.location)}
+        </p>
+        <p style="margin: 0; font-size: 13px; color: var(--text-dark); margin-bottom: 6px; max-height: 60px; overflow: hidden; text-overflow: ellipsis;">
+          ${escapeHtml(issue.description)}
+        </p>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-muted); margin-top: 8px;">
+          <span><strong>${escapeHtml(issue.barangay || "-")}</strong> · Reported by ${escapeHtml(issue.reporter)}</span>
+          <span>${escapeHtml(issue.date)}</span>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  // Render pending documents
+  if (pendingDocs.length === 0) {
+    pendingDocsDiv.innerHTML = '<div style="color: var(--text-muted); font-size: 13px; padding: 12px; background: var(--light-bg); border-radius: 6px;"><i class="fas fa-check-circle" style="color: var(--accent-gold); margin-right: 6px;"></i>No pending document requests</div>';
+  } else {
+    pendingDocsDiv.innerHTML = pendingDocs.map((doc) => `
+      <div style="padding: 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; background: #f8fafb;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+          <div>
+            <div style="font-size: 12px; color: var(--accent-gold); font-weight: 600; margin-bottom: 4px;">${escapeHtml(doc.ref)}</div>
+            <strong style="color: var(--primary-navy); font-size: 14px;">${escapeHtml(doc.type)}</strong>
+          </div>
+          ${statusPill(doc.status)}
+        </div>
+        <p style="margin: 0; font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">
+          <strong>Requested by:</strong> ${escapeHtml(doc.name)}
+        </p>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-muted); margin-top: 8px;">
+          <span><strong>${escapeHtml(doc.barangay)}</strong></span>
+          <span>${escapeHtml(doc.date)}</span>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  // Update last updated time
+  if (lastUpdatedSpan) {
+    lastUpdatedSpan.textContent = new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  }
+}
+
+// Initialize notification button click handler
+function initNotificationButton() {
+  const notifBtn = document.querySelector(".admin-notif-btn");
+  if (notifBtn) {
+    notifBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      renderNotifications();
+      openModal("notificationsModalOverlay");
+    });
+  }
+}
+
 function setHeaderDate() {
   const dateEl = document.getElementById("headerDate");
   if (!dateEl) return;

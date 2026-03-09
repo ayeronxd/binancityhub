@@ -749,14 +749,17 @@ body.logged-in .user-only.block-el {
 
 /* Table alignment hardening for analytics/community sections. */
 #barangayCoverageTable,
-#recentReportsTable {
+#recentReportsTable,
+#userApplicationsTable {
     table-layout: fixed;
 }
 
 #barangayCoverageTable th,
 #barangayCoverageTable td,
 #recentReportsTable th,
-#recentReportsTable td {
+#recentReportsTable td,
+#userApplicationsTable th,
+#userApplicationsTable td {
     vertical-align: middle;
 }
 
@@ -765,7 +768,9 @@ body.logged-in .user-only.block-el {
 #recentReportsTable th:nth-child(1),
 #recentReportsTable td:nth-child(1),
 #recentReportsTable th:nth-child(2),
-#recentReportsTable td:nth-child(2) {
+#recentReportsTable td:nth-child(2),
+#userApplicationsTable th:nth-child(1),
+#userApplicationsTable td:nth-child(1) {
     text-align: left;
 }
 
@@ -774,7 +779,9 @@ body.logged-in .user-only.block-el {
 #recentReportsTable th:nth-child(3),
 #recentReportsTable td:nth-child(3),
 #recentReportsTable th:nth-child(4),
-#recentReportsTable td:nth-child(4) {
+#recentReportsTable td:nth-child(4),
+#userApplicationsTable th:nth-child(n+2),
+#userApplicationsTable td:nth-child(n+2) {
     text-align: center;
 }
 
