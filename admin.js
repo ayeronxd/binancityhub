@@ -1,4 +1,4 @@
-﻿// =====================================
+// =====================================
 // BINAN CITY HUB - ADMIN DASHBOARD JS
 // =====================================
 // Purpose:
@@ -314,15 +314,18 @@ async function loadDocRequests() {
 
   const residentIds = [...new Set((data || []).map((r) => r.resident_id).filter(Boolean))];
   const { data: profiles } = residentIds.length
-    ? await supabaseClient.from("profiles").select("id,full_name").in("id", residentIds)
+    ? await supabaseClient.from("profiles").select("id,full_name,email").in("id", residentIds)
     : { data: [] };
 
   const nameMap = new Map((profiles || []).map((p) => [p.id, p.full_name]));
+  const emailMap = new Map((profiles || []).map((p) => [p.id, p.email]));
 
   docRequests = (data || []).map((r) => ({
     id: r.id,
     ref: String(r.id).slice(0, 8).toUpperCase(),
+    residentId: r.resident_id,
     name: nameMap.get(r.resident_id) || "Resident",
+    residentEmail: emailMap.get(r.resident_id) || "",
     type: r.request_type,
     barangay: r.barangay || "-",
     date: formatDate(new Date(r.created_at)),
@@ -813,6 +816,11 @@ function renderDocRequestsTable(typeFilter = "", statusFilter = "") {
   tbody.innerHTML = filtered.map((r) => {
     const showQueueActions = isBarangayAdmin() || isSuperAdmin();
     const canProcess = ["Pending", "Processing"].includes(r.status);
+    const safeId   = escapeAttr(r.id);
+    const safeDoc  = escapeAttr(r.type);
+    const safeName = escapeAttr(r.name);
+    const safeEmail = escapeAttr(r.residentEmail || "");
+    const safeStatus = escapeAttr(r.status);
 
     return `
     <tr>
@@ -823,9 +831,10 @@ function renderDocRequestsTable(typeFilter = "", statusFilter = "") {
       <td>${escapeHtml(r.date)}</td>
       <td>${statusPill(r.status)}</td>
       <td style="display:flex;gap:5px;flex-wrap:wrap;">
-        ${showQueueActions && canProcess ? `<button class="tbl-btn tbl-btn-approve" onclick="setDocumentStatus('${r.id}','approved')"><i class="fas fa-check"></i> Approve</button>` : ""}
-        ${showQueueActions && canProcess ? `<button class="tbl-btn tbl-btn-delete" onclick="setDocumentStatus('${r.id}','rejected')"><i class="fas fa-xmark"></i> Reject</button>` : ""}
-        ${showQueueActions ? `<button class="tbl-btn tbl-btn-view" onclick="setDocumentStatus('${r.id}','completed')"><i class="fas fa-box-archive"></i> Archive</button>` : ""}
+        ${showQueueActions && canProcess ? `<button class="tbl-btn tbl-btn-approve" onclick="setDocumentStatus('${safeId}','approved')"><i class="fas fa-check"></i> Approve</button>` : ""}
+        ${showQueueActions && canProcess ? `<button class="tbl-btn tbl-btn-delete" onclick="setDocumentStatus('${safeId}','rejected')"><i class="fas fa-xmark"></i> Reject</button>` : ""}
+        ${showQueueActions ? `<button class="tbl-btn tbl-btn-view" onclick="setDocumentStatus('${safeId}','completed')"><i class="fas fa-box-archive"></i> Archive</button>` : ""}
+        ${showQueueActions ? `<button class="tbl-btn tbl-btn-message" onclick="openMessageResidentModal('${safeId}','${safeDoc}','${safeName}','${safeEmail}','${safeStatus}')"><i class="fas fa-envelope"></i> Message</button>` : ""}
       </td>
     </tr>`;
   }).join("");
@@ -855,6 +864,80 @@ async function setDocumentStatus(id, status) {
 
   const label = status === "approved" ? "approved" : status === "rejected" ? "rejected" : "archived";
   showAdminToast(`Document request ${label}.`);
+}
+
+// ── Message Resident ────────────────────────────────────────────────────────
+
+let msgResidentContext = { id: null, email: "", doc: "", name: "" };
+
+// Pre-fills the modal with context-aware default message templates.
+function openMessageResidentModal(docId, docName, residentName, residentEmail, currentStatus) {
+  msgResidentContext = { id: docId, email: residentEmail, doc: docName, name: residentName };
+
+  document.getElementById("msgResidentTo").textContent = residentEmail || "(no email on file)";
+  document.getElementById("msgResidentName").textContent = residentName;
+
+  // Build a helpful default message based on the current document status.
+  const adminName = currentProfile?.full_name || "Barangay Admin";
+  const templates = {
+    Approved:  `Hi ${residentName},\n\nYour ${docName} request (Ref: ${String(docId).slice(0,8).toUpperCase()}) has been APPROVED and is now ready for pick-up at the Barangay Hall.\n\nPlease bring a valid ID when claiming your document.\n\nThank you,\n${adminName}\nBiñan City Hub`,
+    Rejected:  `Hi ${residentName},\n\nWe regret to inform you that your ${docName} request (Ref: ${String(docId).slice(0,8).toUpperCase()}) could not be processed at this time.\n\nPlease visit the Barangay Hall for further assistance or resubmit with the required documents.\n\nThank you,\n${adminName}\nBiñan City Hub`,
+    Pending:   `Hi ${residentName},\n\nYour ${docName} request (Ref: ${String(docId).slice(0,8).toUpperCase()}) is currently being reviewed. We will notify you once it is ready.\n\nThank you for your patience.\n\n${adminName}\nBiñan City Hub`,
+    default:   `Hi ${residentName},\n\nThis is an update regarding your ${docName} request (Ref: ${String(docId).slice(0,8).toUpperCase()}).\n\n[Write your message here]\n\n${adminName}\nBiñan City Hub`
+  };
+
+  const textarea = document.getElementById("msgResidentBody");
+  if (textarea) textarea.value = templates[currentStatus] || templates.default;
+
+  openModal("messageResidentModalOverlay");
+}
+
+function closeMessageResidentModal() {
+  closeModal("messageResidentModalOverlay");
+}
+
+// Sends a mailto: link (opens admin's email client) and saves message to DB for audit trail.
+async function sendMessageToResident() {
+  const body   = (document.getElementById("msgResidentBody")?.value || "").trim();
+  const subject = document.getElementById("msgResidentSubject")?.value?.trim()
+                  || `Update on your ${msgResidentContext.doc} request – Biñan City Hub`;
+  const email  = msgResidentContext.email;
+
+  if (!body) {
+    showAdminToast("Please write a message before sending.");
+    return;
+  }
+  if (!email) {
+    showAdminToast("This resident does not have an email address on file.");
+    return;
+  }
+
+  // Trigger the OS default email client via a hidden anchor — window.open causes a blank tab in Chrome.
+  const mailtoLink = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const a = document.createElement("a");
+  a.href = mailtoLink;
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  // Also persist the message to the DB for an audit trail.
+  if (supabaseClient) {
+    const { error } = await supabaseClient.from("admin_messages").insert({
+      document_request_id: msgResidentContext.id || null,
+      recipient_email: email,
+      subject,
+      message: body,
+      sent_by: currentUser?.id || null,
+      created_at: new Date().toISOString()
+    });
+    if (error) {
+      console.warn("admin_messages insert failed (table may not exist yet):", error.message);
+    }
+  }
+
+  closeMessageResidentModal();
+  showAdminToast(`Message sent to ${email}.`);
 }
 
 async function verifyResident(profileId) {
@@ -1654,6 +1737,11 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+// Escapes values for safe use inside HTML attribute strings (single-quote delimited onclick args).
+function escapeAttr(value) {
+  return String(value || "").replaceAll("'", "\\'").replaceAll('"', "&quot;");
 }
 
 

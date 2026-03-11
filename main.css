@@ -1,4 +1,4 @@
-﻿/*
+/*
   File: main.css
   What this file does:
   - Styles the public/resident portal and tabbed content sections.
@@ -2006,5 +2006,437 @@ body.logged-in li.user-only { display: list-item !important; }
 body.logged-in .apply-hint.user-only { display: inline !important; }
 body.logged-in .glass-card.user-only { display: block !important; }
 body.logged-in #reportForm.user-only { display: block !important; }
+
+/* ====================================================
+   NOTIFICATION BELL
+   ==================================================== */
+.notif-bell-btn {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    background: rgba(212, 165, 116, 0.08);
+    border: 1px solid rgba(212, 165, 116, 0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gold);
+    font-size: 15px;
+    cursor: pointer;
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+
+.notif-bell-btn:hover {
+    background: rgba(212, 165, 116, 0.18);
+    transform: translateY(-1px);
+}
+
+.notif-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 18px;
+    height: 18px;
+    background: #e74c3c;
+    color: #fff;
+    border-radius: 100px;
+    font-size: 10px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border: 2px solid var(--navy-dark);
+    animation: badgePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes badgePop {
+    from { transform: scale(0); }
+    to   { transform: scale(1); }
+}
+
+/* ====================================================
+   NOTIFICATION PANEL
+   ==================================================== */
+.notif-panel {
+    position: fixed;
+    top: calc(var(--nav-h) + 8px);
+    right: 16px;
+    width: 360px;
+    max-height: 520px;
+    background: rgba(10, 24, 38, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(24px);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateY(-8px) scale(0.97);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.notif-panel.open {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    pointer-events: all;
+}
+
+.notif-panel-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1999;
+    background: transparent;
+    pointer-events: none; /* never block clicks unless explicitly activated */
+    display: block !important; /* always in the DOM; interactivity controlled by pointer-events */
+}
+
+.notif-panel-overlay.active {
+    pointer-events: all;
+}
+
+
+.notif-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    flex-shrink: 0;
+}
+
+.notif-panel-header h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--white);
+    margin: 0;
+}
+
+.notif-mark-read {
+    background: none;
+    border: none;
+    color: var(--gold);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: var(--transition);
+}
+
+.notif-mark-read:hover {
+    background: rgba(212, 165, 116, 0.1);
+}
+
+.notif-close-btn {
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    border-radius: 7px;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: var(--transition);
+}
+
+.notif-close-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--white);
+}
+
+.notif-panel-body {
+    overflow-y: auto;
+    flex: 1;
+    padding: 8px 0;
+}
+
+.notif-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 40px 20px;
+    color: var(--text-dim);
+    font-size: 13px;
+}
+
+.notif-empty i {
+    font-size: 28px;
+    opacity: 0.5;
+}
+
+/* Notification item */
+.notif-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    cursor: default;
+    position: relative;
+    transition: var(--transition);
+}
+
+.notif-item:hover {
+    background: rgba(255, 255, 255, 0.025);
+}
+
+.notif-item.unread {
+    background: rgba(212, 165, 116, 0.05);
+}
+
+.notif-item-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    background: rgba(212, 165, 116, 0.12);
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.notif-item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.notif-item-subject {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.notif-item-body {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    line-height: 1.5;
+    margin-bottom: 5px;
+}
+
+.notif-item-time {
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.notif-unread-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--gold);
+    flex-shrink: 0;
+    margin-top: 4px;
+    align-self: flex-start;
+}
+
+/* ====================================================
+   TRACK BUTTON (replaces Download/View Details)
+   ==================================================== */
+.track-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(212, 165, 116, 0.1);
+    border: 1px solid rgba(212, 165, 116, 0.25);
+    color: var(--gold);
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.track-btn:hover {
+    background: rgba(212, 165, 116, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 12px rgba(212, 165, 116, 0.15);
+}
+
+.track-btn i {
+    font-size: 10px;
+}
+
+/* ====================================================
+   DOCUMENT STATUS TIMELINE
+   ==================================================== */
+.track-timeline {
+    display: flex;
+    align-items: center;
+}
+
+.track-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.ts-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+    transition: var(--transition);
+    position: relative;
+}
+
+.ts-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-align: center;
+    white-space: nowrap;
+    transition: var(--transition);
+}
+
+/* Done step */
+.track-step.ts-done .ts-dot {
+    background: var(--gold);
+    border-color: var(--gold);
+    box-shadow: 0 0 10px rgba(212, 165, 116, 0.35);
+}
+
+.track-step.ts-done .ts-dot::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -52%) rotate(45deg);
+    width: 6px;
+    height: 10px;
+    border: 2px solid #0f2236;
+    border-top: none;
+    border-left: none;
+}
+
+.track-step.ts-done .ts-label {
+    color: var(--gold);
+}
+
+/* Active step (current) */
+.track-step.ts-active .ts-dot {
+    border-color: var(--gold);
+    background: rgba(212, 165, 116, 0.15);
+    box-shadow: 0 0 0 4px rgba(212, 165, 116, 0.12);
+    animation: activePulse 2s ease infinite;
+}
+
+.track-step.ts-active .ts-label {
+    color: var(--white);
+    font-weight: 800;
+}
+
+@keyframes activePulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(212, 165, 116, 0.12); }
+    50%       { box-shadow: 0 0 0 8px rgba(212, 165, 116, 0.05); }
+}
+
+/* Rejected step */
+.track-step.ts-rejected .ts-dot {
+    border-color: #e74c3c;
+    background: rgba(231, 76, 60, 0.15);
+}
+
+.track-step.ts-rejected .ts-dot::after {
+    content: '✕';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 11px;
+    color: #e74c3c;
+    font-weight: 900;
+}
+
+.track-step.ts-rejected .ts-label {
+    color: #e74c3c;
+}
+
+/* Connector lines */
+.track-line {
+    flex: 1;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    margin-bottom: 22px;
+    transition: var(--transition);
+}
+
+.track-line.tl-done {
+    background: var(--gold);
+    box-shadow: 0 0 6px rgba(212, 165, 116, 0.3);
+}
+
+/* ====================================================
+   TRACK MODAL – ADMIN MESSAGE ITEMS
+   ==================================================== */
+.track-msg-item {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+}
+
+.tmi-subject {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 6px;
+}
+
+.tmi-body {
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.55;
+    margin-bottom: 8px;
+    white-space: pre-wrap;
+}
+
+.tmi-meta {
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.track-no-msg {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.25);
+    padding: 14px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.track-no-msg i {
+    font-size: 20px;
+    opacity: 0.5;
+}
+
 
 

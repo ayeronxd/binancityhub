@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -20,7 +20,7 @@
 
 <body class="auth-body">
 
-<!--
+    <!--
   File: login.html
   What this file does:
   - Provides login/signup UI for Supabase Auth.
@@ -60,7 +60,7 @@
                 <div class="auth-left-tagline">
                     <h2>Your barangay services,<br><span>now at your fingertips.</span></h2>
                     <p>Join thousands of Biñan City residents who are already using the digital portal to access
-                        government services online â€” fast, easy, and secure.</p>
+                        government services online - fast, easy, and secure.</p>
                 </div>
                 <div class="auth-features">
                     <div class="auth-feat">
@@ -81,7 +81,7 @@
                     </div>
                 </div>
                 <div class="auth-left-footer">
-                    <p><i class="fas fa-map-marker-alt"></i> Pilot: Barangay Poblacion, Biñan City</p>
+                    <p><i class="fas fa-map-marker-alt"></i>Biñan City</p>
                     <p>© 2026 Biñan City Government</p>
                 </div>
             </div>
@@ -149,7 +149,7 @@
                                 <span class="checkmark"></span>
                                 Remember me
                             </label>
-                            <a href="#" class="forgot-link">Forgot password?</a>
+                            <a href="#" class="forgot-link" id="forgotLink">Forgot password?</a>
                         </div>
 
                         <button type="submit" class="btn-auth-submit" id="loginSubmitBtn">
@@ -225,7 +225,7 @@
                                     <option value="langkiwa">Barangay Langkiwa</option>
                                     <option value="loma">Barangay Loma</option>
                                     <option value="sto-tomas">Barangay Sto. Tomas</option>
-                                </select>  
+                                </select>
                             </div>
                             <span class="field-error" id="signupBarangayError"></span>
                         </div>
@@ -290,6 +290,136 @@
                             class="switch-link">Login here</button></p>
                 </div>
 
+                <!-- ===== FORGOT PASSWORD FORM (Multi-Step) ===== -->
+                <div class="auth-form d-none" id="forgotForm">
+
+                    <!-- STEP 1: Enter Email -->
+                    <div id="forgotStep1">
+                        <div class="auth-form-header">
+                            <h3><i class="fas fa-key"
+                                    style="color:var(--accent-gold, #d4a574);margin-right:8px"></i>Forgot Password</h3>
+                            <p>Enter your registered email address and we'll find your account.</p>
+                        </div>
+                        <div class="form-group-auth">
+                            <label for="forgotEmail">Email Address</label>
+                            <div class="input-icon-wrap">
+                                <i class="fas fa-envelope input-icon"></i>
+                                <input type="email" id="forgotEmail" class="auth-input" placeholder="your@email.com"
+                                    autocomplete="email">
+                            </div>
+                            <span class="field-error" id="forgotEmailError"></span>
+                        </div>
+                        <button type="button" class="btn-auth-submit" id="forgotStep1Btn" onclick="handleForgotStep1()">
+                            <span class="btn-text"><i class="fas fa-search"></i> Find My Account</span>
+                            <span class="btn-loading d-none"><i class="fas fa-spinner fa-spin"></i> Searching...</span>
+                        </button>
+                    </div>
+
+                    <!-- STEP 2: Account Card + Send Code -->
+                    <div id="forgotStep2" class="d-none">
+                        <div class="auth-form-header">
+                            <h3>Confirm Your Account</h3>
+                            <p>Click your account below to receive a reset code by email.</p>
+                        </div>
+                        <div id="forgotAccountCard" class="forgot-account-card" onclick="handleForgotSendCode()">
+                            <div class="fac-avatar"><i class="fas fa-user-circle"></i></div>
+                            <div class="fac-info">
+                                <span class="fac-name" id="forgotAccountName">—</span>
+                                <span class="fac-email" id="forgotAccountEmail">—</span>
+                            </div>
+                            <i class="fas fa-chevron-right fac-arr"></i>
+                        </div>
+                        <button type="button" class="btn-auth-submit" id="forgotStep2Btn"
+                            onclick="handleForgotSendCode()">
+                            <span class="btn-text"><i class="fas fa-paper-plane"></i> Send Reset Code</span>
+                            <span class="btn-loading d-none"><i class="fas fa-spinner fa-spin"></i> Sending...</span>
+                        </button>
+                        <p style="text-align:center;margin-top:12px"><button onclick="forgotGoBack(1)"
+                                class="switch-link">Try a different email</button></p>
+                    </div>
+
+                    <!-- STEP 3: Enter OTP Code -->
+                    <div id="forgotStep3" class="d-none">
+                        <div class="auth-form-header">
+                            <h3>Enter Reset Code</h3>
+                            <p id="forgotStep3Sub">We sent a reset code to your email. Enter it below.</p>
+                        </div>
+                        <div class="form-group-auth">
+                            <label for="forgotOtp">Reset Code (from your email)</label>
+                            <div class="input-icon-wrap">
+                                <i class="fas fa-shield-halved input-icon"></i>
+                                <input type="text" id="forgotOtp" class="auth-input otp-input" placeholder="000000"
+                                    maxlength="8" autocomplete="one-time-code"
+                                    style="letter-spacing:6px;font-size:22px;font-weight:700;text-align:center">
+                            </div>
+                            <span class="field-error" id="forgotOtpError"></span>
+                        </div>
+                        <button type="button" class="btn-auth-submit" id="forgotStep3Btn"
+                            onclick="handleForgotVerifyOtp()">
+                            <span class="btn-text"><i class="fas fa-check-circle"></i> Verify Code</span>
+                            <span class="btn-loading d-none"><i class="fas fa-spinner fa-spin"></i> Verifying...</span>
+                        </button>
+                        <p style="text-align:center;margin-top:12px">
+                            <button onclick="handleForgotSendCode()" class="switch-link">Resend code</button>
+                            &nbsp;·&nbsp;
+                            <button onclick="forgotGoBack(1)" class="switch-link">Start over</button>
+                        </p>
+                    </div>
+
+                    <!-- STEP 4: New Password -->
+                    <div id="forgotStep4" class="d-none">
+                        <div class="auth-form-header">
+                            <h3>Set New Password</h3>
+                            <p>Choose a strong password for your account.</p>
+                        </div>
+                        <div class="form-row-two">
+                            <div class="form-group-auth">
+                                <label for="forgotNewPass">New Password</label>
+                                <div class="input-icon-wrap">
+                                    <i class="fas fa-lock input-icon"></i>
+                                    <input type="password" id="forgotNewPass" class="auth-input"
+                                        placeholder="Min. 8 characters" autocomplete="new-password">
+                                    <button type="button" class="toggle-pass"
+                                        onclick="togglePassword('forgotNewPass', this)" tabindex="-1"><i
+                                            class="fas fa-eye"></i></button>
+                                </div>
+                                <span class="field-error" id="forgotNewPassError"></span>
+                            </div>
+                            <div class="form-group-auth">
+                                <label for="forgotConfirmPass">Confirm Password</label>
+                                <div class="input-icon-wrap">
+                                    <i class="fas fa-lock input-icon"></i>
+                                    <input type="password" id="forgotConfirmPass" class="auth-input"
+                                        placeholder="Repeat password" autocomplete="new-password">
+                                    <button type="button" class="toggle-pass"
+                                        onclick="togglePassword('forgotConfirmPass', this)" tabindex="-1"><i
+                                            class="fas fa-eye"></i></button>
+                                </div>
+                                <span class="field-error" id="forgotConfirmPassError"></span>
+                            </div>
+                        </div>
+                        <!-- Password Strength (reuses signup bar IDs via separate set) -->
+                        <div class="password-strength" id="forgotPasswordStrength">
+                            <div class="strength-bars">
+                                <div class="strength-bar" id="fsb1"></div>
+                                <div class="strength-bar" id="fsb2"></div>
+                                <div class="strength-bar" id="fsb3"></div>
+                                <div class="strength-bar" id="fsb4"></div>
+                            </div>
+                            <span class="strength-label" id="forgotStrengthLabel">Enter a password</span>
+                        </div>
+                        <button type="button" class="btn-auth-submit" id="forgotStep4Btn"
+                            onclick="handleForgotSetPassword()">
+                            <span class="btn-text"><i class="fas fa-save"></i> Save New Password</span>
+                            <span class="btn-loading d-none"><i class="fas fa-spinner fa-spin"></i> Saving...</span>
+                        </button>
+                    </div>
+
+                    <div class="auth-divider"><span>or</span></div>
+                    <p class="auth-switch"><button onclick="switchTab('login')" class="switch-link">Back to
+                            Login</button></p>
+                </div>
+
                 <!-- Toast feedback is state-aware: success vs error styling controlled in auth.js/auth.css. -->
                 <!-- Success Toast -->
                 <div class="auth-toast d-none" id="authToast">
@@ -309,10 +439,3 @@
 </body>
 
 </html>
-
-
-
-
-
-
-

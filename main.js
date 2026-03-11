@@ -1,4 +1,4 @@
-﻿// ============================================
+// ============================================
 // BINAN CITY HUB - MAIN.JS (Supabase-backed)
 // ============================================
 // Purpose:
@@ -73,6 +73,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderPortalAnnouncementsMini();
     renderDocRecentApps();
     renderPortalStatCards();
+    await loadNotifications();
   }
 });
 
@@ -401,7 +402,7 @@ async function loadUserApplications() {
     doc: row.request_type,
     date: formatDate(new Date(row.created_at)),
     status: mapDocStatus(row.status),
-    action: row.status === "approved" || row.status === "completed" ? "Download" : "View Details"
+    rawStatus: row.status
   }));
 }
 
@@ -897,6 +898,28 @@ function closeChangePasswordModal() {
   document.getElementById("changePasswordModal")?.classList.remove("open");
 }
 
+// Sends a password-reset email to the currently signed-in user's address.
+// Because the user IS logged in, we know their email — no redirect needed.
+async function openPortalForgotPassword() {
+  if (!supabaseClient || !currentUser) {
+    showToast("Please make sure you are logged in.");
+    return;
+  }
+
+  const email = currentUser.email;
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + "/login.html#reset"
+  });
+
+  if (error) {
+    showToast(error.message || "Failed to send reset email.");
+    return;
+  }
+
+  closeChangePasswordModal();
+  showToast(`Password reset email sent to ${email}. Check your inbox and follow the link.`);
+}
+
 function setupChangePasswordForm() {
   document.getElementById("changePasswordForm")?.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -995,14 +1018,14 @@ function renderUserApplications() {
   const tbody = document.getElementById("userApplicationsBody");
   if (!tbody) return;
 
-  const pillMap = { Pending: "pending", Processing: "processing", Completed: "active", Resolved: "active" };
+  const pillMap = { Pending: "pending", Processing: "processing", Approved: "processing", Completed: "active", Resolved: "active" };
 
   tbody.innerHTML = userApplications.map((a) => `
     <tr>
       <td><strong>${escapeHtml(a.doc)}</strong></td>
       <td style="color:rgba(255,255,255,0.45)">${escapeHtml(a.date)}</td>
       <td><span class="tpill ${pillMap[a.status] || "pending"}">${escapeHtml(a.status)}</span></td>
-      <td><button class="gc-link-btn">${escapeHtml(a.action)}</button></td>
+      <td><button class="track-btn" onclick="openTrackModal('${escapeAttrJs(a.id)}','${escapeAttrJs(a.doc)}','${escapeAttrJs(a.date)}','${escapeAttrJs(a.status)}','${escapeAttrJs(a.rawStatus)}')"><i class="fas fa-map-marker-alt"></i> Track</button></td>
     </tr>
   `).join("");
 }
@@ -1011,13 +1034,13 @@ function renderDocRecentApps() {
   const tbody = document.getElementById("docRecentAppsBody");
   if (!tbody) return;
 
-  const pillMap = { Pending: "pending", Processing: "processing", Completed: "active" };
+  const pillMap = { Pending: "pending", Processing: "processing", Approved: "processing", Completed: "active" };
   tbody.innerHTML = userApplications.slice(0, 3).map((a) => `
     <tr>
       <td><strong>${escapeHtml(a.doc)}</strong></td>
       <td style="color:rgba(255,255,255,0.45)">${escapeHtml(a.date)}</td>
       <td><span class="tpill ${pillMap[a.status] || "pending"}">${escapeHtml(a.status)}</span></td>
-      <td><button class="gc-link-btn">${escapeHtml(a.action)}</button></td>
+      <td><button class="track-btn" onclick="openTrackModal('${escapeAttrJs(a.id)}','${escapeAttrJs(a.doc)}','${escapeAttrJs(a.date)}','${escapeAttrJs(a.status)}','${escapeAttrJs(a.rawStatus)}')"><i class="fas fa-map-marker-alt"></i> Track</button></td>
     </tr>
   `).join("");
 }
@@ -1192,7 +1215,8 @@ function mapDocStatus(status) {
   const v = String(status || "").toLowerCase();
   if (v === "submitted" || v === "pending") return "Pending";
   if (v === "reviewing" || v === "processing") return "Processing";
-  if (v === "completed" || v === "approved") return "Completed";
+  if (v === "approved") return "Approved";
+  if (v === "completed" || v === "archived") return "Completed";
   if (v === "rejected") return "Rejected";
   return "Pending";
 }
@@ -1323,6 +1347,244 @@ function renderPortalStatCards() {
   setText("portalStatCompleted", String(completed));
   setText("portalStatWorkersBrowsed", String(workersBrowsed));
 }
+
+// ─────────────────────────────────────────────────────────────
+// NOTIFICATION BELL SYSTEM
+// ─────────────────────────────────────────────────────────────
+
+let notifData = [];          // all admin_messages for this user
+let notifPanelOpen = false;
+
+// Loads messages from admin_messages table addressed to current user.
+async function loadNotifications() {
+  if (!supabaseClient || !currentUser) return;
+
+  const email = currentUser.email;
+  if (!email) return;
+
+  const { data, error } = await supabaseClient
+    .from("admin_messages")
+    .select("id, subject, message, created_at, document_request_id, read_at")
+    .eq("recipient_email", email)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) {
+    console.warn("[Notifications] Could not load admin_messages:", error.message);
+    return;
+  }
+
+  notifData = data || [];
+  renderNotifBell();
+}
+
+// Updates the bell badge count with unread messages.
+function renderNotifBell() {
+  const badge = document.getElementById("notifBadge");
+  if (!badge) return;
+
+  const unread = notifData.filter((n) => !n.read_at).length;
+
+  if (unread > 0) {
+    badge.textContent = unread > 99 ? "99+" : String(unread);
+    badge.classList.remove("d-none");
+  } else {
+    badge.classList.add("d-none");
+  }
+}
+
+function toggleNotifPanel() {
+  notifPanelOpen ? closeNotifPanel() : openNotifPanel();
+}
+
+function openNotifPanel() {
+  const panel   = document.getElementById("notifPanel");
+  const overlay = document.getElementById("notifOverlay");
+  if (!panel) return;
+
+  renderNotifPanel();
+  panel.classList.add("open");
+  overlay?.classList.add("active");
+  notifPanelOpen = true;
+
+  // Optimistically mark all as read in the UI after 1.5 s (they've seen them).
+  setTimeout(markAllNotifRead, 1500);
+}
+
+function closeNotifPanel() {
+  const panel   = document.getElementById("notifPanel");
+  const overlay = document.getElementById("notifOverlay");
+  panel?.classList.remove("open");
+  overlay?.classList.remove("active");
+  notifPanelOpen = false;
+}
+
+// Renders the list of notifications inside the panel.
+function renderNotifPanel() {
+  const body  = document.getElementById("notifPanelBody");
+  const empty = document.getElementById("notifEmpty");
+  if (!body) return;
+
+  if (!notifData.length) {
+    if (empty) empty.classList.remove("d-none");
+    return;
+  }
+  if (empty) empty.classList.add("d-none");
+
+  const items = notifData.map((n) => {
+    const isUnread = !n.read_at;
+    const when = n.created_at
+      ? new Date(n.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })
+      : "—";
+
+    return `
+      <div class="notif-item${isUnread ? " unread" : ""}">
+        <div class="notif-item-icon"><i class="fas fa-envelope-open-text"></i></div>
+        <div class="notif-item-content">
+          <div class="notif-item-subject">${escapeHtml(n.subject || "Message from Barangay")}</div>
+          <div class="notif-item-body">${escapeHtml((n.message || "").substring(0, 120))}${(n.message || "").length > 120 ? "…" : ""}</div>
+          <div class="notif-item-time"><i class="fas fa-clock"></i> ${when}</div>
+        </div>
+        ${isUnread ? '<span class="notif-unread-dot"></span>' : ""}
+      </div>`;
+  }).join("");
+
+  // Keep empty placeholder in the DOM but hidden, then prepend items.
+  body.innerHTML = items + (notifData.length ? "" : "");
+  if (empty) body.appendChild(empty);
+}
+
+// Marks all notifications as read in Supabase and updates the bell.
+async function markAllNotifRead() {
+  const unreadIds = notifData.filter((n) => !n.read_at).map((n) => n.id);
+  if (!unreadIds.length) return;
+
+  if (supabaseClient) {
+    await supabaseClient
+      .from("admin_messages")
+      .update({ read_at: new Date().toISOString() })
+      .in("id", unreadIds);
+  }
+
+  // Update local state.
+  notifData = notifData.map((n) => ({ ...n, read_at: n.read_at || new Date().toISOString() }));
+  renderNotifBell();
+  renderNotifPanel();
+}
+
+// ─────────────────────────────────────────────────────────────
+// DOCUMENT TRACK MODAL
+// ─────────────────────────────────────────────────────────────
+
+// Status → which timeline step is active (1-indexed).
+const STATUS_STEP_MAP = {
+  submitted: 1,
+  pending:   1,
+  processing: 2,
+  reviewing: 2,
+  under_review: 2,
+  approved: 3,
+  completed: 4,
+  archived: 4,
+  rejected: 2   // stops at Processing; dot turns red
+};
+
+async function openTrackModal(docId, docName, docDate, statusLabel, rawStatus) {
+  // Populate header.
+  setText("trackDocTitle", docName);
+  setText("trackDocDate", docDate);
+
+  // Status pill.
+  const pillMap = { Pending: "pending", Processing: "processing", Approved: "processing", Completed: "active", Rejected: "rejected" };
+  const statusEl = document.getElementById("trackDocStatus");
+  if (statusEl) {
+    statusEl.innerHTML = `<span class="tpill ${pillMap[statusLabel] || "pending"}">${escapeHtml(statusLabel)}</span>`;
+  }
+
+  // Timeline.
+  const step = STATUS_STEP_MAP[rawStatus] || 1;
+  const isRejected = rawStatus === "rejected";
+
+  [1, 2, 3, 4].forEach((n) => {
+    const stepEl = document.getElementById(`tStep${n}`);
+    const lineEl = document.getElementById(`tLine${n}`);
+
+    stepEl?.classList.remove("ts-active", "ts-done", "ts-rejected");
+    lineEl?.classList.remove("tl-done");
+
+    if (isRejected && n === step) {
+      stepEl?.classList.add("ts-rejected");
+    } else if (n < step) {
+      stepEl?.classList.add("ts-done");
+      if (lineEl) lineEl.classList.add("tl-done");
+    } else if (n === step) {
+      stepEl?.classList.add("ts-active");
+    }
+  });
+
+  // Open the modal.
+  document.getElementById("trackModal")?.classList.add("open");
+
+  // Load admin messages for this document.
+  await loadTrackMessages(docId);
+}
+
+async function loadTrackMessages(docId) {
+  const container = document.getElementById("trackMessages");
+  if (!container) return;
+
+  if (!supabaseClient || !docId) {
+    container.innerHTML = `<div class="track-no-msg"><i class="fas fa-comment-slash"></i>No messages yet</div>`;
+    return;
+  }
+
+  container.innerHTML = `<div style="text-align:center;padding:12px;color:rgba(255,255,255,0.3)"><i class="fas fa-spinner fa-spin"></i></div>`;
+
+  const { data, error } = await supabaseClient
+    .from("admin_messages")
+    .select("subject, message, created_at, sent_by")
+    .eq("document_request_id", docId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[Track Messages] Supabase error:", error.message, error.details);
+    container.innerHTML = `<div class="track-no-msg"><i class="fas fa-exclamation-circle"></i>Could not load messages (${escapeHtml(error.message)})</div>`;
+    return;
+  }
+
+  if (!data || !data.length) {
+    container.innerHTML = `<div class="track-no-msg"><i class="fas fa-comment-slash"></i>No messages yet</div>`;
+    return;
+  }
+
+  container.innerHTML = data.map((m) => {
+    const when = m.created_at
+      ? new Date(m.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })
+      : "";
+    return `
+      <div class="track-msg-item">
+        <div class="tmi-subject"><i class="fas fa-envelope" style="color:var(--gold);margin-right:5px"></i>${escapeHtml(m.subject || "Message")}</div>
+        <div class="tmi-body">${escapeHtml(m.message || "")}</div>
+        <div class="tmi-meta"><i class="fas fa-user-tie"></i> Barangay Admin &middot; ${when}</div>
+      </div>`;
+  }).join("");
+}
+
+function closeTrackModal() {
+  document.getElementById("trackModal")?.classList.remove("open");
+}
+
+// Safe string escape for JS onclick attribute values.
+function escapeAttrJs(str) {
+  return String(str || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+
 
 
 

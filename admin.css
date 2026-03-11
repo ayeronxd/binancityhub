@@ -1,4 +1,4 @@
-﻿/*
+/*
   File: admin.css
   What this file does:
   - Styles the admin sidebar, panels, tables, modals, and chart containers.
@@ -766,6 +766,16 @@ body {
 
 .tbl-btn-approve:hover {
     background: #1e9157;
+    color: var(--white);
+}
+
+.tbl-btn-message {
+    background: rgba(93, 173, 226, 0.12);
+    color: #1a6fa3;
+}
+
+.tbl-btn-message:hover {
+    background: #5dade2;
     color: var(--white);
 }
 
