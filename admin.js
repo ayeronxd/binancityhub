@@ -816,6 +816,7 @@ function renderDocRequestsTable(typeFilter = "", statusFilter = "") {
   tbody.innerHTML = filtered.map((r) => {
     const showQueueActions = isBarangayAdmin() || isSuperAdmin();
     const canProcess = ["Pending", "Processing"].includes(r.status);
+    const canArchive = ["Approved"].includes(r.status);
     const canDelete = ["Approved", "Rejected", "Completed", "Archived"].includes(r.status);
     const safeId   = escapeAttr(r.id);
     const safeDoc  = escapeAttr(r.type);
@@ -834,7 +835,7 @@ function renderDocRequestsTable(typeFilter = "", statusFilter = "") {
       <td style="display:flex;gap:5px;flex-wrap:wrap;">
         ${showQueueActions && canProcess ? `<button class="tbl-btn tbl-btn-approve" onclick="setDocumentStatus('${safeId}','approved')"><i class="fas fa-check"></i> Approve</button>` : ""}
         ${showQueueActions && canProcess ? `<button class="tbl-btn tbl-btn-delete" onclick="setDocumentStatus('${safeId}','rejected')"><i class="fas fa-xmark"></i> Reject</button>` : ""}
-        ${showQueueActions ? `<button class="tbl-btn tbl-btn-view" onclick="setDocumentStatus('${safeId}','completed')"><i class="fas fa-box-archive"></i> Archive</button>` : ""}
+        ${showQueueActions && canArchive ? `<button class="tbl-btn tbl-btn-view" onclick="setDocumentStatus('${safeId}','completed')"><i class="fas fa-box-archive"></i> Archive</button>` : ""}
         ${showQueueActions ? `<button class="tbl-btn tbl-btn-message" onclick="openMessageResidentModal('${safeId}','${safeDoc}','${safeName}','${safeEmail}','${safeStatus}')"><i class="fas fa-envelope"></i> Message</button>` : ""}
         ${showQueueActions && canDelete ? `<button class="tbl-btn tbl-btn-delete" onclick="deleteDocumentRequest('${safeId}')"><i class="fas fa-trash"></i> Delete</button>` : ""}
       </td>
