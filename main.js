@@ -1437,8 +1437,10 @@ function renderNotifPanel() {
       ? new Date(n.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })
       : "—";
 
+    const onClick = n.document_request_id ? `onclick="openTrackFromNotif('${escapeAttrJs(n.document_request_id)}')" style="cursor:pointer;"` : '';
+
     return `
-      <div class="notif-item${isUnread ? " unread" : ""}">
+      <div class="notif-item${isUnread ? " unread" : ""}" ${onClick}>
         <div class="notif-item-icon"><i class="fas fa-envelope-open-text"></i></div>
         <div class="notif-item-content">
           <div class="notif-item-subject">${escapeHtml(n.subject || "Message from Barangay")}</div>
@@ -1472,6 +1474,23 @@ async function markAllNotifRead() {
   renderNotifPanel();
 }
 
+function openTrackFromNotif(docId) {
+  closeNotifPanel();
+  const doc = userApplications.find(a => a.id === docId);
+  if (doc) {
+    openTrackModal(doc.id, doc.doc, doc.date, doc.status, doc.rawStatus);
+  } else {
+    // If it's an old document not in the regular list, we just fetch it real quick.
+    supabaseClient.from("document_requests").select("id, request_type, status, created_at").eq("id", docId).single()
+      .then(({data}) => {
+         if (data) {
+            const dateStr = formatDate(new Date(data.created_at));
+            openTrackModal(data.id, data.request_type, dateStr, mapDocStatus(data.status), data.status);
+         }
+      });
+  }
+}
+
 // ─────────────────────────────────────────────────────────────
 // DOCUMENT TRACK MODAL
 // ─────────────────────────────────────────────────────────────
@@ -1502,8 +1521,16 @@ async function openTrackModal(docId, docName, docDate, statusLabel, rawStatus) {
   }
 
   // Timeline.
-  const step = STATUS_STEP_MAP[rawStatus] || 1;
   const isRejected = rawStatus === "rejected";
+  const step = isRejected ? 2 : (STATUS_STEP_MAP[rawStatus] || 1);
+
+  // Restore defaults (in case last viewed doc was rejected)
+  const step2Label = document.querySelector('#tStep2 .ts-label');
+  if (step2Label) step2Label.textContent = "Processing";
+  ['tLine2', 'tStep3', 'tLine3', 'tStep4'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "";
+  });
 
   [1, 2, 3, 4].forEach((n) => {
     const stepEl = document.getElementById(`tStep${n}`);
@@ -1514,11 +1541,23 @@ async function openTrackModal(docId, docName, docDate, statusLabel, rawStatus) {
 
     if (isRejected && n === step) {
       stepEl?.classList.add("ts-rejected");
+      if (step2Label) step2Label.textContent = "Rejected";
+
+      // Hide subsequent steps so the timeline ends cleanly at Rejected
+      ['tLine2', 'tStep3', 'tLine3', 'tStep4'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = "none";
+      });
     } else if (n < step) {
       stepEl?.classList.add("ts-done");
       if (lineEl) lineEl.classList.add("tl-done");
     } else if (n === step) {
-      stepEl?.classList.add("ts-active");
+      // If completed (step 4), show it as done (checked), else show it as active (pulsing ring)
+      if (step === 4) {
+        stepEl?.classList.add("ts-done");
+      } else {
+        stepEl?.classList.add("ts-active");
+      }
     }
   });
 

@@ -816,6 +816,7 @@ function renderDocRequestsTable(typeFilter = "", statusFilter = "") {
   tbody.innerHTML = filtered.map((r) => {
     const showQueueActions = isBarangayAdmin() || isSuperAdmin();
     const canProcess = ["Pending", "Processing"].includes(r.status);
+    const canDelete = ["Approved", "Rejected", "Completed", "Archived"].includes(r.status);
     const safeId   = escapeAttr(r.id);
     const safeDoc  = escapeAttr(r.type);
     const safeName = escapeAttr(r.name);
@@ -835,6 +836,7 @@ function renderDocRequestsTable(typeFilter = "", statusFilter = "") {
         ${showQueueActions && canProcess ? `<button class="tbl-btn tbl-btn-delete" onclick="setDocumentStatus('${safeId}','rejected')"><i class="fas fa-xmark"></i> Reject</button>` : ""}
         ${showQueueActions ? `<button class="tbl-btn tbl-btn-view" onclick="setDocumentStatus('${safeId}','completed')"><i class="fas fa-box-archive"></i> Archive</button>` : ""}
         ${showQueueActions ? `<button class="tbl-btn tbl-btn-message" onclick="openMessageResidentModal('${safeId}','${safeDoc}','${safeName}','${safeEmail}','${safeStatus}')"><i class="fas fa-envelope"></i> Message</button>` : ""}
+        ${showQueueActions && canDelete ? `<button class="tbl-btn tbl-btn-delete" onclick="deleteDocumentRequest('${safeId}')"><i class="fas fa-trash"></i> Delete</button>` : ""}
       </td>
     </tr>`;
   }).join("");
@@ -866,13 +868,38 @@ async function setDocumentStatus(id, status) {
   showAdminToast(`Document request ${label}.`);
 }
 
+async function deleteDocumentRequest(id) {
+  if (!confirm("Are you sure you want to permanently delete this document request?")) return;
+
+  const { data, error } = await supabaseClient
+    .from("document_requests")
+    .delete()
+    .eq("id", id)
+    .select();
+
+  if (error) {
+    showAdminToast(error.message);
+    return;
+  }
+
+  // If data is empty, the RLS policy blocked the deletion (0 rows affected)
+  if (!data || data.length === 0) {
+    showAdminToast("Permission denied. Could not delete document (RLS block).");
+    return;
+  }
+
+  await loadDocRequests();
+  renderAllPanels();
+  showAdminToast("Document request deleted permanently.");
+}
+
 // ── Message Resident ────────────────────────────────────────────────────────
 
-let msgResidentContext = { id: null, email: "", doc: "", name: "" };
+let msgResidentContext = { id: null, email: "", doc: "", name: "", status: "" };
 
 // Pre-fills the modal with context-aware default message templates.
 function openMessageResidentModal(docId, docName, residentName, residentEmail, currentStatus) {
-  msgResidentContext = { id: docId, email: residentEmail, doc: docName, name: residentName };
+  msgResidentContext = { id: docId, email: residentEmail, doc: docName, name: residentName, status: currentStatus };
 
   document.getElementById("msgResidentTo").textContent = residentEmail || "(no email on file)";
   document.getElementById("msgResidentName").textContent = residentName;
@@ -933,6 +960,15 @@ async function sendMessageToResident() {
     });
     if (error) {
       console.warn("admin_messages insert failed (table may not exist yet):", error.message);
+    } else if (msgResidentContext.id) {
+      // User request: "when the admin messages the user the track timeline will be in completed stage"
+      // But we shouldn't mark "Rejected" documents as "Completed".
+      if (msgResidentContext.status !== "Rejected" && msgResidentContext.status !== "rejected") {
+        await supabaseClient.from("document_requests")
+          .update({ status: "completed" })
+          .eq("id", msgResidentContext.id);
+      }
+      filterDocuments(); // refresh admin table
     }
   }
 
