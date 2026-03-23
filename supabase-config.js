@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Shared Supabase client bootstrap.
  * What this file does:
  * - Stores project URL and anon key used by all pages.
@@ -7,8 +7,9 @@
  * - Prevents duplicate client creation and session drift across pages.
  * - Keeps connection config centralized for easier maintenance.
  */
-window.BCH_SUPABASE_URL = "https://aphdslbffeghmtudfbvg.supabase.co";
-window.BCH_SUPABASE_ANON_KEY = "sb_publishable_g8kZCqhujSgSk9wqCLSYrA_CeQaUajE";
+// Set these or inject them using a build tool, referencing the .env file.
+window.BCH_SUPABASE_URL = "YOUR_PROJECT_ID";
+window.BCH_SUPABASE_ANON_KEY = "YOUR_PUBLIC_ANON_KEY";
 
 // Returns a singleton Supabase client used by portal, auth, and admin scripts.
 window.getBchSupabaseClient = function getBchSupabaseClient() {
