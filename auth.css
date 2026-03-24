@@ -441,6 +441,16 @@ body.auth-body {
     appearance: none;
 }
 
+.auth-input[type="number"]::-webkit-inner-spin-button,
+.auth-input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.auth-input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
 .auth-input::placeholder {
     color: rgba(255, 255, 255, 0.25);
 }

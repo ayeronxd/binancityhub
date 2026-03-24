@@ -1,4 +1,4 @@
-# Binan City Hub - Supabase Migration
+# Barangay Hub - Supabase Migration
 
 This project now reads operational data and analytics from Supabase instead of hardcoded arrays.
 

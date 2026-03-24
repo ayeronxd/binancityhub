@@ -1,5 +1,5 @@
-﻿-- ================================================
--- BINAN CITY HUB - SUPABASE SCHEMA (Production)
+-- ================================================
+-- BARANGAY HUB - SUPABASE SCHEMA (Production)
 -- ================================================
 
 create extension if not exists pgcrypto;
@@ -28,6 +28,7 @@ create table if not exists public.profiles (
   full_name text not null,
   email text not null unique,
   phone text,
+  age integer,
   role portal_role not null default 'resident',
   barangay text not null,
   created_at timestamptz not null default now(),
@@ -124,12 +125,13 @@ begin
   full_name_value := coalesce(new.raw_user_meta_data ->> 'full_name', split_part(new.email,'@',1));
   barangay_value := coalesce(new.raw_user_meta_data ->> 'barangay', 'Barangay Poblacion');
 
-  insert into public.profiles (id, full_name, email, phone, role, barangay)
+  insert into public.profiles (id, full_name, email, phone, age, role, barangay)
   values (
     new.id,
     full_name_value,
     new.email,
     new.raw_user_meta_data ->> 'phone',
+    (new.raw_user_meta_data ->> 'age')::integer,
     'resident',
     barangay_value
   )
@@ -138,6 +140,7 @@ begin
     full_name = excluded.full_name,
     email = excluded.email,
     phone = excluded.phone,
+    age = excluded.age,
     barangay = excluded.barangay,
     updated_at = now();
 
@@ -190,32 +193,47 @@ alter table public.document_requests enable row level security;
 alter table public.issue_reports enable row level security;
 
 -- Public read-only portal data
+drop policy if exists "public_read_workers" on public.workers;
 create policy "public_read_workers" on public.workers for select using (is_active = true);
+
+drop policy if exists "public_read_announcements" on public.announcements;
 create policy "public_read_announcements" on public.announcements for select using (true);
+
+drop policy if exists "public_read_barangays" on public.barangays;
 create policy "public_read_barangays" on public.barangays for select using (true);
+
+drop policy if exists "public_read_profiles" on public.profiles;
 create policy "public_read_profiles" on public.profiles for select using (true);
+
+drop policy if exists "public_read_document_requests" on public.document_requests;
 create policy "public_read_document_requests" on public.document_requests for select using (true);
+
+drop policy if exists "public_read_issue_reports" on public.issue_reports;
 create policy "public_read_issue_reports" on public.issue_reports for select using (true);
 
 -- Profiles
+drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own" on public.profiles for select to authenticated using (id = auth.uid());
+
+drop policy if exists "profiles_update_own" on public.profiles;
 create policy "profiles_update_own" on public.profiles for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
 
-create policy "admin_view_profiles" on public.profiles for select to authenticated
-using (
-  exists (
-    select 1 from public.profiles p
-    where p.id = auth.uid()
-      and (
-        p.role = 'super_admin'
-        or (p.role = 'barangay_admin' and p.barangay = public.profiles.barangay)
-      )
-  )
-);
+-- Security definer function to safely check role without causing infinite recursion
+create or replace function public.is_super_admin()
+returns boolean as $$
+  select exists (
+    select 1 from public.profiles 
+    where id = auth.uid() and role = 'super_admin'
+  );
+$$ language sql security definer;
 
+-- admin_view_profiles is strictly redundant since public_read_profiles is using (true).
+drop policy if exists "admin_view_profiles" on public.profiles;
+
+drop policy if exists "super_admin_manage_profiles" on public.profiles;
 create policy "super_admin_manage_profiles" on public.profiles for all to authenticated
-using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'super_admin'))
-with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'super_admin'));
+using (public.is_super_admin())
+with check (public.is_super_admin());
 -- Resident verification support for barangay admins
 alter table public.profiles add column if not exists is_verified boolean not null default false;
 
@@ -241,6 +259,7 @@ with check (
 );
 
 -- Document requests
+drop policy if exists "resident_insert_own_doc_requests" on public.document_requests;
 create policy "resident_insert_own_doc_requests" on public.document_requests for insert to authenticated
 with check (
   resident_id = auth.uid()
@@ -252,9 +271,11 @@ with check (
   )
 );
 
+drop policy if exists "resident_select_own_doc_requests" on public.document_requests;
 create policy "resident_select_own_doc_requests" on public.document_requests for select to authenticated
 using (resident_id = auth.uid());
 
+drop policy if exists "admin_select_doc_requests" on public.document_requests;
 create policy "admin_select_doc_requests" on public.document_requests for select to authenticated
 using (
   exists (
@@ -267,6 +288,7 @@ using (
   )
 );
 
+drop policy if exists "admin_update_doc_requests" on public.document_requests;
 create policy "admin_update_doc_requests" on public.document_requests for update to authenticated
 using (
   exists (
@@ -290,12 +312,15 @@ with check (
 );
 
 -- Issue reports
+drop policy if exists "resident_insert_issue_reports" on public.issue_reports;
 create policy "resident_insert_issue_reports" on public.issue_reports for insert to authenticated
 with check (resident_id = auth.uid());
 
+drop policy if exists "resident_select_own_issue_reports" on public.issue_reports;
 create policy "resident_select_own_issue_reports" on public.issue_reports for select to authenticated
 using (resident_id = auth.uid());
 
+drop policy if exists "admin_select_issue_reports" on public.issue_reports;
 create policy "admin_select_issue_reports" on public.issue_reports for select to authenticated
 using (
   exists (
@@ -367,47 +392,17 @@ with check (
   )
 );
 
+drop policy if exists "admin_manage_announcements" on public.announcements;
 create policy "admin_manage_announcements" on public.announcements for all to authenticated
 using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('super_admin','barangay_admin')))
 with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('super_admin','barangay_admin')));
 
+drop policy if exists "admin_manage_barangays" on public.barangays;
 create policy "admin_manage_barangays" on public.barangays for all to authenticated
 using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'super_admin'))
 with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'super_admin'));
 -- Allow reading analytics view
 grant select on public.v_barangay_analytics to anon, authenticated;
-
--- Seed 24 barangays
-insert into public.barangays (name, status)
-values
-('Barangay Poblacion','active'),
-('Barangay San Antonio','active'),
-('Barangay Biñan','active'),
-('Barangay Canlalay','active'),
-('Barangay Dela Paz Norte','active'),
-('Barangay Dela Paz Sur','active'),
-('Barangay Ganado','active'),
-('Barangay Langkiwa','active'),
-('Barangay Loma','active'),
-('Barangay Santo Tomas','active'),
-('Barangay Malamig','active'),
-('Barangay Casile','active'),
-('Barangay Zapote','active'),
-('Barangay Tubigan','active'),
-('Barangay Bungahan','active'),
-('Barangay Soro-Soro','active'),
-('Barangay Timbao','active'),
-('Barangay Platero','active'),
-('Barangay San Francisco','active'),
-('Barangay Mamplasan','active'),
-('Barangay Sto. Niño','active'),
-('Barangay Langgam','active'),
-('Barangay Macabling','active'),
-('Barangay San Vicente','active')
-on conflict (name) do nothing;
-
-
-
 
 
 

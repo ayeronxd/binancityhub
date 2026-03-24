@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login / Sign Up - Biñan City Hub</title>
+    <title>Login / Sign Up - Barangay Hub</title>
     <meta name="description"
-        content="Login or create your account to access Biñan City Hub's digital government services.">
+        content="Login or create your account to access Barangay Hub's digital government services.">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
@@ -54,7 +54,7 @@
                     <div class="auth-logo-icon">
                         <i class="fas fa-city"></i>
                     </div>
-                    <h1>Biñan City Hub</h1>
+                    <h1>Barangay Hub</h1>
                     <p class="auth-logo-sub">Smart City Digital Portal</p>
                 </div>
                 <div class="auth-left-tagline">
@@ -167,7 +167,7 @@
                 <div class="auth-form d-none" id="signupForm">
                     <div class="auth-form-header">
                         <h3>Create Your Account</h3>
-                        <p>Join Biñan City Hub - it's free and takes less than a minute.</p>
+                        <p>Join Barangay Hub - it's free and takes less than a minute.</p>
                     </div>
 
                     <form id="signupFormEl" novalidate>
@@ -200,13 +200,23 @@
                             <span class="field-error" id="signupEmailError"></span>
                         </div>
 
-                        <div class="form-group-auth">
-                            <label for="signupPhone">Phone Number</label>
-                            <div class="input-icon-wrap">
-                                <i class="fas fa-phone input-icon"></i>
-                                <input type="tel" id="signupPhone" class="auth-input" placeholder="09XXXXXXXXX">
+                        <div class="form-row-two">
+                            <div class="form-group-auth">
+                                <label for="signupPhone">Phone Number</label>
+                                <div class="input-icon-wrap">
+                                    <i class="fas fa-phone input-icon"></i>
+                                    <input type="tel" id="signupPhone" class="auth-input" placeholder="09XXXXXXXXX">
+                                </div>
+                                <span class="field-error" id="signupPhoneError"></span>
                             </div>
-                            <span class="field-error" id="signupPhoneError"></span>
+                            <div class="form-group-auth">
+                                <label for="signupAge">Age</label>
+                                <div class="input-icon-wrap">
+                                    <i class="fas fa-calendar input-icon"></i>
+                                    <input type="number" id="signupAge" class="auth-input" placeholder="18" min="18" max="120">
+                                </div>
+                                <span class="field-error" id="signupAgeError"></span>
+                            </div>
                         </div>
 
                         <div class="form-group-auth">
@@ -434,6 +444,7 @@
     <!-- Bootstrap JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="env.js"></script>
     <script src="supabase-config.js"></script>
     <script src="auth.js"></script>
 </body>

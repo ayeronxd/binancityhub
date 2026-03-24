@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+env.js
 
 # Node modules
 node_modules/

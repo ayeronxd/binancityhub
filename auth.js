@@ -1,5 +1,5 @@
 // =====================================
-// BINAN CITY HUB - AUTH PAGE SCRIPT
+// BARANGAY HUB - AUTH PAGE SCRIPT
 // =====================================
 // Purpose:
 // - Handle login / signup with Supabase Auth.
@@ -264,11 +264,17 @@ async function handleLogin() {
   const { data: userData } = await supabaseClient.auth.getUser();
   const user = userData?.user;
 
-  const { data: profile } = await supabaseClient
+  const { data: profile, error: dbErr } = await supabaseClient
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .maybeSingle();
+
+  if (dbErr) {
+    alert("Database Error during role check: " + dbErr.message + "\nPlease run the SQL policies on Supabase.");
+  } else if (!profile) {
+    alert("Profile not found in database! This means Row Level Security (RLS) is blocking you from reading your own profile. Please run the SQL snippet I provided.");
+  }
 
   const role = profile?.role || "resident";
 
@@ -291,13 +297,14 @@ async function handleSignup() {
   const lastName        = document.getElementById("signupLastName").value.trim();
   const email           = document.getElementById("signupEmail").value.trim();
   const phone           = document.getElementById("signupPhone").value.trim();
+  const age             = document.getElementById("signupAge").value.trim();
   const barangayRaw     = document.getElementById("signupBarangay").value;
   const password        = document.getElementById("signupPassword").value;
   const confirmPassword = document.getElementById("signupConfirmPassword").value;
   const agreeTerms      = document.getElementById("agreeTerms").checked;
 
   clearAllErrors([
-    "signupFirstName", "signupLastName", "signupEmail", "signupPhone",
+    "signupFirstName", "signupLastName", "signupEmail", "signupPhone", "signupAge",
     "signupBarangay", "signupPassword", "signupConfirmPassword", "agreeTerms"
   ]);
 
@@ -310,6 +317,8 @@ async function handleSignup() {
     { showFieldError("signupEmailError",    "Enter a valid email address."); valid = false; }
   if (!phone     || !/^[0-9]{10,11}$/.test(phone))
     { showFieldError("signupPhoneError",    "Enter a valid phone number (10-11 digits)."); valid = false; }
+  if (!age       || isNaN(age) || parseInt(age) < 18 || parseInt(age) > 120)
+    { showFieldError("signupAgeError",      "You must be between 18 and 120 years old."); valid = false; }
   if (!barangayRaw)
     { showFieldError("signupBarangayError", "Please select your barangay."); valid = false; }
   if (!password  || password.length < 8)
@@ -333,7 +342,7 @@ async function handleSignup() {
   const { data, error } = await supabaseClient.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName, barangay, phone } }
+    options: { data: { full_name: fullName, barangay, phone, age: parseInt(age) } }
   });
 
   if (!error && data?.user) {
@@ -343,7 +352,8 @@ async function handleSignup() {
       email,
       barangay,
       role: "resident",
-      phone
+      phone,
+      age: parseInt(age)
     });
   }
 

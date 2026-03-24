@@ -1,7 +1,7 @@
-# Biñan City Hub
+# Barangay Hub
 [![Ask DeepWiki](https://devin.ai/assets/askdeepwiki.png)](https://deepwiki.com/ayeronxd/binancityhub.git)
 
-Biñan City Hub is a serverless web application designed as a smart city portal. It provides a unified platform for residents, public users, and administrators to interact with city services and data. The application is built with Vanilla JavaScript and Bootstrap 5, using Supabase for authentication, database (Postgres), and security via Row Level Security (RLS).
+Barangay Hub is a serverless web application designed as a smart city portal. It provides a unified platform for residents, public users, and administrators to interact with city services and data. The application is built with Vanilla JavaScript and Bootstrap 5, using Supabase for authentication, database (Postgres), and security via Row Level Security (RLS).
 
 ## Key Features
 

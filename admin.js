@@ -1,5 +1,5 @@
 // =====================================
-// BINAN CITY HUB - ADMIN DASHBOARD JS
+// BARANGAY HUB - ADMIN DASHBOARD JS
 // =====================================
 // Purpose:
 // - Provide operational tools for super_admin and barangay_admin roles.
@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderAllPanels();
   initCharts();
 
-  console.log("Binan City Hub - Admin Dashboard Initialized");
+  console.log("Barangay Hub - Admin Dashboard Initialized");
 });
 
 // Rejects non-admin users early and resolves role/barangay from auth metadata.
@@ -73,15 +73,20 @@ async function enforceAdminAccess() {
     "";
 
   // Profile fallback keeps compatibility with existing schema/RLS role storage.
-  const { data: profile } = await supabaseClient
+  const { data: profile, error: errProf } = await supabaseClient
     .from("profiles")
     .select("id,role,barangay,full_name,email")
     .eq("id", user.id)
     .maybeSingle();
 
+  if (errProf) {
+    alert("Admin DB Error: " + errProf.message);
+  }
+
   currentProfile = profile || null;
-  currentRole = normalizeRole(metaRole || profile?.role);
-  currentBarangayName = String(metaBarangay || profile?.barangay || "").trim();
+  // Prioritize profile table data since it is easily updated via Supabase Table Editor
+  currentRole = normalizeRole(profile?.role || metaRole);
+  currentBarangayName = String(profile?.barangay || metaBarangay || "").trim();
 
   if (currentRole !== "super_admin" && currentRole !== "barangay_admin") {
     window.location.href = "index.html";
@@ -661,8 +666,8 @@ function showPanel(panelId) {
   document.querySelector(`[data-panel="${panelId}"]`)?.classList.add("active");
 
   const titles = {
-    overview: ["Overview", "Bi\u00f1an City Hub Administrative Dashboard"],
-    barangays: ["Barangays", "Manage and monitor all 24 barangays of Bi\u00f1an City"],
+    overview: ["Overview", "Barangay Hub Administrative Dashboard"],
+    barangays: ["Barangays", "Manage and monitor all 24 barangays of the City"],
     users: ["Users / Residents", "View and manage registered users"],
     documents: ["Document Requests", "Review and process document applications"],
     announcements: ["Announcements", "Manage official city and barangay announcements"],
@@ -908,10 +913,10 @@ function openMessageResidentModal(docId, docName, residentName, residentEmail, c
   // Build a helpful default message based on the current document status.
   const adminName = currentProfile?.full_name || "Barangay Admin";
   const templates = {
-    Approved:  `Hi ${residentName},\n\nYour ${docName} request (Ref: ${String(docId).slice(0,8).toUpperCase()}) has been APPROVED and is now ready for pick-up at the Barangay Hall.\n\nPlease bring a valid ID when claiming your document.\n\nThank you,\n${adminName}\nBiñan City Hub`,
-    Rejected:  `Hi ${residentName},\n\nWe regret to inform you that your ${docName} request (Ref: ${String(docId).slice(0,8).toUpperCase()}) could not be processed at this time.\n\nPlease visit the Barangay Hall for further assistance or resubmit with the required documents.\n\nThank you,\n${adminName}\nBiñan City Hub`,
-    Pending:   `Hi ${residentName},\n\nYour ${docName} request (Ref: ${String(docId).slice(0,8).toUpperCase()}) is currently being reviewed. We will notify you once it is ready.\n\nThank you for your patience.\n\n${adminName}\nBiñan City Hub`,
-    default:   `Hi ${residentName},\n\nThis is an update regarding your ${docName} request (Ref: ${String(docId).slice(0,8).toUpperCase()}).\n\n[Write your message here]\n\n${adminName}\nBiñan City Hub`
+    Approved:  `Hi ${residentName},\n\nYour ${docName} request (Ref: ${String(docId).slice(0,8).toUpperCase()}) has been APPROVED and is now ready for pick-up at the Barangay Hall.\n\nPlease bring a valid ID when claiming your document.\n\nThank you,\n${adminName}\nBarangay Hub`,
+    Rejected:  `Hi ${residentName},\n\nWe regret to inform you that your ${docName} request (Ref: ${String(docId).slice(0,8).toUpperCase()}) could not be processed at this time.\n\nPlease visit the Barangay Hall for further assistance or resubmit with the required documents.\n\nThank you,\n${adminName}\nBarangay Hub`,
+    Pending:   `Hi ${residentName},\n\nYour ${docName} request (Ref: ${String(docId).slice(0,8).toUpperCase()}) is currently being reviewed. We will notify you once it is ready.\n\nThank you for your patience.\n\n${adminName}\nBarangay Hub`,
+    default:   `Hi ${residentName},\n\nThis is an update regarding your ${docName} request (Ref: ${String(docId).slice(0,8).toUpperCase()}).\n\n[Write your message here]\n\n${adminName}\nBarangay Hub`
   };
 
   const textarea = document.getElementById("msgResidentBody");
@@ -928,7 +933,7 @@ function closeMessageResidentModal() {
 async function sendMessageToResident() {
   const body   = (document.getElementById("msgResidentBody")?.value || "").trim();
   const subject = document.getElementById("msgResidentSubject")?.value?.trim()
-                  || `Update on your ${msgResidentContext.doc} request – Biñan City Hub`;
+                  || `Update on your ${msgResidentContext.doc} request – Barangay Hub`;
   const email  = msgResidentContext.email;
 
   if (!body) {

@@ -1,5 +1,5 @@
-﻿-- ================================================
--- BINAN CITY HUB - ROLE UPGRADE (SAFE MIGRATION)
+-- ================================================
+-- BARANGAY HUB - ROLE UPGRADE (SAFE MIGRATION)
 -- Run this on EXISTING projects (idempotent)
 -- ================================================
 

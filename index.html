@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Biñan City Hub - Smart City Portal</title>
+    <title>Barangay Hub - Smart City Portal</title>
     <meta name="description"
-        content="Biñan City Hub - live barangay analytics, skilled labor directory, official announcements, and document services for all residents.">
+        content="Barangay Hub - live barangay analytics, skilled labor directory, official announcements, and document services for all residents.">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -35,7 +35,7 @@
             <a class="topbar-brand" href="#">
                 <div class="brand-icon-box"><i class="fas fa-city"></i></div>
                 <div class="brand-text">
-                    <span class="brand-name">Biñan City Hub</span>
+                    <span class="brand-name">Barangay Hub</span>
                     <span class="brand-sub">Official Smart City Portal</span>
                 </div>
             </a>
@@ -45,21 +45,15 @@
                 <li><a href="#" class="tnav-link active" data-tab="analytics">
                         <i class="fas fa-chart-line"></i><span>Analytics</span>
                     </a></li>
-                <li><a href="#" class="tnav-link" data-tab="workers">
-                        <i class="fas fa-briefcase"></i><span>Workers</span>
-                    </a></li>
                 <li><a href="#" class="tnav-link" data-tab="documents">
                         <i class="fas fa-file-alt"></i><span>Documents</span>
                     </a></li>
                 <li><a href="#" class="tnav-link" data-tab="community">
                         <i class="fas fa-newspaper"></i><span>Community</span>
                     </a></li>
-                <!-- Only visible when logged in -->
-                <li class="user-only">
-                    <a href="#" class="tnav-link tnav-myportal" data-tab="myportal">
-                        <i class="fas fa-user-circle"></i><span>My Portal</span>
-                    </a>
-                </li>
+                <li><a href="#" class="tnav-link" data-tab="workers">
+                        <i class="fas fa-briefcase"></i><span>Workers</span>
+                    </a></li>
             </ul>
 
             <!-- RIGHT ACTIONS: Guest -->
@@ -77,7 +71,8 @@
                     <span class="live-dot"></span><span>Live</span>
                 </div>
                 <!-- Notification Bell -->
-                <button class="notif-bell-btn" id="notifBellBtn" onclick="toggleNotifPanel()" title="Notifications">
+                <button class="notif-bell-btn" id="notifBellBtn" onclick="toggleNotifPanel()" title="Notifications"
+                    aria-label="Notifications">
                     <i class="fas fa-bell"></i>
                     <span class="notif-badge d-none" id="notifBadge">0</span>
                 </button>
@@ -94,7 +89,7 @@
             </div>
 
             <!-- Hamburger -->
-            <button class="topbar-hamburger" id="hamburger">
+            <button class="topbar-hamburger" id="hamburger" aria-label="Toggle mobile menu">
                 <span></span><span></span><span></span>
             </button>
         </div>
@@ -103,14 +98,12 @@
         <div class="topbar-mobile" id="mobileNav">
             <a href="#" class="tnav-link" data-tab="analytics" onclick="closeMobile()"><i class="fas fa-chart-line"></i>
                 Analytics</a>
-            <a href="#" class="tnav-link" data-tab="workers" onclick="closeMobile()"><i class="fas fa-briefcase"></i>
-                Workers</a>
             <a href="#" class="tnav-link" data-tab="documents" onclick="closeMobile()"><i class="fas fa-file-alt"></i>
                 Documents</a>
             <a href="#" class="tnav-link" data-tab="community" onclick="closeMobile()"><i class="fas fa-newspaper"></i>
                 Community</a>
-            <a href="#" class="tnav-link user-only" data-tab="myportal" onclick="closeMobile()"><i
-                    class="fas fa-user-circle"></i> My Portal</a>
+            <a href="#" class="tnav-link" data-tab="workers" onclick="closeMobile()"><i class="fas fa-briefcase"></i>
+                Workers</a>
             <div class="mob-divider"></div>
             <div class="guest-only mob-auth-links">
                 <a href="login.html">Login</a>
@@ -127,466 +120,476 @@
     <!-- ===== PAGE WRAPPER ===== -->
     <div class="page-wrapper">
 
-        <!-- ====================================
-         TAB: ANALYTICS (Default/Home)
-         ==================================== -->
-        <div class="tab-panel active" id="tab-analytics">
-            <div class="portal-layout">
+        <!-- CONSOLIDATED SCROLL VIEW (Analytics, Workers, Documents, Community) -->
+        <div class="tab-panel active" id="home-continuous-view">
+            <!-- ====================================
+             SECTION: ANALYTICS (Default/Home)
+             ==================================== -->
+            <section id="analytics" class="continuous-section">
+                <div class="portal-layout">
 
-                <!-- MAIN -->
-                <div class="portal-main">
+                    <!-- MAIN -->
+                    <div class="portal-main">
 
-                    <!-- Stat Cards -->
-                    <div class="stat-cards-row">
-                        <div class="stat-card">
-                            <div class="sc-icon blue"><i class="fas fa-users"></i></div>
-                            <div class="sc-body">
-                                <span class="sc-label">Total Residents</span>
-                                <span class="sc-value counter" data-target="3892">0</span>
-                                <span class="sc-trend neutral" id="trendResidents"><i class="fas fa-minus"></i> Loading
-                                    trend...</span>
+                        <!-- Stat Cards -->
+                        <div class="stat-cards-row">
+                            <div class="stat-card">
+                                <div class="sc-icon blue"><i class="fas fa-users"></i></div>
+                                <div class="sc-body">
+                                    <span class="sc-label">Total Residents</span>
+                                    <span class="sc-value counter" data-target="3892">0</span>
+                                    <span class="sc-trend neutral" id="trendResidents"><i class="fas fa-minus"></i>
+                                        Loading
+                                        trend...</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="sc-icon gold"><i class="fas fa-file-circle-check"></i></div>
+                                <div class="sc-body">
+                                    <span class="sc-label">Documents Processed</span>
+                                    <span class="sc-value counter" data-target="1247">0</span>
+                                    <span class="sc-trend neutral" id="trendDocs"><i class="fas fa-minus"></i> Loading
+                                        trend...</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="sc-icon green"><i class="fas fa-briefcase"></i></div>
+                                <div class="sc-body">
+                                    <span class="sc-label">Registered Workers</span>
+                                    <span class="sc-value counter" data-target="456">0</span>
+                                    <span class="sc-trend neutral" id="trendWorkers"><i class="fas fa-minus"></i>
+                                        Loading
+                                        trend...</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="sc-icon red"><i class="fas fa-triangle-exclamation"></i></div>
+                                <div class="sc-body">
+                                    <span class="sc-label">Open Issue Reports</span>
+                                    <span class="sc-value counter" data-target="78">0</span>
+                                    <span class="sc-trend neutral" id="trendIssues"><i class="fas fa-minus"></i> Loading
+                                        trend...</span>
+                                </div>
                             </div>
                         </div>
-                        <div class="stat-card">
-                            <div class="sc-icon gold"><i class="fas fa-file-circle-check"></i></div>
-                            <div class="sc-body">
-                                <span class="sc-label">Documents Processed</span>
-                                <span class="sc-value counter" data-target="1247">0</span>
-                                <span class="sc-trend neutral" id="trendDocs"><i class="fas fa-minus"></i> Loading
-                                    trend...</span>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="sc-icon green"><i class="fas fa-briefcase"></i></div>
-                            <div class="sc-body">
-                                <span class="sc-label">Registered Workers</span>
-                                <span class="sc-value counter" data-target="456">0</span>
-                                <span class="sc-trend neutral" id="trendWorkers"><i class="fas fa-minus"></i> Loading
-                                    trend...</span>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="sc-icon red"><i class="fas fa-triangle-exclamation"></i></div>
-                            <div class="sc-body">
-                                <span class="sc-label">Open Issue Reports</span>
-                                <span class="sc-value counter" data-target="78">0</span>
-                                <span class="sc-trend neutral" id="trendIssues"><i class="fas fa-minus"></i> Loading
-                                    trend...</span>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Charts -->
-                    <div class="charts-row">
-                        <div class="glass-card chart-card-lg">
+                        <!-- Charts -->
+                        <div class="charts-row">
+                            <div class="glass-card chart-card-lg">
+                                <div class="gc-header">
+                                    <div>
+                                        <h4><i class="fas fa-chart-line"></i> Document Request Trends</h4>
+                                        <span class="gc-sub">Monthly volume - Barangay Poblacion</span>
+                                    </div>
+                                    <span class="live-chip"><span class="live-dot sm"></span> Live</span>
+                                </div>
+                                <div style="padding:16px"><canvas id="docTrendChart" height="130"></canvas></div>
+                            </div>
+                            <div class="glass-card chart-card-sm">
+                                <div class="gc-header">
+                                    <h4><i class="fas fa-chart-pie"></i> Request Types</h4>
+                                </div>
+                                <div style="padding:16px"><canvas id="docTypeChart" height="160"></canvas></div>
+                                <div class="chart-legend-custom" id="docTypeLegend"></div>
+                            </div>
+                        </div>
+
+                        <!-- Barangay Table -->
+                        <div class="glass-card" style="margin-top:18px">
                             <div class="gc-header">
                                 <div>
-                                    <h4><i class="fas fa-chart-line"></i> Document Request Trends</h4>
-                                    <span class="gc-sub">Monthly volume - Barangay Poblacion</span>
+                                    <h4><i class="fas fa-map-marker-alt"></i> Barangay Coverage</h4>
+                                    <span class="gc-sub">All 24 barangays of Biñan City</span>
                                 </div>
-                                <span class="live-chip"><span class="live-dot sm"></span> Live</span>
+                                <span class="scope-chip">Primary Service Area: Poblacion</span>
                             </div>
-                            <div style="padding:16px"><canvas id="docTrendChart" height="130"></canvas></div>
-                        </div>
-                        <div class="glass-card chart-card-sm">
-                            <div class="gc-header">
-                                <h4><i class="fas fa-chart-pie"></i> Request Types</h4>
-                            </div>
-                            <div style="padding:16px"><canvas id="docTypeChart" height="160"></canvas></div>
-                            <div class="chart-legend-custom" id="docTypeLegend"></div>
-                        </div>
-                    </div>
-
-                    <!-- Barangay Table -->
-                    <div class="glass-card" style="margin-top:18px">
-                        <div class="gc-header">
-                            <div>
-                                <h4><i class="fas fa-map-marker-alt"></i> Barangay Coverage</h4>
-                                <span class="gc-sub">All 24 barangays of Biñan City</span>
-                            </div>
-                            <span class="scope-chip">Primary Service Area: Poblacion</span>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="portal-table" id="barangayCoverageTable">
-                                <thead>
-                                    <tr>
-                                        <th>Barangay</th>
-                                        <th>Residents</th>
-                                        <th>Docs Processed</th>
-                                        <th>Workers</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="barangayTableBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Skills Chart -->
-                    <div class="glass-card" style="margin-top:18px">
-                        <div class="gc-header">
-                            <h4><i class="fas fa-hammer"></i> Most Searched Skills This Month</h4>
-                        </div>
-                        <div style="padding:16px"><canvas id="skillsChart" height="80"></canvas></div>
-                    </div>
-
-                </div><!-- /portal-main -->
-
-                <!-- ASIDE -->
-                <aside class="portal-aside">
-
-                    <!-- Announcements -->
-                    <div class="glass-card aside-card">
-                        <div class="gc-header">
-                            <h4><i class="fas fa-bullhorn"></i> Announcements</h4>
-                            <button class="gc-link-btn" onclick="switchTab('community')">View All</button>
-                        </div>
-                        <div id="announcementsFeed" style="padding:4px 18px 14px"></div>
-                    </div>
-
-                    <!-- Quick Document Access -->
-                    <div class="glass-card aside-card" style="margin-top:14px">
-                        <div class="gc-header">
-                            <h4><i class="fas fa-file-alt"></i> Request Documents</h4>
-                        </div>
-                        <div class="quick-doc-list">
-                            <button class="quick-doc-btn" onclick="handleDocAction('Barangay ID')">
-                                <span class="qd-ico"><i class="fas fa-id-card"></i></span>
-                                <div>
-                                    <strong>Barangay ID</strong>
-                                    <span>2-3 days - Free</span>
-                                </div>
-                                <i class="fas fa-chevron-right qd-arr"></i>
-                            </button>
-                            <button class="quick-doc-btn" onclick="handleDocAction('Barangay Clearance')">
-                                <span class="qd-ico"><i class="fas fa-certificate"></i></span>
-                                <div>
-                                    <strong>Barangay Clearance</strong>
-                                    <span>1-2 days - Free</span>
-                                </div>
-                                <i class="fas fa-chevron-right qd-arr"></i>
-                            </button>
-                            <button class="quick-doc-btn" onclick="handleDocAction('Job Seeker Cert.')">
-                                <span class="qd-ico"><i class="fas fa-graduation-cap"></i></span>
-                                <div>
-                                    <strong>Job Seeker Cert.</strong>
-                                    <span>Same day - Free</span>
-                                </div>
-                                <i class="fas fa-chevron-right qd-arr"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Top Workers -->
-                    <div class="glass-card aside-card" style="margin-top:14px">
-                        <div class="gc-header">
-                            <h4><i class="fas fa-star"></i> Top Rated Workers</h4>
-                            <button class="gc-link-btn" onclick="switchTab('workers')">Browse All</button>
-                        </div>
-                        <div id="topWorkersList" style="padding:8px 14px 14px"></div>
-                    </div>
-
-                </aside>
-            </div>
-        </div>
-
-        <!-- ====================================
-         TAB: WORKERS
-         ==================================== -->
-        <div class="tab-panel" id="tab-workers">
-            <div class="tab-content-wrap">
-                <div class="tab-page-header">
-                    <div>
-                        <h2><i class="fas fa-briefcase"></i> Skilled Worker Directory</h2>
-                        <p>Browse <strong id="workerCount">0</strong> verified workers from Barangay Poblacion.
-                            <span class="guest-only">Guest access - <strong>login</strong> to view contact details and
-                                connect.</span>
-                            <span class="user-only" style="color:var(--t-green)"><i class="fas fa-circle-check"></i>
-                                Logged in - call or email directly.</span>
-                        </p>
-                    </div>
-                </div>
-                <div class="glass-filter-bar">
-                    <div class="filter-search">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="workerSearch" placeholder="Search by name or skill...">
-                    </div>
-                    <select id="categoryFilter" class="filter-select">
-                        <option value="">All Barangays</option>
-                    </select>
-                    <select id="specialtyFilter" class="filter-select">
-                        <option value="">All Specialties</option>
-                        <option value="plumber">Plumber</option>
-                        <option value="electrician">Electrician</option>
-                        <option value="carpenter">Carpenter</option>
-                        <option value="tutor">Tutor</option>
-                        <option value="accountant">Accountant</option>
-                        <option value="mechanic">Mechanic</option>
-                    </select>
-                    <span class="filter-count" id="workerFilterCount"></span>
-                </div>
-                <div class="worker-grid" id="workerDirectory"></div>
-            </div>
-        </div>
-
-        <!-- ====================================
-         TAB: DOCUMENTS
-         ==================================== -->
-        <div class="tab-panel" id="tab-documents">
-            <div class="tab-content-wrap">
-                <div class="tab-page-header">
-                    <div>
-                        <h2><i class="fas fa-file-alt"></i> Document Request Services</h2>
-                        <p>Official barangay documents available online. Browse requirements freely -
-                            <span class="guest-only">login to apply.</span>
-                            <span class="user-only" style="color:var(--t-green)"><i class="fas fa-circle-check"></i>
-                                You're logged in - click Apply Now to submit.</span>
-                        </p>
-                    </div>
-                </div>
-                <!-- Guest notice - only shown to guests -->
-                <div class="guest-notice guest-only">
-                    <div class="gn-icon"><i class="fas fa-eye"></i></div>
-                    <div class="gn-text">
-                        <strong>Browsing as Guest</strong>
-                        <span>To submit an application, <a href="login.html">login</a> or <a
-                                href="login.html#signup">create a free account</a>.</span>
-                    </div>
-                </div>
-
-                <div class="doc-services-grid">
-                    <div class="doc-service-card">
-                        <div class="dsc-icon-wrap"><i class="fas fa-id-card"></i></div>
-                        <div class="dsc-body">
-                            <h3>Barangay ID</h3>
-                            <p>Official photo identification for barangay residents. Required for various government
-                                transactions.</p>
-                            <div class="dsc-tags">
-                                <span class="dsc-tag"><i class="fas fa-clock"></i> 2-3 business days</span>
-                                <span class="dsc-tag"><i class="fas fa-tag"></i> Free</span>
-                            </div>
-                            <div class="dsc-reqs">
-                                <strong>Requirements:</strong>
-                                <ul>
-                                    <li>Valid government-issued ID</li>
-                                    <li>Proof of barangay residency</li>
-                                    <li>1 recent 2x2 ID photo</li>
-                                </ul>
-                            </div>
-                        </div>
-                        <button class="btn-apply" onclick="handleDocAction('Barangay ID')">
-                            <span><i class="fas fa-file-pen"></i> Apply Now</span>
-                            <span class="apply-hint guest-only">Login required</span>
-                            <span class="apply-hint user-only" style="color:var(--t-green)">Logged in ✓</span>
-                        </button>
-                    </div>
-
-                    <div class="doc-service-card">
-                        <div class="dsc-icon-wrap"><i class="fas fa-certificate"></i></div>
-                        <div class="dsc-body">
-                            <h3>Barangay Clearance</h3>
-                            <p>Character clearance certificate. Required for employment, business permits, and loans.
-                            </p>
-                            <div class="dsc-tags">
-                                <span class="dsc-tag"><i class="fas fa-clock"></i> 1-2 business days</span>
-                                <span class="dsc-tag"><i class="fas fa-tag"></i> Free</span>
-                            </div>
-                            <div class="dsc-reqs">
-                                <strong>Requirements:</strong>
-                                <ul>
-                                    <li>Valid government-issued ID</li>
-                                    <li>Proof of barangay residency</li>
-                                    <li>Completed online form</li>
-                                </ul>
-                            </div>
-                        </div>
-                        <button class="btn-apply" onclick="handleDocAction('Barangay Clearance')">
-                            <span><i class="fas fa-file-pen"></i> Apply Now</span>
-                            <span class="apply-hint guest-only">Login required</span>
-                            <span class="apply-hint user-only" style="color:var(--t-green)">Logged in ✓</span>
-                        </button>
-                    </div>
-
-                    <div class="doc-service-card">
-                        <div class="dsc-icon-wrap"><i class="fas fa-graduation-cap"></i></div>
-                        <div class="dsc-body">
-                            <h3>First-Time Job Seeker</h3>
-                            <p>Certification per RA 11261. Provides fee exemptions for first-time job seekers.</p>
-                            <div class="dsc-tags">
-                                <span class="dsc-tag"><i class="fas fa-clock"></i> Same day</span>
-                                <span class="dsc-tag"><i class="fas fa-tag"></i> Free</span>
-                            </div>
-                            <div class="dsc-reqs">
-                                <strong>Requirements:</strong>
-                                <ul>
-                                    <li>School credentials or diploma</li>
-                                    <li>Barangay residency proof</li>
-                                    <li>No prior employment record</li>
-                                </ul>
-                            </div>
-                        </div>
-                        <button class="btn-apply" onclick="handleDocAction('Job Seeker Cert.')">
-                            <span><i class="fas fa-file-pen"></i> Apply Now</span>
-                            <span class="apply-hint guest-only">Login required</span>
-                            <span class="apply-hint user-only" style="color:var(--t-green)">Logged in ✓</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Application form modal trigger / How-it-works for guests -->
-                <div class="glass-card how-strip guest-only" style="margin-top:20px">
-                    <div class="hs-title"><i class="fas fa-route"></i> How Document Requests Work</div>
-                    <div class="hs-steps">
-                        <div class="hs-step">
-                            <div class="hs-num">1</div>
-                            <div class="hs-ico"><i class="fas fa-user-plus"></i></div>
-                            <p>Create Account</p>
-                        </div>
-                        <div class="hs-line"><i class="fas fa-chevron-right"></i></div>
-                        <div class="hs-step">
-                            <div class="hs-num">2</div>
-                            <div class="hs-ico"><i class="fas fa-file-pen"></i></div>
-                            <p>Fill the Form</p>
-                        </div>
-                        <div class="hs-line"><i class="fas fa-chevron-right"></i></div>
-                        <div class="hs-step">
-                            <div class="hs-num">3</div>
-                            <div class="hs-ico"><i class="fas fa-magnifying-glass"></i></div>
-                            <p>Track Status</p>
-                        </div>
-                        <div class="hs-line"><i class="fas fa-chevron-right"></i></div>
-                        <div class="hs-step">
-                            <div class="hs-num">4</div>
-                            <div class="hs-ico"><i class="fas fa-check-circle"></i></div>
-                            <p>Receive Document</p>
-                        </div>
-                    </div>
-                    <a href="login.html#signup" class="btn-gold"><i class="fas fa-user-plus"></i> Create Free
-                        Account</a>
-                </div>
-
-                <!-- My Applications quick view - logged-in only -->
-                <div class="glass-card user-only" style="margin-top:20px" id="docMyAppsCard">
-                    <div class="gc-header">
-                        <h4><i class="fas fa-clock-rotate-left"></i> My Recent Applications</h4>
-                        <button class="gc-link-btn" onclick="switchTab('myportal')">View All</button>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="portal-table" id="docRecentAppsTable">
-                            <thead>
-                                <tr>
-                                    <th>Document</th>
-                                    <th>Date</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="docRecentAppsBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ====================================
-         TAB: COMMUNITY
-         ==================================== -->
-        <div class="tab-panel" id="tab-community">
-            <div class="tab-content-wrap">
-                <div class="tab-page-header">
-                    <div>
-                        <h2><i class="fas fa-newspaper"></i> Community Reports &amp; News</h2>
-                        <p>Read official announcements. <span class="guest-only">Login to submit issue reports.</span>
-                            <span class="user-only" style="color:var(--t-green)"><i class="fas fa-circle-check"></i>
-                                Logged in - submit reports directly.</span>
-                        </p>
-                    </div>
-                </div>
-                <div class="community-layout">
-                    <div>
-                        <div class="glass-card" style="overflow:visible">
-                            <div class="gc-header">
-                                <h4><i class="fas fa-triangle-exclamation"></i> Report an Issue</h4>
-                            </div>
-                            <div style="padding:16px 22px 22px">
-                                <!-- Guest prompt -->
-                                <div class="guest-only" style="text-align:center;padding:24px 0">
-                                    <div style="font-size:36px;color:rgba(255,255,255,0.15);margin-bottom:12px"><i
-                                            class="fas fa-lock"></i></div>
-                                    <p style="color:rgba(255,255,255,0.4);font-size:13px;margin-bottom:16px">Login to
-                                        submit infrastructure reports</p>
-                                    <a href="login.html" class="btn-gold"><i class="fas fa-sign-in-alt"></i> Login to
-                                        Report</a>
-                                </div>
-                                <!-- Logged-in form -->
-                                <form id="reportForm" class="user-only">
-                                    <div class="glass-field">
-                                        <label>Barangay</label>
-                                        <select id="reportBarangay" class="glass-input">
-                                            <option value="">Select barangay...</option>
-                                        </select>
-                                    </div>
-                                    <div class="glass-field">
-                                        <label>Category</label>
-                                        <select id="reportCategory" class="glass-input">
-                                            <option value="">Select category...</option>
-                                            <option>Road Damage</option>
-                                            <option>Water Supply Issue</option>
-                                            <option>Waste Management</option>
-                                            <option>Street Light Problem</option>
-                                            <option>Drainage Problem</option>
-                                            <option>Other</option>
-                                        </select>
-                                    </div>
-                                    <div class="glass-field">
-                                        <label>Location</label>
-                                        <input type="text" id="reportLocation" class="glass-input"
-                                            placeholder="Address or landmark...">
-                                    </div>
-                                    <div class="glass-field">
-                                        <label>Description</label>
-                                        <textarea id="reportDescription" class="glass-input" rows="4"
-                                            placeholder="Describe the issue..."></textarea>
-                                    </div>
-                                    <button type="submit" class="btn-gold w-full">
-                                        <i class="fas fa-paper-plane"></i> Submit Report
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="glass-card">
-                            <div class="gc-header"
-                                style="padding:18px 22px;border-bottom:1px solid var(--glass-border)">
-                                <h4><i class="fas fa-bullhorn"></i> Official Announcements</h4>
-                                <span class="live-chip"><span class="live-dot sm"></span> Live</span>
-                            </div>
-                            <div style="padding:8px 18px 14px" id="communityAnnouncementsFeed"></div>
-                        </div>
-                        <div class="glass-card" style="margin-top:14px">
-                            <div class="gc-header"
-                                style="padding:16px 22px;border-bottom:1px solid var(--glass-border)">
-                                <h4><i class="fas fa-list-check"></i> Recent Reports Status</h4>
-                            </div>
-                            <div class="table-responsive" style="padding:8px">
-                                <table class="portal-table" id="recentReportsTable">
+                            <div class="table-responsive">
+                                <table class="portal-table" id="barangayCoverageTable">
                                     <thead>
                                         <tr>
-                                            <th>Category</th>
-                                            <th>Location</th>
-                                            <th>Date</th>
+                                            <th>Barangay</th>
+                                            <th>Residents</th>
+                                            <th>Docs Processed</th>
+                                            <th>Workers</th>
                                             <th>Status</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="reportsTableBody"></tbody>
+                                    <tbody id="barangayTableBody"></tbody>
                                 </table>
+                            </div>
+                        </div>
+
+                        <!-- Skills Chart -->
+                        <div class="glass-card" style="margin-top:18px">
+                            <div class="gc-header">
+                                <h4><i class="fas fa-hammer"></i> Most Searched Skills This Month</h4>
+                            </div>
+                            <div style="padding:16px"><canvas id="skillsChart" height="80"></canvas></div>
+                        </div>
+
+                    </div><!-- /portal-main -->
+
+                    <!-- ASIDE -->
+                    <aside class="portal-aside">
+
+                        <!-- Announcements -->
+                        <div class="glass-card aside-card">
+                            <div class="gc-header">
+                                <h4><i class="fas fa-bullhorn"></i> Announcements</h4>
+                                <button class="gc-link-btn" onclick="switchTab('community')">View All</button>
+                            </div>
+                            <div id="announcementsFeed" style="padding:4px 18px 14px"></div>
+                        </div>
+
+                        <!-- Quick Document Access -->
+                        <div class="glass-card aside-card" style="margin-top:14px">
+                            <div class="gc-header">
+                                <h4><i class="fas fa-file-alt"></i> Request Documents</h4>
+                            </div>
+                            <div class="quick-doc-list">
+                                <button class="quick-doc-btn" onclick="handleDocAction('Barangay ID')">
+                                    <span class="qd-ico"><i class="fas fa-id-card"></i></span>
+                                    <div>
+                                        <strong>Barangay ID</strong>
+                                        <span>2-3 days - Free</span>
+                                    </div>
+                                    <i class="fas fa-chevron-right qd-arr"></i>
+                                </button>
+                                <button class="quick-doc-btn" onclick="handleDocAction('Barangay Clearance')">
+                                    <span class="qd-ico"><i class="fas fa-certificate"></i></span>
+                                    <div>
+                                        <strong>Barangay Clearance</strong>
+                                        <span>1-2 days - Free</span>
+                                    </div>
+                                    <i class="fas fa-chevron-right qd-arr"></i>
+                                </button>
+                                <button class="quick-doc-btn" onclick="handleDocAction('Job Seeker Cert.')">
+                                    <span class="qd-ico"><i class="fas fa-graduation-cap"></i></span>
+                                    <div>
+                                        <strong>Job Seeker Cert.</strong>
+                                        <span>Same day - Free</span>
+                                    </div>
+                                    <i class="fas fa-chevron-right qd-arr"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Top Workers -->
+                        <div class="glass-card aside-card" style="margin-top:14px">
+                            <div class="gc-header">
+                                <h4><i class="fas fa-star"></i> Top Rated Workers</h4>
+                                <button class="gc-link-btn" onclick="switchTab('workers')">Browse All</button>
+                            </div>
+                            <div id="topWorkersList" style="padding:8px 14px 14px"></div>
+                        </div>
+
+                    </aside>
+                </div>
+            </section>
+
+            <!-- ====================================
+         SECTION: DOCUMENTS
+         ==================================== -->
+            <section id="documents" class="continuous-section">
+                <div class="tab-content-wrap">
+                    <div class="tab-page-header">
+                        <div>
+                            <h2><i class="fas fa-file-alt"></i> Document Request Services</h2>
+                            <p>Official barangay documents available online. Browse requirements freely -
+                                <span class="guest-only">login to apply.</span>
+                                <span class="user-only" style="color:var(--t-green)"><i class="fas fa-circle-check"></i>
+                                    You're logged in - click Apply Now to submit.</span>
+                            </p>
+                        </div>
+                    </div>
+                    <!-- Guest notice - only shown to guests -->
+                    <div class="guest-notice guest-only">
+                        <div class="gn-icon"><i class="fas fa-eye"></i></div>
+                        <div class="gn-text">
+                            <strong>Browsing as Guest</strong>
+                            <span>To submit an application, <a href="login.html">login</a> or <a
+                                    href="login.html#signup">create a free account</a>.</span>
+                        </div>
+                    </div>
+
+                    <div class="doc-services-grid">
+                        <div class="doc-service-card">
+                            <div class="dsc-icon-wrap"><i class="fas fa-id-card"></i></div>
+                            <div class="dsc-body">
+                                <h3>Barangay ID</h3>
+                                <p>Official photo identification for barangay residents. Required for various government
+                                    transactions.</p>
+                                <div class="dsc-tags">
+                                    <span class="dsc-tag"><i class="fas fa-clock"></i> 2-3 business days</span>
+                                    <span class="dsc-tag"><i class="fas fa-tag"></i> Free</span>
+                                </div>
+                                <div class="dsc-reqs">
+                                    <strong>Requirements:</strong>
+                                    <ul>
+                                        <li>Valid government-issued ID</li>
+                                        <li>Proof of barangay residency</li>
+                                        <li>1 recent 2x2 ID photo</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <button class="btn-apply" onclick="handleDocAction('Barangay ID')">
+                                <span><i class="fas fa-file-pen"></i> Apply Now</span>
+                                <span class="apply-hint guest-only">Login required</span>
+                                <span class="apply-hint user-only" style="color:var(--t-green)">Logged in ✓</span>
+                            </button>
+                        </div>
+
+                        <div class="doc-service-card">
+                            <div class="dsc-icon-wrap"><i class="fas fa-certificate"></i></div>
+                            <div class="dsc-body">
+                                <h3>Barangay Clearance</h3>
+                                <p>Character clearance certificate. Required for employment, business permits, and
+                                    loans.
+                                </p>
+                                <div class="dsc-tags">
+                                    <span class="dsc-tag"><i class="fas fa-clock"></i> 1-2 business days</span>
+                                    <span class="dsc-tag"><i class="fas fa-tag"></i> Free</span>
+                                </div>
+                                <div class="dsc-reqs">
+                                    <strong>Requirements:</strong>
+                                    <ul>
+                                        <li>Valid government-issued ID</li>
+                                        <li>Proof of barangay residency</li>
+                                        <li>Completed online form</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <button class="btn-apply" onclick="handleDocAction('Barangay Clearance')">
+                                <span><i class="fas fa-file-pen"></i> Apply Now</span>
+                                <span class="apply-hint guest-only">Login required</span>
+                                <span class="apply-hint user-only" style="color:var(--t-green)">Logged in ✓</span>
+                            </button>
+                        </div>
+
+                        <div class="doc-service-card">
+                            <div class="dsc-icon-wrap"><i class="fas fa-graduation-cap"></i></div>
+                            <div class="dsc-body">
+                                <h3>First-Time Job Seeker</h3>
+                                <p>Certification per RA 11261. Provides fee exemptions for first-time job seekers.</p>
+                                <div class="dsc-tags">
+                                    <span class="dsc-tag"><i class="fas fa-clock"></i> Same day</span>
+                                    <span class="dsc-tag"><i class="fas fa-tag"></i> Free</span>
+                                </div>
+                                <div class="dsc-reqs">
+                                    <strong>Requirements:</strong>
+                                    <ul>
+                                        <li>School credentials or diploma</li>
+                                        <li>Barangay residency proof</li>
+                                        <li>No prior employment record</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <button class="btn-apply" onclick="handleDocAction('Job Seeker Cert.')">
+                                <span><i class="fas fa-file-pen"></i> Apply Now</span>
+                                <span class="apply-hint guest-only">Login required</span>
+                                <span class="apply-hint user-only" style="color:var(--t-green)">Logged in ✓</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Application form modal trigger / How-it-works for guests -->
+                    <div class="glass-card how-strip guest-only" style="margin-top:20px">
+                        <div class="hs-title"><i class="fas fa-route"></i> How Document Requests Work</div>
+                        <div class="hs-steps">
+                            <div class="hs-step">
+                                <div class="hs-num">1</div>
+                                <div class="hs-ico"><i class="fas fa-user-plus"></i></div>
+                                <p>Create Account</p>
+                            </div>
+                            <div class="hs-line"><i class="fas fa-chevron-right"></i></div>
+                            <div class="hs-step">
+                                <div class="hs-num">2</div>
+                                <div class="hs-ico"><i class="fas fa-file-pen"></i></div>
+                                <p>Fill the Form</p>
+                            </div>
+                            <div class="hs-line"><i class="fas fa-chevron-right"></i></div>
+                            <div class="hs-step">
+                                <div class="hs-num">3</div>
+                                <div class="hs-ico"><i class="fas fa-magnifying-glass"></i></div>
+                                <p>Track Status</p>
+                            </div>
+                            <div class="hs-line"><i class="fas fa-chevron-right"></i></div>
+                            <div class="hs-step">
+                                <div class="hs-num">4</div>
+                                <div class="hs-ico"><i class="fas fa-check-circle"></i></div>
+                                <p>Receive Document</p>
+                            </div>
+                        </div>
+                        <a href="login.html#signup" class="btn-gold"><i class="fas fa-user-plus"></i> Create Free
+                            Account</a>
+                    </div>
+
+                    <!-- My Applications quick view - logged-in only -->
+                    <div class="glass-card user-only" style="margin-top:20px" id="docMyAppsCard">
+                        <div class="gc-header">
+                            <h4><i class="fas fa-clock-rotate-left"></i> My Recent Applications</h4>
+                            <button class="gc-link-btn" onclick="switchTab('myportal')">View All</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="portal-table" id="docRecentAppsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Document</th>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="docRecentAppsBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ====================================
+         SECTION: COMMUNITY
+         ==================================== -->
+            <section id="community" class="continuous-section">
+                <div class="tab-content-wrap">
+                    <div class="tab-page-header">
+                        <div>
+                            <h2><i class="fas fa-newspaper"></i> Community Reports &amp; News</h2>
+                            <p>Read official announcements. <span class="guest-only">Login to submit issue
+                                    reports.</span>
+                                <span class="user-only" style="color:var(--t-green)"><i class="fas fa-circle-check"></i>
+                                    Logged in - submit reports directly.</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="community-layout">
+                        <div>
+                            <div class="glass-card" style="overflow:visible">
+                                <div class="gc-header">
+                                    <h4><i class="fas fa-triangle-exclamation"></i> Report an Issue</h4>
+                                </div>
+                                <div style="padding:16px 22px 22px">
+                                    <!-- Guest prompt -->
+                                    <div class="guest-only" style="text-align:center;padding:24px 0">
+                                        <div style="font-size:36px;color:rgba(255,255,255,0.15);margin-bottom:12px"><i
+                                                class="fas fa-lock"></i></div>
+                                        <p style="color:rgba(255,255,255,0.4);font-size:13px;margin-bottom:16px">Login
+                                            to
+                                            submit infrastructure reports</p>
+                                        <a href="login.html" class="btn-gold"><i class="fas fa-sign-in-alt"></i> Login
+                                            to
+                                            Report</a>
+                                    </div>
+                                    <!-- Logged-in form -->
+                                    <form id="reportForm" class="user-only">
+                                        <div class="glass-field">
+                                            <label>Barangay</label>
+                                            <select id="reportBarangay" class="glass-input">
+                                                <option value="">Select barangay...</option>
+                                            </select>
+                                        </div>
+                                        <div class="glass-field">
+                                            <label>Category</label>
+                                            <select id="reportCategory" class="glass-input">
+                                                <option value="">Select category...</option>
+                                                <option>Road Damage</option>
+                                                <option>Water Supply Issue</option>
+                                                <option>Waste Management</option>
+                                                <option>Street Light Problem</option>
+                                                <option>Drainage Problem</option>
+                                                <option>Other</option>
+                                            </select>
+                                        </div>
+                                        <div class="glass-field">
+                                            <label>Location</label>
+                                            <input type="text" id="reportLocation" class="glass-input"
+                                                placeholder="Address or landmark...">
+                                        </div>
+                                        <div class="glass-field">
+                                            <label>Description</label>
+                                            <textarea id="reportDescription" class="glass-input" rows="4"
+                                                placeholder="Describe the issue..."></textarea>
+                                        </div>
+                                        <button type="submit" class="btn-gold w-full">
+                                            <i class="fas fa-paper-plane"></i> Submit Report
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="glass-card">
+                                <div class="gc-header"
+                                    style="padding:18px 22px;border-bottom:1px solid var(--glass-border)">
+                                    <h4><i class="fas fa-bullhorn"></i> Official Announcements</h4>
+                                    <span class="live-chip"><span class="live-dot sm"></span> Live</span>
+                                </div>
+                                <div style="padding:8px 18px 14px" id="communityAnnouncementsFeed"></div>
+                            </div>
+                            <div class="glass-card" style="margin-top:14px">
+                                <div class="gc-header"
+                                    style="padding:16px 22px;border-bottom:1px solid var(--glass-border)">
+                                    <h4><i class="fas fa-list-check"></i> Recent Reports Status</h4>
+                                </div>
+                                <div class="table-responsive" style="padding:8px">
+                                    <table class="portal-table" id="recentReportsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Category</th>
+                                                <th>Location</th>
+                                                <th>Date</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="reportsTableBody"></tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
+            </section>
+
+            <!-- ====================================
+         SECTION: WORKERS
+         ==================================== -->
+            <section id="workers" class="continuous-section">
+                <div class="tab-content-wrap">
+                    <div class="tab-page-header">
+                        <div>
+                            <h2><i class="fas fa-briefcase"></i> Skilled Worker Directory</h2>
+                            <p>Browse <strong id="workerCount">0</strong> verified workers from Barangay Poblacion.
+                                <span class="guest-only">Guest access - <strong>login</strong> to view contact details
+                                    and
+                                    connect.</span>
+                                <span class="user-only" style="color:var(--t-green)"><i class="fas fa-circle-check"></i>
+                                    Logged in - call or email directly.</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="glass-filter-bar">
+                        <div class="filter-search">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="workerSearch" placeholder="Search by name or skill...">
+                        </div>
+                        <select id="categoryFilter" class="filter-select">
+                            <option value="">All Barangays</option>
+                        </select>
+                        <select id="specialtyFilter" class="filter-select">
+                            <option value="">All Specialties</option>
+                            <option value="plumber">Plumber</option>
+                            <option value="electrician">Electrician</option>
+                            <option value="carpenter">Carpenter</option>
+                            <option value="tutor">Tutor</option>
+                            <option value="accountant">Accountant</option>
+                            <option value="mechanic">Mechanic</option>
+                        </select>
+                        <span class="filter-count" id="workerFilterCount"></span>
+                    </div>
+                    <div class="worker-grid" id="workerDirectory"></div>
+                </div>
+            </section>
+        </div><!-- /home-continuous-view -->
 
         <!-- ====================================
          TAB: MY PORTAL (logged-in only)
@@ -600,7 +603,7 @@
                         <div class="mpw-avatar"><i class="fas fa-user"></i></div>
                         <div>
                             <h2>Good day, <span id="portalWelcomeName" class="gold-name">Resident</span></h2>
-                            <p>Welcome to your Biñan City Hub portal. Here's your summary.</p>
+                            <p>Welcome to your Barangay Hub portal. Here's your summary.</p>
                             <p class="mpw-brgy"><i class="fas fa-map-marker-alt"></i> <span
                                     id="portalUserBarangay">â€”</span></p>
                         </div>
@@ -699,9 +702,10 @@
                 <h4>Notifications</h4>
             </div>
             <div style="display:flex;align-items:center;gap:10px">
-                <button class="notif-mark-read" onclick="markAllNotifRead()" id="notifMarkReadBtn"
-                    title="Mark all read">Mark all read</button>
-                <button class="notif-close-btn" onclick="closeNotifPanel()"><i class="fas fa-times"></i></button>
+                <button class="notif-mark-read" onclick="markAllNotifRead()" id="notifMarkReadBtn" title="Mark all read"
+                    aria-label="Mark all notifications as read">Mark all read</button>
+                <button class="notif-close-btn" onclick="closeNotifPanel()" aria-label="Close notifications panel"><i
+                        class="fas fa-times"></i></button>
             </div>
         </div>
         <div class="notif-panel-body" id="notifPanelBody">
@@ -717,7 +721,7 @@
     <div class="status-bar">
         <div class="sb-left">
             <span class="live-dot"></span>
-            <span>Biñan City Hub - Live Portal</span>
+            <span>Barangay Hub - Live Portal</span>
             <span class="sb-sep">|</span>
             <span>City-Wide Portal</span>
         </div>
@@ -729,7 +733,8 @@
     <!-- ===== LOGIN MODAL (guest-triggered) ===== -->
     <div class="modal-backdrop" id="loginModal">
         <div class="login-modal">
-            <button class="modal-x" onclick="closeLoginModal()"><i class="fas fa-times"></i></button>
+            <button class="modal-x" onclick="closeLoginModal()" aria-label="Close modal"><i
+                    class="fas fa-times"></i></button>
             <div class="modal-ico" id="modalIco"><i class="fas fa-lock"></i></div>
             <h3 id="modalTitle">Login Required</h3>
             <p id="modalDesc">Please login or create a free account to continue.</p>
@@ -747,7 +752,8 @@
     <!-- ===== APPLY MODAL (logged-in) ===== -->
     <div class="modal-backdrop" id="applyModal">
         <div class="login-modal" style="max-width:440px">
-            <button class="modal-x" onclick="closeApplyModal()"><i class="fas fa-times"></i></button>
+            <button class="modal-x" onclick="closeApplyModal()" aria-label="Close application form"><i
+                    class="fas fa-times"></i></button>
             <div class="modal-ico gold-ico"><i class="fas fa-file-pen"></i></div>
             <h3 id="applyModalTitle">Apply for Document</h3>
             <p id="applyModalSub" style="margin-bottom:20px">Fill in the required details below.</p>
@@ -783,7 +789,8 @@
     <!-- ===== CONTACT MODAL (logged-in) ===== -->
     <div class="modal-backdrop" id="contactModal">
         <div class="login-modal" style="max-width:360px">
-            <button class="modal-x" onclick="closeContactModal()"><i class="fas fa-times"></i></button>
+            <button class="modal-x" onclick="closeContactModal()" aria-label="Close contact info"><i
+                    class="fas fa-times"></i></button>
             <div class="modal-ico"><i class="fas fa-address-book"></i></div>
             <h3 id="contactName">Worker Name</h3>
             <p id="contactSpec" style="color:var(--gold);font-weight:700;margin-bottom:18px"></p>
@@ -800,7 +807,8 @@
     <!-- ===== PROFILE MODAL (logged-in) ===== -->
     <div class="modal-backdrop" id="profileModal">
         <div class="login-modal" style="max-width:440px">
-            <button class="modal-x" onclick="closeProfileModal()"><i class="fas fa-times"></i></button>
+            <button class="modal-x" onclick="closeProfileModal()" aria-label="Close profile editor"><i
+                    class="fas fa-times"></i></button>
             <div class="modal-ico gold-ico"><i class="fas fa-user-pen"></i></div>
             <h3>Edit Profile</h3>
             <p style="margin-bottom:20px">Update your resident profile details.</p>
@@ -819,7 +827,7 @@
                 </div>
                 <div class="glass-field">
                     <label>Phone</label>
-                    <input type="text" id="profileEditPhone" class="glass-input" placeholder="09xxxxxxxxx">
+                    <input type="tel" id="profileEditPhone" class="glass-input" placeholder="09xxxxxxxxx">
                 </div>
                 <button type="submit" class="btn-gold w-full"><i class="fas fa-save"></i> Save Profile</button>
             </form>
@@ -835,7 +843,8 @@
     <!-- ===== CHANGE PASSWORD MODAL ===== -->
     <div class="modal-backdrop" id="changePasswordModal">
         <div class="login-modal" style="max-width:440px">
-            <button class="modal-x" onclick="closeChangePasswordModal()"><i class="fas fa-times"></i></button>
+            <button class="modal-x" onclick="closeChangePasswordModal()" aria-label="Close change password modal"><i
+                    class="fas fa-times"></i></button>
             <div class="modal-ico gold-ico"><i class="fas fa-key"></i></div>
             <h3>Change Password</h3>
             <p style="margin-bottom:20px">Enter your current password and set a new one.</p>
@@ -882,8 +891,8 @@
                         <div style="font-size:16px;font-weight:700;color:#fff" id="trackDocTitle">—</div>
                     </div>
                 </div>
-                <button class="modal-x" onclick="closeTrackModal()" style="position:relative;top:unset;right:unset"><i
-                        class="fas fa-times"></i></button>
+                <button class="modal-x" onclick="closeTrackModal()" aria-label="Close document tracker"
+                    style="position:relative;top:unset;right:unset"><i class="fas fa-times"></i></button>
             </div>
             <div style="padding:22px 24px">
                 <!-- Meta -->
@@ -956,6 +965,7 @@
 
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="env.js"></script>
     <script src="supabase-config.js"></script>
     <script src="main.js"></script>
 </body>

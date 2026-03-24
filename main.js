@@ -1,5 +1,5 @@
 // ============================================
-// BINAN CITY HUB - MAIN.JS (Supabase-backed)
+// BARANGAY HUB - MAIN.JS (Supabase-backed)
 // ============================================
 // Purpose:
 // - Power the public + resident portal using direct Supabase queries (serverless).
@@ -454,8 +454,37 @@ function checkUrlHash() {
 }
 
 function setupTopbarScroll() {
+  const sections = ["analytics", "documents", "community", "workers"];
   window.addEventListener("scroll", () => {
     document.getElementById("topbar")?.classList.toggle("scrolled", window.scrollY > 20);
+
+    const continuousView = document.getElementById("home-continuous-view");
+    if (continuousView && continuousView.classList.contains("active")) {
+      let currentSection = "";
+      for (const id of sections) {
+        const el = document.getElementById(id);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= window.innerHeight / 3) {
+            currentSection = id;
+          }
+        }
+      }
+
+      // Force highlight last section if at the absolute bottom of the page
+      if (Math.ceil(window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 50) {
+        currentSection = sections[sections.length - 1];
+      }
+
+      if (currentSection) {
+        document.querySelectorAll(".tnav-link[data-tab]").forEach((l) => {
+          if (sections.includes(l.getAttribute("data-tab"))) {
+            l.classList.toggle("active", l.getAttribute("data-tab") === currentSection);
+          }
+        });
+        history.replaceState(null, null, "#" + currentSection);
+      }
+    }
   }, { passive: true });
 }
 
@@ -486,15 +515,26 @@ function switchTab(tabId) {
     return;
   }
 
+  const isContinuous = ["analytics", "workers", "documents", "community"].includes(tabId);
+  const targetTab = isContinuous ? "home-continuous-view" : "tab-" + tabId;
+
   document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
-  document.getElementById("tab-" + tabId)?.classList.add("active");
+  document.getElementById(targetTab)?.classList.add("active");
 
   document.querySelectorAll(".tnav-link[data-tab]").forEach((l) => {
     l.classList.toggle("active", l.getAttribute("data-tab") === tabId);
   });
 
-  history.replaceState(null, null, "#" + tabId);
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  if (isContinuous) {
+    const el = document.getElementById(tabId);
+    if (el) {
+      const y = el.getBoundingClientRect().top + window.scrollY - 80;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    }
+  } else {
+    history.replaceState(null, null, "#" + tabId);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 }
 
 function setCounterTargetByIndex(index, value) {
@@ -834,39 +874,47 @@ function setupProfileForm() {
       return;
     }
 
-    let payload = { full_name: fullName, barangay, phone };
-    let { error } = await supabaseClient.from("profiles").update(payload).eq("id", currentUser.id);
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn ? btn.innerHTML : "";
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Processing...'; }
 
-    if (error && String(error.message || "").toLowerCase().includes("column") && String(error.message || "").toLowerCase().includes("barangay")) {
-      payload = { full_name: fullName, barangay_name: barangay, phone };
-      ({ error } = await supabaseClient.from("profiles").update(payload).eq("id", currentUser.id));
+    try {
+      let payload = { full_name: fullName, barangay, phone };
+      let { error } = await supabaseClient.from("profiles").update(payload).eq("id", currentUser.id);
+
+      if (error && String(error.message || "").toLowerCase().includes("column") && String(error.message || "").toLowerCase().includes("barangay")) {
+        payload = { full_name: fullName, barangay_name: barangay, phone };
+        ({ error } = await supabaseClient.from("profiles").update(payload).eq("id", currentUser.id));
+      }
+
+      if (error) {
+        showToast(error.message);
+        return;
+      }
+
+      const { data: refreshed } = await supabaseClient
+        .from("profiles")
+        .select("id,full_name,email,phone,barangay,role,created_at")
+        .eq("id", currentUser.id)
+        .maybeSingle();
+
+      currentProfile = refreshed || currentProfile;
+
+      const parsedName = parseFullName(currentProfile?.full_name || fullName);
+      const resolvedBarangay = currentProfile?.barangay || barangay;
+      applyLoggedInUI({
+        firstName: parsedName.firstName,
+        lastName: parsedName.lastName,
+        email: currentProfile?.email || currentUser.email,
+        barangay: resolvedBarangay,
+        memberSince: currentProfile?.created_at
+      });
+
+      closeProfileModal();
+      showToast("Profile updated successfully.");
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
     }
-
-    if (error) {
-      showToast(error.message);
-      return;
-    }
-
-    const { data: refreshed } = await supabaseClient
-      .from("profiles")
-      .select("id,full_name,email,phone,barangay,role,created_at")
-      .eq("id", currentUser.id)
-      .maybeSingle();
-
-    currentProfile = refreshed || currentProfile;
-
-    const parsedName = parseFullName(currentProfile?.full_name || fullName);
-    const resolvedBarangay = currentProfile?.barangay || barangay;
-    applyLoggedInUI({
-      firstName: parsedName.firstName,
-      lastName: parsedName.lastName,
-      email: currentProfile?.email || currentUser.email,
-      barangay: resolvedBarangay,
-      memberSince: currentProfile?.created_at
-    });
-
-    closeProfileModal();
-    showToast("Profile updated successfully.");
   });
 }
 
@@ -953,31 +1001,39 @@ function setupChangePasswordForm() {
       return;
     }
 
-    // First, verify the current password by attempting to sign in
-    const { error: signInError } = await supabaseClient.auth.signInWithPassword({
-      email: currentUser.email,
-      password: currentPassword
-    });
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn ? btn.innerHTML : "";
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Processing...'; }
 
-    if (signInError) {
-      showToast("Current password is incorrect.");
-      return;
+    try {
+      // First, verify the current password by attempting to sign in
+      const { error: signInError } = await supabaseClient.auth.signInWithPassword({
+        email: currentUser.email,
+        password: currentPassword
+      });
+
+      if (signInError) {
+        showToast("Current password is incorrect.");
+        return;
+      }
+
+      // If verification succeeds, update the password
+      const { error: updateError } = await supabaseClient.auth.updateUser({
+        password: newPassword
+      });
+
+      if (updateError) {
+        showToast(updateError.message || "Failed to update password.");
+        return;
+      }
+
+      // Clear the form and close modal
+      document.getElementById("changePasswordForm")?.reset();
+      closeChangePasswordModal();
+      showToast("Password changed successfully.");
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
     }
-
-    // If verification succeeds, update the password
-    const { error: updateError } = await supabaseClient.auth.updateUser({
-      password: newPassword
-    });
-
-    if (updateError) {
-      showToast(updateError.message || "Failed to update password.");
-      return;
-    }
-
-    // Clear the form and close modal
-    document.getElementById("changePasswordForm")?.reset();
-    closeChangePasswordModal();
-    showToast("Password changed successfully.");
   });
 }
 
@@ -992,25 +1048,33 @@ function setupApplyForm() {
     }
 
     const purpose = document.getElementById("applyPurpose")?.value || "General request";
-    const { error } = await supabaseClient.from("document_requests").insert({
-      resident_id: currentUser.id,
-      barangay: currentProfile?.barangay || currentUser?.user_metadata?.barangay || "Barangay Poblacion",
-      request_type: applyModalDocName,
-      purpose,
-      status: "submitted"
-    });
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn ? btn.innerHTML : "";
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Processing...'; }
 
-    if (error) {
-      showToast(error.message);
-      return;
+    try {
+      const { error } = await supabaseClient.from("document_requests").insert({
+        resident_id: currentUser.id,
+        barangay: currentProfile?.barangay || currentUser?.user_metadata?.barangay || "Barangay Poblacion",
+        request_type: applyModalDocName,
+        purpose,
+        status: "submitted"
+      });
+
+      if (error) {
+        showToast(error.message);
+        return;
+      }
+
+      closeApplyModal();
+      await loadUserApplications();
+      renderUserApplications();
+      renderDocRecentApps();
+      renderPortalStatCards();
+      showToast(`${applyModalDocName} application submitted.`);
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
     }
-
-    closeApplyModal();
-    await loadUserApplications();
-    renderUserApplications();
-    renderDocRecentApps();
-    renderPortalStatCards();
-    showToast(`${applyModalDocName} application submitted.`);
   });
 }
 
@@ -1065,25 +1129,33 @@ function setupReportForm() {
       return;
     }
 
-    const { error } = await supabaseClient.from("issue_reports").insert({
-      resident_id: currentUser.id,
-      category,
-      location,
-      description,
-      status: "pending",
-      barangay
-    });
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn ? btn.innerHTML : "";
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Processing...'; }
 
-    if (error) {
-      showToast(error.message);
-      return;
+    try {
+      const { error } = await supabaseClient.from("issue_reports").insert({
+        resident_id: currentUser.id,
+        category,
+        location,
+        description,
+        status: "pending",
+        barangay
+      });
+
+      if (error) {
+        showToast(error.message);
+        return;
+      }
+
+      e.target.reset();
+      await loadIssueReports();
+      populateReportBarangayOptions();
+      renderReportsTable();
+      showToast("Issue report submitted successfully.");
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
     }
-
-    e.target.reset();
-    await loadIssueReports();
-    populateReportBarangayOptions();
-    renderReportsTable();
-    showToast("Issue report submitted successfully.");
   });
 }
 

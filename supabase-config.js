@@ -7,9 +7,9 @@
  * - Prevents duplicate client creation and session drift across pages.
  * - Keeps connection config centralized for easier maintenance.
  */
-// Set these or inject them using a build tool, referencing the .env file.
-window.BCH_SUPABASE_URL = "YOUR_PROJECT_ID";
-window.BCH_SUPABASE_ANON_KEY = "YOUR_PUBLIC_ANON_KEY";
+// Load from env.js if available (for local dev without bundler), else use placeholders
+window.BCH_SUPABASE_URL = (window.ENV && window.ENV.BCH_SUPABASE_URL) || "YOUR_PROJECT_ID";
+window.BCH_SUPABASE_ANON_KEY = (window.ENV && window.ENV.BCH_SUPABASE_ANON_KEY) || "YOUR_PUBLIC_ANON_KEY";
 
 // Returns a singleton Supabase client used by portal, auth, and admin scripts.
 window.getBchSupabaseClient = function getBchSupabaseClient() {
