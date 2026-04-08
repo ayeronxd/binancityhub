@@ -21,6 +21,8 @@ let announcements = [];
 let issueReports = [];
 let workersRegistry = [];
 let portalSettings = null;
+let docTemplates = [];
+let fillDocContext = { reqId: null, barangay: "", docType: "", residentName: "", ref: "", purpose: "", phone: "", templateUrl: null, templateFileName: "" };
 
 // Admin bootstrap: secure gate -> role-aware UI -> scoped data load -> panel render.
 document.addEventListener("DOMContentLoaded", async () => {
@@ -141,11 +143,11 @@ function applyRoleScopedUI() {
   if (isSuperAdmin()) {
     setText("adminPanelSub", "City-Wide Controller · All 24 barangays");
     setText("roleModeTitle", "City-Wide Controller");
-    setText("roleModeDesc", "Global operations across all barangays and system users.");
+    setText("roleModeDesc", "Monitoring all barangays. Document processing is handled by each Barangay Admin.");
     if (roleLabel) roleLabel.textContent = "Super Admin";
     if (roleContext) roleContext.textContent = "City-Wide";
     if (usersHeading) usersHeading.textContent = "All System Users";
-    if (docsHeading) docsHeading.textContent = "City-Wide Document Queue";
+    if (docsHeading) docsHeading.textContent = "City-Wide Document Monitor (Read-Only)";
     if (annHeading) annHeading.textContent = "City-Wide News Hub";
     if (verifyHint) verifyHint.textContent = "Verification controls are available in Barangay Admin scope.";
 
@@ -186,7 +188,8 @@ async function loadAdminData() {
     loadAnnouncements(),
     loadIssueReports(),
     loadWorkers(),
-    loadPortalSettings()
+    loadPortalSettings(),
+    loadDocTemplates()
   ]);
 }
 
@@ -297,7 +300,7 @@ async function loadDocRequests() {
   const buildDocQuery = (barangayColumn) => {
     let query = supabaseClient
       .from("document_requests")
-      .select("id,resident_id,request_type,barangay,created_at,status")
+      .select("id,resident_id,request_type,barangay,created_at,status,processed_at,notified_at")
       .order("created_at", { ascending: false });
 
     if (isBarangayAdmin() && barangayColumn) {
@@ -334,7 +337,9 @@ async function loadDocRequests() {
     type: r.request_type,
     barangay: r.barangay || "-",
     date: formatDate(new Date(r.created_at)),
-    status: mapDocStatus(r.status)
+    status: mapDocStatus(r.status),
+    processedAt: r.processed_at || null,
+    notifiedAt:  r.notified_at  || null
   }));
 }
 
@@ -503,6 +508,7 @@ function renderAllPanels() {
   renderIssueReportsTable();
   renderWorkersTable();
   renderAnnouncementsGrid();
+  renderDocTemplatesPanel();
 }
 
 function renderOverviewStats() {
@@ -673,6 +679,7 @@ function showPanel(panelId) {
     announcements: ["Announcements", "Manage official city and barangay announcements"],
     reports: ["Issue Reports", "Review community-submitted infrastructure reports"],
     workers: ["Workers Registry", "Manage the skilled worker directory"],
+    doctemplates: ["Document Templates", "Upload and manage per-barangay document templates"],
     settings: ["Settings", "System configuration and admin account"]
   };
 
@@ -719,7 +726,18 @@ function renderOverviewTable() {
   const tbody = document.getElementById("overviewRequestsBody");
   if (!tbody) return;
 
-  tbody.innerHTML = docRequests.slice(0, 5).map((r) => `
+  tbody.innerHTML = docRequests.slice(0, 5).map((r) => {
+    const safeId = escapeAttr(r.id);
+    let actionBtn = "";
+    // Super admin sees read-only — only barangay admins can process
+    if (isBarangayAdmin()) {
+      if (r.status === "Pending") {
+        actionBtn = `<button class="tbl-btn tbl-btn-approve" onclick="markAsProcessing('${safeId}')"><i class="fas fa-play"></i> Process</button>`;
+      } else if (r.status === "Processing") {
+        actionBtn = `<button class="tbl-btn tbl-btn-edit" onclick="openFillDocModal('${safeId}')"><i class="fas fa-file-signature"></i> Edit Doc</button>`;
+      }
+    }
+    return `
     <tr>
       <td><code style="font-size:11px;color:var(--accent-gold)">${r.ref}</code></td>
       <td><strong>${escapeHtml(r.name)}</strong></td>
@@ -727,12 +745,9 @@ function renderOverviewTable() {
       <td>${escapeHtml(r.barangay)}</td>
       <td>${escapeHtml(r.date)}</td>
       <td>${statusPill(r.status)}</td>
-      <td>
-        ${r.status === "Pending" ? `<button class="tbl-btn tbl-btn-approve" onclick="setDocumentStatus('${r.id}','approved')"><i class="fas fa-check"></i> Approve</button>` : ""}
-        <button class="tbl-btn tbl-btn-view" onclick="showAdminToast('Viewing request ${r.ref}')"><i class="fas fa-eye"></i></button>
-      </td>
-    </tr>
-  `).join("");
+      <td>${actionBtn || '<span style="font-size:11px;color:var(--text-muted)">—</span>'}</td>
+    </tr>`;
+  }).join("");
 }
 
 function renderBarangayTable(filter = "") {
@@ -818,14 +833,78 @@ function renderDocRequestsTable(typeFilter = "", statusFilter = "") {
   if (typeFilter) filtered = filtered.filter((r) => r.type === typeFilter);
   if (statusFilter) filtered = filtered.filter((r) => r.status === statusFilter);
 
+  // ── SUPER ADMIN: read-only view grouped by barangay ──────────────────────
+  if (isSuperAdmin()) {
+    // Update column header to "Processing Time"
+    const table = document.getElementById("docRequestsBody")?.closest("table");
+    const headers = table?.querySelectorAll("thead th");
+    if (headers && headers.length >= 7) headers[6].textContent = "Processing Time";
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:28px;color:var(--text-muted)"><i class="fas fa-inbox" style="font-size:22px;margin-bottom:8px;display:block"></i>No document requests found.</td></tr>`;
+      return;
+    }
+
+    // Group by barangay
+    const groups = {};
+    filtered.forEach(r => {
+      const key = r.barangay || "Unknown Barangay";
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(r);
+    });
+
+    const sortedBarangays = Object.keys(groups).sort();
+
+    tbody.innerHTML = sortedBarangays.map(brgyName => {
+      const rows = groups[brgyName];
+      const pendingCount = rows.filter(r => r.status === "Pending").length;
+      const processingCount = rows.filter(r => r.status === "Processing").length;
+
+      const groupHeader = `
+        <tr class="brgy-group-header">
+          <td colspan="7">
+            <div class="brgy-group-header-inner">
+              <div>
+                <i class="fas fa-map-marker-alt" style="color:var(--accent-gold);margin-right:8px"></i>
+                <strong>${escapeHtml(brgyName)}</strong>
+              </div>
+              <div class="brgy-group-badges">
+                <span class="status-pill pending" style="font-size:11px">${pendingCount} Pending</span>
+                <span class="status-pill processing" style="font-size:11px">${processingCount} Processing</span>
+                <span style="font-size:11px;color:var(--text-muted);font-weight:600">${rows.length} total</span>
+              </div>
+            </div>
+          </td>
+        </tr>`;
+
+      const dataRows = rows.map(r => `
+        <tr>
+          <td><code style="font-size:11px;color:var(--accent-gold)">${r.ref}</code></td>
+          <td><strong>${escapeHtml(r.name)}</strong></td>
+          <td>${escapeHtml(r.type)}</td>
+          <td>${escapeHtml(r.barangay)}</td>
+          <td>${escapeHtml(r.date)}</td>
+          <td>${statusPill(r.status)}</td>
+          <td>${buildTimingBadge(r.processedAt, r.notifiedAt)}</td>
+        </tr>`).join("");
+
+      return groupHeader + dataRows;
+    }).join("");
+
+    return;
+  }
+
+  // ── BARANGAY ADMIN: full action buttons ───────────────────────────────────
   tbody.innerHTML = filtered.map((r) => {
-    const showQueueActions = isBarangayAdmin() || isSuperAdmin();
-    const canProcess = ["Pending", "Processing"].includes(r.status);
-    const canArchive = ["Approved"].includes(r.status);
-    const canDelete = ["Approved", "Rejected", "Completed", "Archived"].includes(r.status);
-    const safeId   = escapeAttr(r.id);
-    const safeDoc  = escapeAttr(r.type);
-    const safeName = escapeAttr(r.name);
+    const isPending     = r.status === "Pending";
+    const isProcessing  = r.status === "Processing";
+    const canArchive    = r.status === "Approved";
+    const canDelete     = ["Approved", "Rejected", "Completed", "Archived"].includes(r.status);
+    const canRedownload = ["Approved", "Completed", "Archived"].includes(r.status) &&
+                          docTemplates.some(t => t.barangay_name === r.barangay && t.document_type === r.type);
+    const safeId    = escapeAttr(r.id);
+    const safeDoc   = escapeAttr(r.type);
+    const safeName  = escapeAttr(r.name);
     const safeEmail = escapeAttr(r.residentEmail || "");
     const safeStatus = escapeAttr(r.status);
 
@@ -838,11 +917,13 @@ function renderDocRequestsTable(typeFilter = "", statusFilter = "") {
       <td>${escapeHtml(r.date)}</td>
       <td>${statusPill(r.status)}</td>
       <td style="display:flex;gap:5px;flex-wrap:wrap;">
-        ${showQueueActions && canProcess ? `<button class="tbl-btn tbl-btn-approve" onclick="setDocumentStatus('${safeId}','approved')"><i class="fas fa-check"></i> Approve</button>` : ""}
-        ${showQueueActions && canProcess ? `<button class="tbl-btn tbl-btn-delete" onclick="setDocumentStatus('${safeId}','rejected')"><i class="fas fa-xmark"></i> Reject</button>` : ""}
-        ${showQueueActions && canArchive ? `<button class="tbl-btn tbl-btn-view" onclick="setDocumentStatus('${safeId}','completed')"><i class="fas fa-box-archive"></i> Archive</button>` : ""}
-        ${showQueueActions ? `<button class="tbl-btn tbl-btn-message" onclick="openMessageResidentModal('${safeId}','${safeDoc}','${safeName}','${safeEmail}','${safeStatus}')"><i class="fas fa-envelope"></i> Message</button>` : ""}
-        ${showQueueActions && canDelete ? `<button class="tbl-btn tbl-btn-delete" onclick="deleteDocumentRequest('${safeId}')"><i class="fas fa-trash"></i> Delete</button>` : ""}
+        ${isPending ? `<button class="tbl-btn tbl-btn-approve" onclick="markAsProcessing('${safeId}')"><i class="fas fa-play"></i> Process</button>` : ""}
+        ${isProcessing ? `<button class="tbl-btn tbl-btn-edit" onclick="openFillDocModal('${safeId}')"><i class="fas fa-file-signature"></i> Edit Doc</button>` : ""}
+        ${isProcessing ? `<button class="tbl-btn tbl-btn-delete" onclick="setDocumentStatus('${safeId}','rejected')"><i class="fas fa-xmark"></i> Reject</button>` : ""}
+        ${canArchive ? `<button class="tbl-btn tbl-btn-view" onclick="setDocumentStatus('${safeId}','completed')"><i class="fas fa-box-archive"></i> Archive</button>` : ""}
+        ${canRedownload ? `<button class="tbl-btn tbl-btn-edit" onclick="openFillDocModal('${safeId}', true)" title="Re-download filled document"><i class="fas fa-download"></i> Download Doc</button>` : ""}
+        <button class="tbl-btn tbl-btn-message" onclick="openMessageResidentModal('${safeId}','${safeDoc}','${safeName}','${safeEmail}','${safeStatus}')"><i class="fas fa-envelope"></i> Message</button>
+        ${canDelete ? `<button class="tbl-btn tbl-btn-delete" onclick="deleteDocumentRequest('${safeId}')"><i class="fas fa-trash"></i> Delete</button>` : ""}
       </td>
     </tr>`;
   }).join("");
@@ -967,13 +1048,16 @@ async function sendMessageToResident() {
     if (error) {
       console.warn("admin_messages insert failed (table may not exist yet):", error.message);
     } else if (msgResidentContext.id) {
-      // User request: "when the admin messages the user the track timeline will be in completed stage"
-      // But we shouldn't mark "Rejected" documents as "Completed".
+      // Save notified_at timestamp for processing time tracking
+      const notifiedNow = new Date().toISOString();
+      const updatePayload = { notified_at: notifiedNow };
+      // Mark as completed unless it was rejected
       if (msgResidentContext.status !== "Rejected" && msgResidentContext.status !== "rejected") {
-        await supabaseClient.from("document_requests")
-          .update({ status: "completed" })
-          .eq("id", msgResidentContext.id);
+        updatePayload.status = "completed";
       }
+      await supabaseClient.from("document_requests")
+        .update(updatePayload)
+        .eq("id", msgResidentContext.id);
       filterDocuments(); // refresh admin table
     }
   }
@@ -1786,6 +1870,488 @@ function escapeAttr(value) {
   return String(value || "").replaceAll("'", "\\'").replaceAll('"', "&quot;");
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// DOCUMENT TEMPLATES — load, render, upload, delete
+// ══════════════════════════════════════════════════════════════════════
+
+async function loadDocTemplates() {
+  let query = supabaseClient
+    .from("document_templates")
+    .select("id,barangay_id,barangay_name,document_type,template_file_url,template_file_path,template_file_name,created_at")
+    .order("created_at", { ascending: false });
+
+  if (isBarangayAdmin()) {
+    query = query.eq("barangay_name", getScopedBarangay());
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    // Silently ignore if table doesn't exist yet
+    const msg = String(error.message || "").toLowerCase();
+    if (!msg.includes("document_templates")) showAdminToast(error.message);
+    docTemplates = [];
+    return;
+  }
+  docTemplates = data || [];
+}
+
+function renderDocTemplatesPanel() {
+  const grid = document.getElementById("docTemplatesGrid");
+  if (!grid) return;
+
+  const typeFilter = document.getElementById("doctplTypeFilter")?.value || "";
+  const scopedBarangay = getScopedBarangay();
+
+  // Group templates by document type for display
+  const docTypes = [
+    "Barangay Clearance",
+    "Barangay ID",
+    "Job Seeker Cert.",
+    "Indigency Certificate",
+    "Residency Certificate"
+  ];
+
+  const typesToShow = typeFilter ? [typeFilter] : docTypes;
+
+  // Filter by scope
+  let scopedTemplates = isBarangayAdmin()
+    ? docTemplates.filter(t => t.barangay_name === scopedBarangay)
+    : docTemplates;
+
+  if (grid.children.length === 0 && scopedTemplates.length === 0 && !typeFilter) {
+    // Show empty state
+  }
+
+  grid.innerHTML = typesToShow.map(docType => {
+    const tpl = scopedTemplates.find(t => t.document_type === docType);
+    const typeColor = {
+      "Barangay Clearance": "#1a3a52",
+      "Barangay ID": "#2c5282",
+      "Job Seeker Cert.": "#276749",
+      "Indigency Certificate": "#744210",
+      "Residency Certificate": "#553c9a"
+    }[docType] || "#1a3a52";
+
+    if (tpl) {
+      return `
+      <div class="doc-template-card has-template">
+        <div class="doc-template-type-bar" style="background:${typeColor}">
+          <i class="fas fa-file-word"></i>
+          <span>${escapeHtml(docType)}</span>
+        </div>
+        <div class="doc-template-body">
+          <div class="doc-template-filename"><i class="fas fa-file-alt" style="color:${typeColor};margin-right:6px"></i>${escapeHtml(tpl.template_file_name || "template.docx")}</div>
+          ${!isBarangayAdmin() ? `<div class="doc-template-brgy"><i class="fas fa-map-marker-alt" style="color:var(--text-muted);margin-right:4px"></i>${escapeHtml(tpl.barangay_name)}</div>` : ""}
+          <div class="doc-template-date"><i class="fas fa-calendar-alt" style="color:var(--text-muted);margin-right:4px"></i>Uploaded ${formatDate(new Date(tpl.created_at))}</div>
+        </div>
+        <div class="doc-template-actions">
+          <a class="tbl-btn tbl-btn-view" href="${escapeHtml(tpl.template_file_url)}" target="_blank" title="Download template">
+            <i class="fas fa-download"></i> Download
+          </a>
+          <button class="tbl-btn tbl-btn-edit" onclick="openUploadTemplateModal('${escapeAttr(docType)}','${escapeAttr(tpl.barangay_name)}')" title="Replace template">
+            <i class="fas fa-arrows-rotate"></i> Replace
+          </button>
+          <button class="tbl-btn tbl-btn-delete" onclick="deleteDocTemplate('${escapeAttr(tpl.id)}','${escapeAttr(tpl.template_file_path || '')}')" title="Delete template">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>`;
+    } else {
+      const safeType = escapeAttr(docType);
+      return `
+      <div class="doc-template-card no-template">
+        <div class="doc-template-type-bar" style="background:${typeColor}">
+          <i class="fas fa-file-word"></i>
+          <span>${escapeHtml(docType)}</span>
+        </div>
+        <div class="doc-template-body">
+          <div class="doc-template-empty">
+            <i class="fas fa-cloud-upload-alt" style="font-size:22px;color:#cbd5e0;margin-bottom:8px"></i>
+            <p>No template uploaded yet</p>
+          </div>
+        </div>
+        <div class="doc-template-actions">
+          <button class="tbl-btn tbl-btn-approve" onclick="openUploadTemplateModal('${safeType}','${escapeAttr(isBarangayAdmin() ? scopedBarangay : '')}')">
+            <i class="fas fa-upload"></i> Upload Template
+          </button>
+        </div>
+      </div>`;
+    }
+  }).join("");
+}
+
+function openUploadTemplateModal(presetDocType = "", presetBarangay = "") {
+  // Reset form
+  const docTypeEl = document.getElementById("tplDocType");
+  const barangayEl = document.getElementById("tplBarangaySelect");
+  const fileNameEl = document.getElementById("tplFileName");
+  const fileInput = document.getElementById("tplFileInput");
+  const docTypeErr = document.getElementById("tplDocTypeError");
+  const brgyErr = document.getElementById("tplBarangayError");
+  const fileErr = document.getElementById("tplFileError");
+
+  if (fileInput) fileInput.value = "";
+  if (fileNameEl) fileNameEl.textContent = "";
+  if (docTypeErr) docTypeErr.textContent = "";
+  if (brgyErr) brgyErr.textContent = "";
+  if (fileErr) fileErr.textContent = "";
+
+  // Populate barangay options
+  if (barangayEl) {
+    if (isBarangayAdmin()) {
+      const b = getScopedBarangay();
+      barangayEl.innerHTML = `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`;
+      barangayEl.value = b;
+      barangayEl.setAttribute("disabled", "disabled");
+    } else {
+      const opts = barangays.map(b => `<option value="${escapeHtml(b.name)}">${escapeHtml(b.name)}</option>`).join("");
+      barangayEl.innerHTML = `<option value="">Select barangay...</option>${opts}`;
+      barangayEl.removeAttribute("disabled");
+      if (presetBarangay) barangayEl.value = presetBarangay;
+    }
+  }
+
+  if (docTypeEl && presetDocType) docTypeEl.value = presetDocType;
+
+  openModal("uploadTemplateModalOverlay");
+}
+
+function onTemplateFileSelected(input) {
+  const file = input.files[0];
+  const fileNameEl = document.getElementById("tplFileName");
+  const fileErr = document.getElementById("tplFileError");
+
+  if (!file) {
+    if (fileNameEl) fileNameEl.textContent = "";
+    return;
+  }
+
+  if (!file.name.endsWith(".docx")) {
+    if (fileErr) fileErr.textContent = "Only .docx files are supported.";
+    input.value = "";
+    if (fileNameEl) fileNameEl.textContent = "";
+    return;
+  }
+
+  if (fileErr) fileErr.textContent = "";
+  if (fileNameEl) fileNameEl.textContent = "✓ " + file.name;
+}
+
+async function handleTemplateUpload() {
+  const docType = document.getElementById("tplDocType")?.value;
+  const barangayName = document.getElementById("tplBarangaySelect")?.value;
+  const fileInput = document.getElementById("tplFileInput");
+  const file = fileInput?.files[0];
+  let valid = true;
+
+  document.getElementById("tplDocTypeError").textContent = "";
+  document.getElementById("tplBarangayError").textContent = "";
+  document.getElementById("tplFileError").textContent = "";
+
+  if (!docType) { document.getElementById("tplDocTypeError").textContent = "Please select a document type."; valid = false; }
+  if (!barangayName) { document.getElementById("tplBarangayError").textContent = "Please select a barangay."; valid = false; }
+  if (!file) { document.getElementById("tplFileError").textContent = "Please select a .docx file."; valid = false; }
+  if (!valid) return;
+
+  const uploadBtn = document.getElementById("tplUploadBtn");
+  if (uploadBtn) { uploadBtn.disabled = true; uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...'; }
+
+  // Find barangay record
+  const brgyRecord = barangays.find(b => b.name === barangayName);
+  if (!brgyRecord) {
+    showAdminToast("Barangay not found in database.");
+    if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Upload & Save'; }
+    return;
+  }
+
+  // Upload file to Supabase Storage
+  const safeType = docType.replace(/[^a-z0-9]/gi, "_").toLowerCase();
+  const safeBrgy = barangayName.replace(/[^a-z0-9]/gi, "_").toLowerCase();
+  const filePath = `${safeBrgy}/${safeType}.docx`;
+
+  const { error: storageError } = await supabaseClient.storage
+    .from("document-templates")
+    .upload(filePath, file, { upsert: true, contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+
+  if (storageError) {
+    showAdminToast("Upload failed: " + storageError.message);
+    if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Upload & Save'; }
+    return;
+  }
+
+  // Get public URL
+  const { data: urlData } = supabaseClient.storage.from("document-templates").getPublicUrl(filePath);
+  const publicUrl = urlData?.publicUrl || "";
+
+  // Upsert record in document_templates table
+  const { error: dbError } = await supabaseClient
+    .from("document_templates")
+    .upsert({
+      barangay_id: brgyRecord.id,
+      barangay_name: barangayName,
+      document_type: docType,
+      template_file_url: publicUrl,
+      template_file_path: filePath,
+      template_file_name: file.name,
+      created_by: currentUser.id
+    }, { onConflict: "barangay_id,document_type" });
+
+  if (dbError) {
+    showAdminToast("DB save failed: " + dbError.message);
+    if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Upload & Save'; }
+    return;
+  }
+
+  await loadDocTemplates();
+  renderDocTemplatesPanel();
+  closeModal("uploadTemplateModalOverlay");
+  showAdminToast(`Template for "${docType}" uploaded successfully.`);
+
+  if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Upload & Save'; }
+}
+
+async function deleteDocTemplate(templateId, filePath) {
+  if (!confirm("Delete this template? This action cannot be undone.")) return;
+
+  // Delete from Storage if path is known
+  if (filePath) {
+    await supabaseClient.storage.from("document-templates").remove([filePath]);
+  }
+
+  const { error } = await supabaseClient
+    .from("document_templates")
+    .delete()
+    .eq("id", templateId);
+
+  if (error) {
+    showAdminToast(error.message);
+    return;
+  }
+
+  await loadDocTemplates();
+  renderDocTemplatesPanel();
+  showAdminToast("Template deleted.");
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// PROCESS FLOW — markAsProcessing, openFillDocModal, generateFilledDocx
+// ══════════════════════════════════════════════════════════════════════
+
+async function markAsProcessing(docId) {
+  const now = new Date().toISOString();
+  const { error } = await supabaseClient
+    .from("document_requests")
+    .update({ status: "reviewing", processed_at: now })
+    .eq("id", docId);
+
+  if (error) { showAdminToast(error.message); return; }
+
+  await loadDocRequests();
+  renderAllPanels();
+  showAdminToast("Request moved to Processing. Resident notified on their dashboard.");
+}
+
+async function openFillDocModal(reqId, redownload = false) {
+  const req = docRequests.find(r => String(r.id) === String(reqId));
+  if (!req) { showAdminToast("Request not found."); return; }
+
+  // Find matching template for this barangay + doc type
+  const tpl = docTemplates.find(
+    t => t.barangay_name === req.barangay && t.document_type === req.type
+  );
+
+  // Find barangay captain
+  const brgy = barangays.find(b => b.name === req.barangay);
+  const captainName = brgy?.captain && brgy.captain !== "-" ? brgy.captain : "";
+
+  // Find resident profile for extra fields
+  const { data: profile } = await supabaseClient
+    .from("profiles")
+    .select("full_name,phone,barangay")
+    .eq("id", req.residentId)
+    .maybeSingle();
+
+  const today = new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
+
+  fillDocContext = {
+    reqId,
+    barangay: req.barangay,
+    docType: req.type,
+    residentName: req.name,
+    ref: req.ref,
+    purpose: "",  // not stored in request — editable
+    phone: profile?.phone || "",
+    templateUrl: tpl?.template_file_url || null,
+    templateFileName: tpl?.template_file_name || ""
+  };
+
+  // Populate header
+  document.getElementById("fillDocResidentName").textContent = req.name;
+  document.getElementById("fillDocType").textContent = req.type;
+  document.getElementById("fillDocRef").textContent = req.ref;
+  document.getElementById("fillDocSubtitle").textContent =
+    tpl ? `Template: ${tpl.template_file_name}` : "No template found — approve without document";
+
+  const noTplDiv = document.getElementById("fillDocNoTemplate");
+  const fieldsSection = document.getElementById("fillDocFieldsSection");
+  const downloadBtn = document.getElementById("fillDocDownloadBtn");
+
+  if (!tpl) {
+    // No template — show warning, hide fields + download
+    if (noTplDiv) { noTplDiv.style.display = "block"; document.getElementById("fillDocNoTplBarangay").textContent = req.barangay; }
+    if (fieldsSection) fieldsSection.style.display = "none";
+    if (downloadBtn) downloadBtn.style.display = "none";
+  } else {
+    if (noTplDiv) noTplDiv.style.display = "none";
+    if (fieldsSection) fieldsSection.style.display = "block";
+    if (downloadBtn) downloadBtn.style.display = "";
+
+    // Build editable fields grid
+    const fields = [
+      { key: "resident_name",  label: "Resident Name",    value: req.name },
+      { key: "date_today",     label: "Date",              value: today },
+      { key: "barangay_name",  label: "Barangay",          value: req.barangay },
+      { key: "captain_name",   label: "Barangay Captain",  value: captainName },
+      { key: "purpose",        label: "Purpose",           value: "" },
+      { key: "ref_no",         label: "Reference No.",     value: req.ref },
+      { key: "address",        label: "Address",           value: profile?.barangay || req.barangay },
+      { key: "phone",          label: "Phone",             value: profile?.phone || "" },
+      { key: "document_type",  label: "Document Type",     value: req.type }
+    ];
+
+    const grid = document.getElementById("fillDocFieldsGrid");
+    if (grid) {
+      grid.innerHTML = fields.map(f => `
+        <div class="fill-doc-field-row">
+          <label class="fill-doc-field-label">${escapeHtml(f.label)}</label>
+          <input type="text" class="admin-input fill-doc-field-input"
+                 data-key="${escapeHtml(f.key)}"
+                 value="${escapeHtml(f.value)}"
+                 placeholder="${escapeHtml(f.label)}">
+        </div>
+      `).join("");
+    }
+  }
+
+  // Show/hide approve & reject buttons based on mode
+  const approveBtn = document.getElementById("fillDocApproveBtn");
+  const rejectBtn  = document.getElementById("fillDocRejectBtn");
+  const alreadyApprovedBanner = document.getElementById("fillDocAlreadyApproved");
+
+  if (redownload) {
+    // Download-only mode: request already approved
+    if (approveBtn) approveBtn.style.display = "none";
+    if (rejectBtn)  rejectBtn.style.display  = "none";
+    if (alreadyApprovedBanner) alreadyApprovedBanner.style.display = "flex";
+  } else {
+    if (approveBtn) approveBtn.style.display = "";
+    if (rejectBtn)  rejectBtn.style.display  = "";
+    if (alreadyApprovedBanner) alreadyApprovedBanner.style.display = "none";
+  }
+
+  openModal("fillDocModalOverlay");
+}
+
+function getFilledDocFields() {
+  const inputs = document.querySelectorAll(".fill-doc-field-input");
+  const data = {};
+  inputs.forEach(inp => { data[inp.dataset.key] = inp.value || ""; });
+  return data;
+}
+
+async function generateFilledDocx() {
+  if (!fillDocContext.templateUrl) {
+    showAdminToast("No template available for this document type.");
+    return;
+  }
+
+  const btn = document.getElementById("fillDocDownloadBtn");
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...'; }
+
+  try {
+    // 1. Download the template .docx (which is just a ZIP file)
+    const response = await fetch(fillDocContext.templateUrl);
+    if (!response.ok) throw new Error("Could not download template file. Make sure the bucket is public.");
+    const arrayBuffer = await response.arrayBuffer();
+
+    // 2. Open the ZIP and read the main document XML
+    const zip = new PizZip(arrayBuffer);
+    const xmlFile = zip.file("word/document.xml");
+    if (!xmlFile) throw new Error("Invalid .docx file: word/document.xml not found.");
+
+    let xml = xmlFile.asText();
+
+    // 3. Pre-process: Word sometimes splits {{ placeholder }} text across multiple
+    //    XML <w:r> run elements (e.g. due to spell-check markers). This step
+    //    collapses those splits so replacement works even on "damaged" templates.
+    //    It removes any XML tags found between {{ and }} so the placeholder
+    //    becomes a single plain string again.
+    xml = xml.replace(/\{\{((?:[^{}]|<[^>]+>)*?)\}\}/g, (match) => {
+      return match.replace(/<[^>]+>/g, ""); // strip XML tags inside {{ }}
+    });
+
+    // 4. Replace each {{key}} with its XML-safe value
+    const fieldValues = getFilledDocFields();
+    Object.entries(fieldValues).forEach(([key, value]) => {
+      const safe = String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+      xml = xml.split(`{{${key}}}`).join(safe);
+    });
+
+    // 5. Write modified XML back and generate blob
+    zip.file("word/document.xml", xml);
+    const out = zip.generate({
+      type: "blob",
+      mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    });
+
+    // 6. Trigger download via FileSaver
+    const safeType = fillDocContext.docType.replace(/[^a-z0-9]/gi, "_");
+    const safeRef  = fillDocContext.ref;
+    saveAs(out, `${safeType}_${safeRef}_filled.docx`);
+    showAdminToast("Document downloaded successfully!");
+
+  } catch (err) {
+    showAdminToast("Error generating document: " + err.message);
+    console.error(err);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-download"></i> Download .docx'; }
+  }
+}
+
+async function approveFromFillModal() {
+  if (!fillDocContext.reqId) return;
+  const { error } = await supabaseClient
+    .from("document_requests")
+    .update({ status: "approved" })
+    .eq("id", fillDocContext.reqId);
+
+  if (error) { showAdminToast(error.message); return; }
+
+  closeModal("fillDocModalOverlay");
+  await loadDocRequests();
+  renderAllPanels();
+  showAdminToast("Request approved.");
+}
+
+async function rejectFromFillModal() {
+  if (!fillDocContext.reqId) return;
+  if (!confirm("Reject this document request?")) return;
+
+  const { error } = await supabaseClient
+    .from("document_requests")
+    .update({ status: "rejected" })
+    .eq("id", fillDocContext.reqId);
+
+  if (error) { showAdminToast(error.message); return; }
+
+  closeModal("fillDocModalOverlay");
+  await loadDocRequests();
+  renderAllPanels();
+  showAdminToast("Request rejected.");
+}
 
 
 
@@ -1824,9 +2390,73 @@ function escapeAttr(value) {
 
 
 
+// ══════════════════════════════════════════════════════════════════════
+// PROCESSING TIME HELPERS — super admin document monitor
+// ══════════════════════════════════════════════════════════════════════
 
+/**
+ * Converts milliseconds into a human-readable "Xh Ym" or "Zm" string.
+ */
+function formatDuration(ms) {
+  if (ms < 0) ms = 0;
+  const totalMins = Math.floor(ms / 60000);
+  if (totalMins < 1) return "< 1 min";
+  const hours = Math.floor(totalMins / 60);
+  const mins  = totalMins % 60;
+  if (hours > 0 && mins > 0) return `${hours}h ${mins}m`;
+  if (hours > 0)              return `${hours}h`;
+  return `${mins}m`;
+}
 
+/**
+ * Formats a Date into a short time string like "9:00 AM".
+ */
+function fmtTime(date) {
+  return date.toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit", hour12: true });
+}
 
+/**
+ * Builds the timing badge HTML for the super admin document monitor.
+ * Shows the time range from Process → Message and the elapsed duration.
+ *
+ * Possible states:
+ *  - Neither processed nor notified  → "Not yet processed"
+ *  - Processed but not notified yet  → "Processing since HH:MM AM"
+ *  - Both timestamps present         → "HH:MM AM → HH:MM AM (1h 5m)"
+ */
+function buildTimingBadge(processedAt, notifiedAt) {
+  // Not yet started
+  if (!processedAt) {
+    return `<span class="timing-badge timing-none">
+              <i class="fas fa-clock"></i> Not yet processed
+            </span>`;
+  }
+
+  const pTime = new Date(processedAt);
+  const pStr  = fmtTime(pTime);
+
+  // Processed but resident not yet notified
+  if (!notifiedAt) {
+    return `<span class="timing-badge timing-processing">
+              <i class="fas fa-spinner fa-spin" style="font-size:10px"></i>
+              Processing since <strong>${pStr}</strong>
+            </span>`;
+  }
+
+  // Both timestamps — show full range
+  const nTime    = new Date(notifiedAt);
+  const nStr     = fmtTime(nTime);
+  const duration = formatDuration(nTime - pTime);
+
+  return `<div class="timing-badge timing-complete">
+            <div class="timing-range">
+              <span class="timing-time">${pStr}</span>
+              <i class="fas fa-arrow-right timing-arrow"></i>
+              <span class="timing-time">${nStr}</span>
+            </div>
+            <span class="timing-duration">${duration}</span>
+          </div>`;
+}
 
 
 

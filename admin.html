@@ -92,6 +92,11 @@
                         <i class="fas fa-briefcase"></i> <span>Workers Registry</span>
                     </a>
                 </li>
+                <li>
+                    <a href="#" class="admin-nav-link" data-panel="doctemplates">
+                        <i class="fas fa-file-word"></i> <span>Doc Templates</span>
+                    </a>
+                </li>
             </ul>
 
             <div class="admin-nav-label">System</div>
@@ -508,7 +513,54 @@
                 </div>
             </div>
 
-                        <!-- ===== SETTINGS PANEL ===== -->
+                <!-- ===== DOCUMENT TEMPLATES PANEL ===== -->
+            <div class="admin-panel" id="panel-doctemplates">
+                <div class="panel-toolbar">
+                    <h4 class="mb-0 me-3" id="doctplPanelHeading">Document Templates</h4>
+                    <div class="toolbar-filters">
+                        <select id="doctplTypeFilter" class="admin-select" onchange="renderDocTemplatesPanel()">
+                            <option value="">All Document Types</option>
+                            <option value="Barangay Clearance">Barangay Clearance</option>
+                            <option value="Barangay ID">Barangay ID</option>
+                            <option value="Job Seeker Cert.">Job Seeker Cert.</option>
+                            <option value="Indigency Certificate">Indigency Certificate</option>
+                            <option value="Residency Certificate">Residency Certificate</option>
+                        </select>
+                    </div>
+                    <button class="btn-admin-primary" onclick="openUploadTemplateModal()">
+                        <i class="fas fa-upload"></i> Upload Template
+                    </button>
+                </div>
+
+                <!-- Placeholder Reference Card -->
+                <div class="admin-table-card mb-3" id="placeholderRefCard">
+                    <div class="table-card-header">
+                        <h4><i class="fas fa-info-circle" style="color:var(--accent-gold)"></i> How to use templates</h4>
+                    </div>
+                    <div class="px-4 pb-3">
+                        <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Create a <strong>.docx (Word)</strong> file and insert these placeholders where you want the resident's data to appear:</p>
+                        <div class="placeholder-tags-row">
+                            <span class="placeholder-tag">{{resident_name}}</span>
+                            <span class="placeholder-tag">{{date_today}}</span>
+                            <span class="placeholder-tag">{{barangay_name}}</span>
+                            <span class="placeholder-tag">{{captain_name}}</span>
+                            <span class="placeholder-tag">{{purpose}}</span>
+                            <span class="placeholder-tag">{{ref_no}}</span>
+                            <span class="placeholder-tag">{{address}}</span>
+                            <span class="placeholder-tag">{{phone}}</span>
+                            <span class="placeholder-tag">{{document_type}}</span>
+                        </div>
+                        <p style="font-size:12px;color:var(--text-muted);margin-top:10px"><i class="fas fa-lightbulb" style="color:var(--accent-gold)"></i> Example: <em>"This is to certify that <strong>{{resident_name}}</strong> is a bonafide resident of {{barangay_name}}..."</em></p>
+                    </div>
+                </div>
+
+                <!-- Templates Grid -->
+                <div class="doc-templates-grid" id="docTemplatesGrid">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+                    <!-- ===== SETTINGS PANEL ===== -->
             <div class="admin-panel" id="panel-settings">
                 <div class="settings-grid">
                     <div class="settings-card" id="settingsCityCard">
@@ -894,6 +946,123 @@
         </div>
     </div>
 
+    <!-- ===== UPLOAD TEMPLATE MODAL ===== -->
+    <div class="admin-modal-overlay" id="uploadTemplateModalOverlay">
+        <div class="admin-modal" id="uploadTemplateModal" style="max-width:580px">
+            <div class="admin-modal-header" style="background:linear-gradient(135deg,#1a3a5c,#0f2236)">
+                <h4 style="color:#fff"><i class="fas fa-file-word" style="color:#5b9bd5;margin-right:8px"></i> Upload Document Template</h4>
+                <button class="admin-modal-close" onclick="closeModal('uploadTemplateModalOverlay')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="admin-modal-body">
+                <div class="modal-field">
+                    <label>Document Type <span style="color:red">*</span></label>
+                    <select class="admin-select admin-input" id="tplDocType" required>
+                        <option value="">Select document type...</option>
+                        <option value="Barangay Clearance">Barangay Clearance</option>
+                        <option value="Barangay ID">Barangay ID</option>
+                        <option value="Job Seeker Cert.">Job Seeker Cert.</option>
+                        <option value="Indigency Certificate">Indigency Certificate</option>
+                        <option value="Residency Certificate">Residency Certificate</option>
+                    </select>
+                    <span class="modal-field-error" id="tplDocTypeError"></span>
+                </div>
+                <div class="modal-field">
+                    <label>Barangay <span style="color:red">*</span></label>
+                    <select class="admin-select admin-input" id="tplBarangaySelect" required>
+                        <option value="">Select barangay...</option>
+                    </select>
+                    <span class="modal-field-error" id="tplBarangayError"></span>
+                </div>
+                <div class="modal-field">
+                    <label>Word Template File (.docx) <span style="color:red">*</span></label>
+                    <div class="template-file-drop" id="templateFileDrop" onclick="document.getElementById('tplFileInput').click()">
+                        <i class="fas fa-cloud-upload-alt" style="font-size:28px;color:var(--accent-gold);margin-bottom:8px"></i>
+                        <div style="font-weight:600;color:var(--primary-navy)">Click to select .docx file</div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Only Word documents (.docx) are supported</div>
+                        <div id="tplFileName" style="margin-top:10px;font-size:13px;color:var(--accent-gold);font-weight:600"></div>
+                    </div>
+                    <input type="file" id="tplFileInput" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display:none" onchange="onTemplateFileSelected(this)">
+                    <span class="modal-field-error" id="tplFileError"></span>
+                </div>
+                <div style="background:#f0f6ff;border:1px solid #c3d9f5;border-radius:8px;padding:12px 16px;font-size:12px;color:var(--text-muted)">
+                    <strong style="color:var(--primary-navy)"><i class="fas fa-lightbulb" style="color:var(--accent-gold)"></i> Reminder:</strong> Your .docx file should contain placeholder tags like <code>{{resident_name}}</code>, <code>{{purpose}}</code>, etc. The system will replace them automatically when processing a request.
+                </div>
+            </div>
+            <div class="admin-modal-footer">
+                <button type="button" class="btn-admin-secondary" onclick="closeModal('uploadTemplateModalOverlay')">Cancel</button>
+                <button type="button" class="btn-admin-primary" id="tplUploadBtn" onclick="handleTemplateUpload()">
+                    <i class="fas fa-upload"></i> Upload & Save
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== FILL DOCUMENT MODAL (Edit Document) ===== -->
+    <div class="admin-modal-overlay" id="fillDocModalOverlay">
+        <div class="admin-modal" id="fillDocModal" style="max-width:620px">
+            <div class="admin-modal-header" style="background:linear-gradient(135deg,#1a3a5c,#0f2236)">
+                <div>
+                    <h4 style="color:#fff;margin:0"><i class="fas fa-file-signature" style="color:#5b9bd5;margin-right:8px"></i> Edit Document</h4>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px" id="fillDocSubtitle">Filling placeholders from request data</div>
+                </div>
+                <button class="admin-modal-close" onclick="closeModal('fillDocModalOverlay')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="admin-modal-body">
+                <!-- Request info banner -->
+                <div class="fill-doc-info-banner" id="fillDocInfoBanner">
+                    <div class="fill-doc-info-item">
+                        <span class="fill-doc-info-label">Resident</span>
+                        <span class="fill-doc-info-value" id="fillDocResidentName">-</span>
+                    </div>
+                    <div class="fill-doc-info-item">
+                        <span class="fill-doc-info-label">Document</span>
+                        <span class="fill-doc-info-value" id="fillDocType">-</span>
+                    </div>
+                    <div class="fill-doc-info-item">
+                        <span class="fill-doc-info-label">Ref No.</span>
+                        <span class="fill-doc-info-value" id="fillDocRef">-</span>
+                    </div>
+                </div>
+
+                <!-- No template warning -->
+                <div id="fillDocNoTemplate" style="display:none;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:13px">
+                    <i class="fas fa-exclamation-triangle" style="color:#f39c12;margin-right:8px"></i>
+                    <strong>No template uploaded</strong> for this document type in <span id="fillDocNoTplBarangay">this barangay</span>. You can still approve the request, but no document will be generated.
+                    <br><a href="#" style="color:var(--accent-gold);font-weight:600;margin-top:6px;display:inline-block" onclick="closeModal('fillDocModalOverlay');showPanel('doctemplates')">Upload a template &rarr;</a>
+                </div>
+
+                <!-- Already Approved banner (shown in redownload mode) -->
+                <div id="fillDocAlreadyApproved" style="display:none;align-items:center;gap:10px;background:#f0fff4;border:1px solid #9ae6b4;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px">
+                    <i class="fas fa-check-circle" style="color:#1e9157;font-size:18px;flex-shrink:0"></i>
+                    <div>
+                        <strong style="color:#1e9157">This request has already been approved.</strong>
+                        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">You can update the field values below and re-download the filled document at any time.</div>
+                    </div>
+                </div>
+
+                <!-- Fields form (shown when template exists) -->
+                <div id="fillDocFieldsSection">
+                    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Review and edit the values below. These will replace the <code>{{placeholders}}</code> in the Word template.</p>
+                    <div id="fillDocFieldsGrid" class="fill-doc-fields-grid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+            <div class="admin-modal-footer" style="flex-wrap:wrap;gap:8px">
+                <button type="button" class="btn-admin-secondary" onclick="closeModal('fillDocModalOverlay')">Cancel</button>
+                <button type="button" class="btn-admin-primary" id="fillDocDownloadBtn" onclick="generateFilledDocx()" style="background:var(--accent-gold);border-color:var(--accent-gold);color:#fff">
+                    <i class="fas fa-download"></i> Download .docx
+                </button>
+                <button type="button" class="btn-admin-primary" id="fillDocApproveBtn" onclick="approveFromFillModal()">
+                    <i class="fas fa-check"></i> Approve Request
+                </button>
+                <button type="button" class="btn-admin-danger" id="fillDocRejectBtn" onclick="rejectFromFillModal()">
+                    <i class="fas fa-xmark"></i> Reject
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast notification communicates result of database-backed admin actions. -->
     <!-- Toast notification -->
     <div class="admin-toast d-none" id="adminToast">
@@ -903,6 +1072,10 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <!-- PizZip for reading/writing DOCX (ZIP) files -->
+    <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.4/dist/pizzip.js"></script>
+    <!-- FileSaver for download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="env.js"></script>
     <script src="supabase-config.js"></script>
