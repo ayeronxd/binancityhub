@@ -1624,3 +1624,157 @@ tr.brgy-group-header td {
     align-self: flex-start;
 }
 
+/* ============================================================
+   ADMIN RESPONSIVE — MOBILE FIRST
+   Breakpoints: 992 · 768 · 480
+   ============================================================ */
+
+/* ── Tablet/Mobile (≤ 992px) — slide-out sidebar ────────── */
+@media (max-width: 992px) {
+
+    /* Sidebar hidden off-screen, slides in via JS .open class */
+    .admin-sidebar {
+        transform: translateX(-100%);
+        z-index: 1100;
+        box-shadow: none;
+        transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                    box-shadow 0.28s ease;
+    }
+
+    .admin-sidebar.open {
+        transform: translateX(0);
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
+    }
+
+    /* Remove the sidebar's space from the layout */
+    .admin-main {
+        margin-left: 0 !important;
+        width: 100%;
+    }
+
+    /* Show the hamburger toggle button */
+    .sidebar-toggle-btn {
+        display: inline-flex !important;
+    }
+
+    /* Content padding: reduce */
+    .admin-content {
+        padding: 16px;
+    }
+
+    /* Header: tighten */
+    .admin-header {
+        padding: 0 16px;
+        gap: 10px;
+    }
+
+    /* Stat cards: 2 per row */
+    .stat-cards-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    /* Charts: stack vertically */
+    .charts-row {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    /* Tables: horizontal scroll */
+    .admin-table-card {
+        overflow-x: auto;
+    }
+
+    .admin-table-card table {
+        min-width: 560px;
+    }
+
+    /* Modals: full-width on mobile */
+    .admin-modal {
+        width: calc(100vw - 24px);
+        max-width: 100%;
+        margin: 12px;
+        max-height: calc(100dvh - 60px);
+    }
+}
+
+/* ── Phone (≤ 768px) ───────────────────────────────────── */
+@media (max-width: 768px) {
+
+    /* Hide date and View Site in header to save space */
+    .admin-header-date,
+    .btn-view-site {
+        display: none !important;
+    }
+
+    .admin-header-right {
+        gap: 8px;
+    }
+
+    /* Stat cards stack to 1 per row */
+    .stat-cards-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .stat-card {
+        padding: 14px 16px;
+        gap: 12px;
+    }
+
+    .stat-card-icon {
+        width: 42px;
+        height: 42px;
+        font-size: 16px;
+    }
+
+    .stat-value {
+        font-size: 22px;
+    }
+
+    /* Admin chart cards: reduce padding */
+    .admin-chart-card {
+        padding: 14px;
+    }
+
+    /* Filter bar in tables: stack */
+    .table-filters {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .table-filter-input,
+    .table-filter-select {
+        width: 100%;
+    }
+
+    /* Panel headers: reduce */
+    .panel-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .panel-header-actions {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+}
+
+/* ── Small Phone (≤ 480px) ──────────────────────────────── */
+@media (max-width: 480px) {
+
+    .admin-content {
+        padding: 10px;
+    }
+
+    .admin-header {
+        padding: 0 12px;
+        height: 56px;
+    }
+
+    .stat-cards-row {
+        grid-template-columns: 1fr;
+    }
+}

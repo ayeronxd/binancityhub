@@ -492,6 +492,33 @@ function setupHamburger() {
   document.getElementById("hamburger")?.addEventListener("click", () => {
     document.getElementById("mobileNav")?.classList.toggle("open");
   });
+
+  // Apply immediately and on resize – uses inline !important to beat
+  // body.logged-in .user-only { display: unset !important } specificity.
+  applyMobileTopbar();
+  window.addEventListener("resize", applyMobileTopbar);
+}
+
+// Controls which topbar elements show on mobile vs desktop.
+// Inline style.setProperty with 'important' wins over any class-based rule.
+function applyMobileTopbar() {
+  const mobile = window.innerWidth <= 768;
+  const ua    = document.getElementById("userTopbarActions");
+  const ga    = document.querySelector(".topbar-actions.guest-only");
+  const tnav  = document.getElementById("mainNav");
+  const hb    = document.getElementById("hamburger");
+
+  if (mobile) {
+    ua?.style.setProperty("display", "none", "important");
+    ga?.style.setProperty("display", "none", "important");
+    tnav?.style.setProperty("display", "none", "important");
+    hb?.style.setProperty("display", "flex", "important");
+  } else {
+    ua?.style.removeProperty("display");
+    ga?.style.removeProperty("display");
+    tnav?.style.removeProperty("display");
+    hb?.style.removeProperty("display");
+  }
 }
 
 function closeMobile() {
@@ -587,7 +614,8 @@ function renderAnalyticsCharts() {
       },
       options: {
         responsive: true,
-        plugins: { legend: { labels: { color: "rgba(255,255,255,0.55)" } } },
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: "rgba(255,255,255,0.55)", boxWidth: 12, font: { size: 11 } } } },
         scales: { y: { beginAtZero: true, ticks: { color: "rgba(255,255,255,0.4)" } }, x: { ticks: { color: "rgba(255,255,255,0.4)" } } }
       }
     });
@@ -601,7 +629,7 @@ function renderAnalyticsCharts() {
     new Chart(dCtx, {
       type: "doughnut",
       data: { labels, datasets: [{ data: values, backgroundColor: ["#d4a574", "#5dade2", "#4cde80"], borderWidth: 3, borderColor: "#0f2236" }] },
-      options: { responsive: true, cutout: "68%", plugins: { legend: { display: false } } }
+      options: { responsive: true, maintainAspectRatio: false, cutout: "68%", plugins: { legend: { display: false } } }
     });
 
     const total = values.reduce((acc, n) => acc + n, 0) || 1;
@@ -625,6 +653,7 @@ function renderAnalyticsCharts() {
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: { x: { ticks: { color: "rgba(255,255,255,0.4)" } }, y: { beginAtZero: true, ticks: { color: "rgba(255,255,255,0.4)" } } }
       }
@@ -655,12 +684,167 @@ function renderBarangayTable() {
 }
 
 function buildAnnCard(a) {
-  return `<div class="ann-card">
+  return `<div class="ann-card" onclick="openAnnouncement('${escapeHtml(a.id)}')">
     <span class="ann-card-tag">${escapeHtml(a.category)}</span>
     <p class="ann-card-title">${escapeHtml(a.title)}</p>
     <p class="ann-card-date"><i class="fas fa-calendar-alt"></i> ${escapeHtml(a.date)}</p>
     <p class="ann-card-content">${escapeHtml(a.content)}</p>
   </div>`;
+}
+
+// === INTERACTIVE ANNOUNCEMENTS LOGIC ===
+let currentOpenAnnId = null;
+let currentAnnIsLiked = false;
+
+async function openAnnouncement(id) {
+  const ann = announcementsData.find(a => a.id === id);
+  if (!ann) return;
+  
+  currentOpenAnnId = id;
+  setText("annModalTitle", ann.title);
+  setText("annModalDate", ann.date);
+  setText("annModalCategory", ann.category);
+  setText("annModalContent", ann.content);
+
+  document.getElementById("announcementModalOverlay").classList.add("open");
+  document.getElementById("annLikeCount").innerText = "0"; // To be updated by load
+  document.getElementById("annCommentsList").innerHTML = ""; // Clear old comments
+  
+  // Clean up classes
+  const likeBtn = document.getElementById("annLikeBtn");
+  const likeIcon = document.getElementById("annLikeIcon");
+  likeBtn.classList.remove("liked");
+  likeIcon.classList.remove("fas");
+  likeIcon.classList.add("far");
+  currentAnnIsLiked = false;
+
+  await loadAnnouncementSocials(id);
+}
+
+function closeAnnouncementModal() {
+  document.getElementById("announcementModalOverlay").classList.remove("open");
+  currentOpenAnnId = null;
+}
+
+async function loadAnnouncementSocials(id) {
+  if (!supabaseClient) return;
+
+  // Load likes
+  try {
+    const { data: likesData, error: lErr } = await supabaseClient
+      .from("announcement_likes")
+      .select("resident_id")
+      .eq("announcement_id", id);
+      
+    if (!lErr && likesData) {
+      document.getElementById("annLikeCount").innerText = likesData.length;
+      if (currentUser && likesData.find(l => l.resident_id === currentUser.id)) {
+        currentAnnIsLiked = true;
+        const likeBtn = document.getElementById("annLikeBtn");
+        const likeIcon = document.getElementById("annLikeIcon");
+        likeBtn.classList.add("liked");
+        likeIcon.classList.remove("far");
+        likeIcon.classList.add("fas");
+      }
+    }
+  } catch (e) {}
+
+  // Load comments
+  try {
+    const { data: commentsData, error: cErr } = await supabaseClient
+      .from("announcement_comments")
+      .select(`
+        id, content, created_at,
+        profiles:resident_id ( full_name )
+      `)
+      .eq("announcement_id", id)
+      .order("created_at", { ascending: true });
+
+    if (!cErr && commentsData) {
+      renderAnnComments(commentsData);
+    }
+  } catch (e) {}
+}
+
+function renderAnnComments(comments) {
+  const container = document.getElementById("annCommentsList");
+  if (!comments || comments.length === 0) {
+    container.innerHTML = `<div style="color:rgba(255,255,255,0.4);font-size:13px;text-align:center;padding:10px 0;">No comments yet. Be the first to share your thoughts!</div>`;
+    return;
+  }
+  
+  const html = comments.map(c => {
+    const name = c.profiles ? c.profiles.full_name : "Resident";
+    const d = new Date(c.created_at).toLocaleDateString("en-US", { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" });
+    return `
+      <div class="ann-comment-item">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <strong style="font-size:13px;color:var(--white)">${escapeHtml(name)}</strong>
+          <span style="font-size:11px;color:rgba(255,255,255,0.4)">${d}</span>
+        </div>
+        <p style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.5;margin:0;">${escapeHtml(c.content)}</p>
+      </div>
+    `;
+  }).join("");
+  container.innerHTML = html;
+}
+
+async function toggleAnnouncementLike() {
+  if (!currentUser) return requireLogin("like announcements");
+  if (!currentOpenAnnId) return;
+
+  const btn = document.getElementById("annLikeBtn");
+  const icon = document.getElementById("annLikeIcon");
+  const countEl = document.getElementById("annLikeCount");
+  let count = parseInt(countEl.innerText) || 0;
+
+  if (currentAnnIsLiked) {
+    // Unlike
+    btn.classList.remove("liked");
+    icon.classList.remove("fas");
+    icon.classList.add("far");
+    countEl.innerText = Math.max(0, count - 1);
+    currentAnnIsLiked = false;
+    await supabaseClient.from("announcement_likes")
+      .delete()
+      .eq("announcement_id", currentOpenAnnId)
+      .eq("resident_id", currentUser.id);
+  } else {
+    // Like
+    btn.classList.add("liked");
+    icon.classList.remove("far");
+    icon.classList.add("fas");
+    countEl.innerText = count + 1;
+    currentAnnIsLiked = true;
+    await supabaseClient.from("announcement_likes")
+      .insert({ announcement_id: currentOpenAnnId, resident_id: currentUser.id });
+  }
+}
+
+async function postAnnouncementComment() {
+  if (!currentUser) return requireLogin("comment on announcements");
+  if (!currentOpenAnnId) return;
+
+  const input = document.getElementById("annCommentInput");
+  const text = input.value.trim();
+  if (!text) return;
+  
+  input.disabled = true;
+  
+  const { error } = await supabaseClient.from("announcement_comments")
+    .insert({
+      announcement_id: currentOpenAnnId,
+      resident_id: currentUser.id,
+      content: text
+    });
+    
+  input.disabled = false;
+  if (error) {
+    showToast("Failed to post comment.");
+  } else {
+    input.value = "";
+    loadAnnouncementSocials(currentOpenAnnId); // reload comments fully
+  }
 }
 
 function renderAnnouncementsSidebar() {

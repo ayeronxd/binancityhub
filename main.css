@@ -63,6 +63,7 @@
 
 html {
     scroll-behavior: smooth;
+    overflow-x: hidden; /* prevent horizontal scroll at root level */
 }
 
 body {
@@ -654,6 +655,37 @@ body.logged-in .user-only.block-el {
     margin-bottom: 18px;
 }
 
+/* All grid layout children: allow shrinking below content size */
+.portal-layout > *,
+.charts-row > *,
+.stat-cards-row > *,
+.portal-aside > *,
+.portal-two-col > *,
+.community-layout > * {
+    min-width: 0;
+}
+
+/* Canvas: never wider than its container */
+canvas {
+    display: block;
+    max-width: 100%;
+}
+
+/* Chart canvas wrappers — need explicit height when maintainAspectRatio:false */
+.chart-card-lg > div:last-child,
+.chart-card-sm > div:last-child {
+    position: relative;
+}
+.chart-card-lg canvas {
+    height: 220px !important;
+}
+.chart-card-sm canvas {
+    height: 200px !important;
+}
+#skillsChart {
+    height: 200px !important;
+}
+
 .chart-legend-custom {
     display: flex;
     flex-direction: column;
@@ -995,8 +1027,15 @@ body.logged-in .user-only.block-el {
 
 /* Announcements */
 .ann-card {
-    padding: 12px 0;
+    padding: 12px;
     border-bottom: 1px solid var(--glass-border);
+    cursor: pointer;
+    transition: background 0.2s, border-radius 0.2s;
+}
+
+.ann-card:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
 }
 
 .ann-card:last-child {
@@ -1035,6 +1074,28 @@ body.logged-in .user-only.block-el {
     font-size: 12px;
     color: var(--text-muted);
     line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Announcement Comments */
+.ann-comment-item {
+    padding: 12px;
+    background: rgba(255,255,255,0.02);
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.btn-like.liked {
+    background: rgba(231, 76, 60, 0.1) !important;
+    border-color: rgba(231, 76, 60, 0.3) !important;
+    color: #e74c3c !important;
+}
+
+.btn-like.liked i {
+    font-weight: 900;
 }
 
 /* â”€â”€ TAB CONTENT PAGES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -2488,5 +2549,255 @@ body.logged-in #reportForm.user-only { display: block !important; }
     opacity: 0.5;
 }
 
+/* ============================================================
+   RESPONSIVE — MOBILE FIRST
+   Breakpoints: 1024 · 768 · 600 · 390
+   ============================================================ */
 
+/* ── Tablet / Small Desktop (≤ 1024px) ──────────────────── */
+@media (max-width: 1024px) {
+    .portal-layout {
+        grid-template-columns: 1fr;
+        padding: 0 16px 28px;
+    }
+    .portal-aside {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+    }
+    .charts-row {
+        grid-template-columns: 1fr;
+    }
+    .stat-cards-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .portal-two-col {
+        grid-template-columns: 1fr;
+    }
+    .community-layout {
+        grid-template-columns: 1fr;
+    }
+}
 
+/* ── Phablet (≤ 768px) ───────────────────────────────────── */
+@media (max-width: 768px) {
+    /* Topbar inner: tighter padding on mobile */
+    .topbar-inner {
+        padding: 0 14px;
+        gap: 10px;
+    }
+
+    /* Hide desktop nav always */
+    .topbar-nav {
+        display: none !important;
+    }
+
+    /* Hide topbar actions for BOTH guest and logged-in states.
+       Must use specificity (0,3,1) to beat body.logged-in .user-only (0,2,1) */
+    body .topbar-actions,
+    body.logged-in .topbar-actions.user-only,
+    body .topbar-actions.guest-only {
+        display: none !important;
+    }
+
+    /* Show hamburger */
+    .topbar-hamburger {
+        display: flex !important;
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+
+    .online-indicator {
+        display: none;
+    }
+    .portal-layout {
+        padding: 0 12px 24px;
+    }
+    .portal-aside {
+        grid-template-columns: 1fr;
+    }
+    .stat-cards-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    .charts-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    /* Limit chart heights so the donut doesn't fill the whole screen */
+    .chart-card-sm {
+        max-height: 360px;
+    }
+    .chart-card-sm canvas,
+    #docTypeChart {
+        max-height: 220px !important;
+    }
+    .chart-card-lg canvas,
+    #docTrendChart,
+    #skillsChart {
+        max-height: 200px !important;
+    }
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .portal-table {
+        min-width: 520px;
+    }
+    .doc-services-grid {
+        grid-template-columns: 1fr;
+    }
+    .community-layout {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+    .worker-grid {
+        grid-template-columns: 1fr;
+    }
+    .glass-filter-bar {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .filter-search {
+        width: 100%;
+    }
+    .filter-select {
+        width: 100%;
+    }
+    .tab-content-wrap {
+        padding: 0 14px;
+    }
+    .tab-page-header {
+        padding: 24px 14px 14px;
+    }
+    .tab-page-header h2 {
+        font-size: 18px;
+    }
+    .hs-steps {
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+    }
+    .hs-line {
+        display: none;
+    }
+    .hs-step {
+        flex: 0 0 calc(50% - 12px);
+    }
+    .myportal-welcome {
+        padding: 20px 14px;
+    }
+    .mpw-main {
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+    }
+    .mpw-main h2 {
+        font-size: 20px;
+    }
+    .portal-two-col {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+    .status-bar {
+        font-size: 11px;
+        padding: 0 12px;
+    }
+    .login-modal {
+        margin: 16px;
+        padding: 28px 20px;
+    }
+    .modal-backdrop {
+        align-items: flex-start;
+        padding-top: 60px;
+    }
+    .notif-panel {
+        width: 100%;
+        right: 0;
+        left: 0;
+        border-radius: 0 0 16px 16px;
+    }
+}
+
+/* ── Mobile (≤ 600px) ───────────────────────────────────── */
+@media (max-width: 600px) {
+    :root {
+        --nav-h: 60px;
+    }
+    .brand-sub {
+        display: none;
+    }
+    .stat-cards-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    .stat-card {
+        padding: 12px 12px;
+        gap: 10px;
+    }
+    .sc-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 15px;
+    }
+    .sc-value {
+        font-size: 22px;
+    }
+    .sc-label {
+        font-size: 10px;
+    }
+    .sc-trend {
+        font-size: 10px;
+    }
+    .worker-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    .ann-item {
+        padding: 12px 14px;
+    }
+    .gc-header {
+        padding: 12px 14px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .gc-header h4 {
+        font-size: 13px;
+    }
+    .quick-doc-btn {
+        padding: 10px 12px;
+    }
+    .hs-step {
+        flex: 0 0 calc(50% - 8px);
+    }
+    .hs-step p {
+        font-size: 11px;
+    }
+    .login-modal {
+        margin: 10px;
+        padding: 24px 16px;
+        max-width: calc(100vw - 20px);
+    }
+    .tab-page-header h2 {
+        font-size: 16px;
+    }
+    .tab-page-header p {
+        font-size: 13px;
+    }
+}
+
+/* ── Small Phone (≤ 390px) ──────────────────────────────── */
+@media (max-width: 390px) {
+    .stat-cards-row {
+        grid-template-columns: 1fr;
+    }
+    .portal-layout {
+        padding: 0 10px 20px;
+    }
+    .tab-content-wrap {
+        padding: 0 10px;
+    }
+    .tab-page-header {
+        padding: 16px 10px 10px;
+    }
+}

@@ -654,7 +654,32 @@ function initSidebarNav() {
       e.preventDefault();
       const panel = this.getAttribute("data-panel");
       if (panel) showPanel(panel);
+      // Close sidebar on mobile after navigation
+      closeMobileSidebar();
     });
+  });
+}
+
+// === Mobile Sidebar ===
+function openMobileSidebar() {
+  document.getElementById("adminSidebar")?.classList.add("open");
+  document.getElementById("sidebarOverlay")?.classList.add("show");
+  document.body.style.overflow = "hidden";
+}
+
+function closeMobileSidebar() {
+  if (window.innerWidth >= 992) return; // only on mobile
+  document.getElementById("adminSidebar")?.classList.remove("open");
+  document.getElementById("sidebarOverlay")?.classList.remove("show");
+  document.body.style.overflow = "";
+}
+
+function initMobileSidebar() {
+  document.getElementById("sidebarToggleBtn")?.addEventListener("click", openMobileSidebar);
+  document.getElementById("sidebarCloseBtn")?.addEventListener("click", closeMobileSidebar);
+  document.getElementById("sidebarOverlay")?.addEventListener("click", closeMobileSidebar);
+  window.addEventListener("resize", () => {
+    if (window.innerWidth >= 992) closeMobileSidebar();
   });
 }
 
