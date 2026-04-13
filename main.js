@@ -26,7 +26,7 @@ let userApplications = [];
 
 let analyticsData = {
   totals: { residents: 0, docs: 0, workers: 0, unresolvedReports: 0 },
-  docTrend: { labels: [], id: [], clearance: [], seeker: [] },
+  docTrend: { labels: [], id: [], clearance: [], seeker: [], indigency: [], residency: [] },
   docType: { labels: [], values: [] },
   skills: { labels: [], values: [] },
   kpiTrends: {
@@ -164,7 +164,7 @@ async function loadWorkers() {
 async function loadAnnouncements() {
   const { data } = await supabaseClient
     .from("announcements")
-    .select("id,title,content,category,barangay_scope,published_at")
+    .select("id,title,content,category,barangay_scope,published_at,media_url,media_type")
     .order("published_at", { ascending: false })
     .limit(20);
 
@@ -173,7 +173,10 @@ async function loadAnnouncements() {
     category: a.category || (a.barangay_scope || "General"),
     title: a.title,
     date: formatDate(new Date(a.published_at || Date.now())),
-    content: a.content
+    content: a.content,
+    media_url: a.media_url,
+    media_type: a.media_type,
+    barangay: a.barangay_scope
   }));
 }
 
@@ -286,19 +289,25 @@ async function loadChartData() {
     if (type === "id") monthBuckets[key].id += 1;
     if (type === "clearance") monthBuckets[key].clearance += 1;
     if (type === "seeker") monthBuckets[key].seeker += 1;
+    if (type === "indigency") monthBuckets[key].indigency += 1;
+    if (type === "residency") monthBuckets[key].residency += 1;
   });
 
   analyticsData.docTrend.labels = Object.values(monthBuckets).map((m) => m.label);
   analyticsData.docTrend.id = Object.values(monthBuckets).map((m) => m.id);
   analyticsData.docTrend.clearance = Object.values(monthBuckets).map((m) => m.clearance);
   analyticsData.docTrend.seeker = Object.values(monthBuckets).map((m) => m.seeker);
+  analyticsData.docTrend.indigency = Object.values(monthBuckets).map((m) => m.indigency);
+  analyticsData.docTrend.residency = Object.values(monthBuckets).map((m) => m.residency);
 
-  const typeAgg = { "Barangay ID": 0, "Barangay Clearance": 0, "Job Seeker Cert.": 0 };
+  const typeAgg = { "Barangay ID": 0, "Barangay Clearance": 0, "Job Seeker Cert.": 0, "Indigency Certificate": 0, "Residency Certificate": 0 };
   docs.forEach((row) => {
     const type = normalizeDocType(row.request_type);
     if (type === "id") typeAgg["Barangay ID"] += 1;
     if (type === "clearance") typeAgg["Barangay Clearance"] += 1;
     if (type === "seeker") typeAgg["Job Seeker Cert."] += 1;
+    if (type === "indigency") typeAgg["Indigency Certificate"] += 1;
+    if (type === "residency") typeAgg["Residency Certificate"] += 1;
   });
   analyticsData.docType.labels = Object.keys(typeAgg);
   analyticsData.docType.values = Object.values(typeAgg);
@@ -599,6 +608,8 @@ function renderAnalyticsCharts() {
   const idSeries = analyticsData.docTrend.id.length ? analyticsData.docTrend.id : [0, 0, 0, 0, 0, 0];
   const clearSeries = analyticsData.docTrend.clearance.length ? analyticsData.docTrend.clearance : [0, 0, 0, 0, 0, 0];
   const seekerSeries = analyticsData.docTrend.seeker.length ? analyticsData.docTrend.seeker : [0, 0, 0, 0, 0, 0];
+  const indySeries = analyticsData.docTrend.indigency.length ? analyticsData.docTrend.indigency : [0, 0, 0, 0, 0, 0];
+  const resSeries = analyticsData.docTrend.residency.length ? analyticsData.docTrend.residency : [0, 0, 0, 0, 0, 0];
 
   const tCtx = document.getElementById("docTrendChart");
   if (tCtx) {
@@ -609,7 +620,9 @@ function renderAnalyticsCharts() {
         datasets: [
           { label: "Barangay ID", data: idSeries, borderColor: "#d4a574", backgroundColor: "rgba(212,165,116,0.08)", fill: true, tension: 0.42, borderWidth: 2.5 },
           { label: "Barangay Clearance", data: clearSeries, borderColor: "#5dade2", backgroundColor: "rgba(93,173,226,0.07)", fill: true, tension: 0.42, borderWidth: 2.5 },
-          { label: "Job Seeker Cert.", data: seekerSeries, borderColor: "#4cde80", backgroundColor: "rgba(76,222,128,0.07)", fill: true, tension: 0.42, borderWidth: 2.5 }
+          { label: "Job Seeker Cert.", data: seekerSeries, borderColor: "#4cde80", backgroundColor: "rgba(76,222,128,0.07)", fill: true, tension: 0.42, borderWidth: 2.5 },
+          { label: "Indigency Cert.", data: indySeries, borderColor: "#9b59b6", backgroundColor: "rgba(155,89,182,0.07)", fill: true, tension: 0.42, borderWidth: 2.5 },
+          { label: "Residency Cert.", data: resSeries, borderColor: "#e67e22", backgroundColor: "rgba(230,126,34,0.07)", fill: true, tension: 0.42, borderWidth: 2.5 }
         ]
       },
       options: {
@@ -623,12 +636,13 @@ function renderAnalyticsCharts() {
 
   const dCtx = document.getElementById("docTypeChart");
   if (dCtx) {
-    const labels = analyticsData.docType.labels.length ? analyticsData.docType.labels : ["Barangay ID", "Barangay Clearance", "Job Seeker Cert."];
-    const values = analyticsData.docType.values.length ? analyticsData.docType.values : [0, 0, 0];
+    const labels = analyticsData.docType.labels.length ? analyticsData.docType.labels : ["Barangay ID", "Barangay Clearance", "Job Seeker Cert.", "Indigency Certificate", "Residency Certificate"];
+    const values = analyticsData.docType.values.length ? analyticsData.docType.values : [0, 0, 0, 0, 0];
+    const chartColors = ["#d4a574", "#5dade2", "#4cde80", "#9b59b6", "#e67e22"];
 
     new Chart(dCtx, {
       type: "doughnut",
-      data: { labels, datasets: [{ data: values, backgroundColor: ["#d4a574", "#5dade2", "#4cde80"], borderWidth: 3, borderColor: "#0f2236" }] },
+      data: { labels, datasets: [{ data: values, backgroundColor: chartColors, borderWidth: 3, borderColor: "#0f2236" }] },
       options: { responsive: true, maintainAspectRatio: false, cutout: "68%", plugins: { legend: { display: false } } }
     });
 
@@ -637,7 +651,7 @@ function renderAnalyticsCharts() {
     if (legend) {
       legend.innerHTML = labels.map((label, idx) => {
         const pct = Math.round((values[idx] / total) * 100);
-        const color = ["#d4a574", "#5dade2", "#4cde80"][idx % 3];
+        const color = chartColors[idx % chartColors.length];
         return `<div style="display:flex;align-items:center;gap:8px;font-size:12px"><span style="width:9px;height:9px;border-radius:50%;background:${color};flex-shrink:0"></span><span style="color:rgba(255,255,255,0.5);flex:1">${label}</span><span style="color:#fff;font-weight:700">${pct}%</span></div>`;
       }).join("");
     }
@@ -684,11 +698,46 @@ function renderBarangayTable() {
 }
 
 function buildAnnCard(a) {
-  return `<div class="ann-card" onclick="openAnnouncement('${escapeHtml(a.id)}')">
-    <span class="ann-card-tag">${escapeHtml(a.category)}</span>
-    <p class="ann-card-title">${escapeHtml(a.title)}</p>
-    <p class="ann-card-date"><i class="fas fa-calendar-alt"></i> ${escapeHtml(a.date)}</p>
-    <p class="ann-card-content">${escapeHtml(a.content)}</p>
+  const mediaHtml = a.media_url 
+    ? (a.media_type === 'video' 
+        ? `<div class="fb-media-wrapper"><video controls src="${escapeAttr(a.media_url)}" style="width:100%;max-height:500px;background:#000;display:block;"></video></div>`
+        : `<div class="fb-media-wrapper" onclick="openAnnouncement('${escapeHtml(a.id)}')"><img src="${escapeAttr(a.media_url)}" alt="Attachment" style="width:100%;object-fit:cover;max-height:500px;display:block;cursor:pointer;"></div>`)
+    : '';
+
+  return `
+  <div class="ann-card fb-layout">
+    <div class="fb-card-header" onclick="openAnnouncement('${escapeHtml(a.id)}')">
+      <div class="fb-avatar">
+        <i class="fas fa-bullhorn"></i>
+      </div>
+      <div class="fb-meta">
+        <div class="fb-publisher">${escapeHtml(a.barangay || 'City-Wide')} Hub <i class="fas fa-check-circle verified-badge"></i></div>
+        <div class="fb-date">${escapeHtml(a.date)} &middot; <i class="fas fa-globe-americas"></i></div>
+      </div>
+      <div class="fb-category-badge">${escapeHtml(a.category)}</div>
+    </div>
+    
+    <div class="fb-card-body" onclick="openAnnouncement('${escapeHtml(a.id)}')">
+      <div class="fb-title">${escapeHtml(a.title)}</div>
+      <p class="fb-content">${escapeHtml(a.content)}</p>
+    </div>
+
+    ${mediaHtml}
+
+    <div class="fb-card-footer">
+      <div class="fb-stats-row" onclick="openAnnouncement('${escapeHtml(a.id)}')">
+        <span><i class="fas fa-thumbs-up" style="color:var(--t-blue);margin-right:4px"></i> Interact</span>
+        <span>Join discussion</span>
+      </div>
+      <div class="fb-actions-row">
+        <button class="fb-action-btn" onclick="openAnnouncement('${escapeHtml(a.id)}')">
+          <i class="far fa-thumbs-up"></i> Like
+        </button>
+        <button class="fb-action-btn" onclick="openAnnouncement('${escapeHtml(a.id)}')">
+          <i class="far fa-comment-alt"></i> Comment
+        </button>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -726,6 +775,21 @@ function closeAnnouncementModal() {
   currentOpenAnnId = null;
 }
 
+let activeReplyParentId = null;
+
+function setReplyParent(parentId, name) {
+  activeReplyParentId = parentId;
+  const input = document.getElementById("annCommentInput");
+  input.placeholder = `Replying to ${name}...`;
+  input.focus();
+}
+
+function clearReplyParent() {
+  activeReplyParentId = null;
+  const input = document.getElementById("annCommentInput");
+  if(input) input.placeholder = "Write a comment...";
+}
+
 async function loadAnnouncementSocials(id) {
   if (!supabaseClient) return;
 
@@ -754,7 +818,7 @@ async function loadAnnouncementSocials(id) {
     const { data: commentsData, error: cErr } = await supabaseClient
       .from("announcement_comments")
       .select(`
-        id, content, created_at,
+        id, content, created_at, parent_id,
         profiles:resident_id ( full_name )
       `)
       .eq("announcement_id", id)
@@ -773,16 +837,41 @@ function renderAnnComments(comments) {
     return;
   }
   
-  const html = comments.map(c => {
+  // Group comments
+  const rootComments = comments.filter(c => !c.parent_id);
+  const childComments = comments.filter(c => c.parent_id);
+  
+  const html = rootComments.map(c => {
     const name = c.profiles ? c.profiles.full_name : "Resident";
     const d = new Date(c.created_at).toLocaleDateString("en-US", { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" });
-    return `
-      <div class="ann-comment-item">
-        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-          <strong style="font-size:13px;color:var(--white)">${escapeHtml(name)}</strong>
-          <span style="font-size:11px;color:rgba(255,255,255,0.4)">${d}</span>
+    
+    // Find replies for this comment
+    const replies = childComments.filter(child => child.parent_id === c.id);
+    const repliesHtml = replies.map(child => {
+      const cName = child.profiles ? child.profiles.full_name : "Resident";
+      const cD = new Date(child.created_at).toLocaleDateString("en-US", { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" });
+      return `
+        <div class="ann-comment-item reply-item">
+          <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+            <strong style="font-size:13px;color:var(--white)">${escapeHtml(cName)}</strong>
+            <span style="font-size:11px;color:rgba(255,255,255,0.4)">${cD}</span>
+          </div>
+          <p style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.5;margin:0;">${escapeHtml(child.content)}</p>
         </div>
-        <p style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.5;margin:0;">${escapeHtml(c.content)}</p>
+      `;
+    }).join("");
+
+    return `
+      <div class="ann-comment-thread">
+        <div class="ann-comment-item">
+          <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+            <strong style="font-size:13px;color:var(--white)">${escapeHtml(name)}</strong>
+            <span style="font-size:11px;color:rgba(255,255,255,0.4)">${d}</span>
+          </div>
+          <p style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.5;margin:0 0 6px 0;">${escapeHtml(c.content)}</p>
+          <div style="font-size:12px;color:var(--gold);cursor:pointer;font-weight:600;display:inline-block;" onclick="setReplyParent('${escapeHtml(c.id)}', '${escapeHtml(name)}')">Reply</div>
+        </div>
+        ${repliesHtml ? `<div class="ann-replies-list">${repliesHtml}</div>` : ''}
       </div>
     `;
   }).join("");
@@ -831,18 +920,24 @@ async function postAnnouncementComment() {
   
   input.disabled = true;
   
-  const { error } = await supabaseClient.from("announcement_comments")
-    .insert({
-      announcement_id: currentOpenAnnId,
-      resident_id: currentUser.id,
-      content: text
-    });
+  const payload = {
+    announcement_id: currentOpenAnnId,
+    resident_id: currentUser.id,
+    content: text
+  };
+  
+  if (activeReplyParentId) {
+    payload.parent_id = activeReplyParentId;
+  }
+  
+  const { error } = await supabaseClient.from("announcement_comments").insert(payload);
     
   input.disabled = false;
   if (error) {
     showToast("Failed to post comment.");
   } else {
     input.value = "";
+    clearReplyParent();
     loadAnnouncementSocials(currentOpenAnnId); // reload comments fully
   }
 }
@@ -1014,7 +1109,7 @@ function openApplyModal(docName) {
   setText("applyModalSub", `Fill in the required details for your ${docName} request.`);
 
   const purposeWrap = document.getElementById("applyPurposeWrap");
-  if (purposeWrap) purposeWrap.style.display = docName.toLowerCase().includes("clearance") ? "block" : "none";
+  if (purposeWrap) purposeWrap.style.display = "block";
 
   if (currentProfile) {
     const nameInput = document.getElementById("applyFullName");
@@ -1232,6 +1327,7 @@ function setupApplyForm() {
     }
 
     const purpose = document.getElementById("applyPurpose")?.value || "General request";
+    const address = document.getElementById("applyAddress")?.value || "Not specified";
     const btn = e.target.querySelector('button[type="submit"]');
     const originalText = btn ? btn.innerHTML : "";
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Processing...'; }
@@ -1240,6 +1336,7 @@ function setupApplyForm() {
       const { error } = await supabaseClient.from("document_requests").insert({
         resident_id: currentUser.id,
         barangay: currentProfile?.barangay || currentUser?.user_metadata?.barangay || "Barangay Poblacion",
+        address: address,
         request_type: applyModalDocName,
         purpose,
         status: "submitted"
@@ -1315,16 +1412,48 @@ function setupReportForm() {
 
     const btn = e.target.querySelector('button[type="submit"]');
     const originalText = btn ? btn.innerHTML : "";
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Processing...'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Uploading...'; }
 
     try {
+      const fileInput = document.getElementById("reportPhoto");
+      const file = fileInput?.files[0];
+      let photoUrl = null;
+
+      if (!file) {
+        showToast("Please upload a photo for verification.");
+        if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
+        return;
+      }
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      
+      const { data: uploadData, error: uploadError } = await supabaseClient.storage
+        .from("issue-reports")
+        .upload(fileName, file, { upsert: false });
+
+      if (uploadError) {
+        showToast("Photo upload failed: " + uploadError.message);
+        if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
+        return;
+      }
+
+      const { data: urlData } = supabaseClient.storage
+        .from("issue-reports")
+        .getPublicUrl(fileName);
+      
+      if (urlData && urlData.publicUrl) {
+        photoUrl = urlData.publicUrl;
+      }
+
       const { error } = await supabaseClient.from("issue_reports").insert({
         resident_id: currentUser.id,
         category,
         location,
         description,
         status: "pending",
-        barangay
+        barangay,
+        photo_url: photoUrl
       });
 
       if (error) {
@@ -1462,8 +1591,10 @@ function formatDate(d) {
 
 function normalizeDocType(typeValue) {
   const v = String(typeValue || "").toLowerCase();
-  if (v.includes("id")) return "id";
+  if (v.includes("barangay id") || v === "id") return "id";
   if (v.includes("clearance")) return "clearance";
+  if (v.includes("indigency")) return "indigency";
+  if (v.includes("residency")) return "residency";
   return "seeker";
 }
 
@@ -1501,7 +1632,9 @@ function makeLastMonthBuckets(n) {
       label: date.toLocaleDateString("en-PH", { month: "short" }),
       id: 0,
       clearance: 0,
-      seeker: 0
+      seeker: 0,
+      indigency: 0,
+      residency: 0
     };
   }
 

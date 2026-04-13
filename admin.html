@@ -541,7 +541,12 @@
                         <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Create a <strong>.docx (Word)</strong> file and insert these placeholders where you want the resident's data to appear:</p>
                         <div class="placeholder-tags-row">
                             <span class="placeholder-tag">{{resident_name}}</span>
+                            <span class="placeholder-tag">{{age}}</span>
                             <span class="placeholder-tag">{{date_today}}</span>
+                            <span class="placeholder-tag">{{date_formal}}</span>
+                            <span class="placeholder-tag">{{day_ordinal}}</span>
+                            <span class="placeholder-tag">{{month}}</span>
+                            <span class="placeholder-tag">{{year}}</span>
                             <span class="placeholder-tag">{{barangay_name}}</span>
                             <span class="placeholder-tag">{{captain_name}}</span>
                             <span class="placeholder-tag">{{purpose}}</span>
@@ -798,6 +803,11 @@
                         <textarea class="admin-input" id="annContent" rows="4" placeholder="Write the announcement..."
                             required></textarea>
                     </div>
+                    <div class="modal-field">
+                        <label>Media Attachment (Optional)</label>
+                        <input type="file" class="admin-input" id="annMedia" accept="image/*,video/*" style="padding:8px">
+                        <p style="font-size:12px;color:var(--text-muted);margin-top:4px"><i class="fas fa-info-circle"></i> Attach an image or video to this announcement.</p>
+                    </div>
                     <div class="admin-modal-footer">
                         <button type="button" class="btn-admin-secondary"
                             onclick="closeModal('addAnnouncementModalOverlay')">Cancel</button>
@@ -899,10 +909,17 @@
                     <label>Status</label>
                     <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500" id="issueStatus">-</div>
                 </div>
-                <div class="admin-modal-footer">
-                    <button type="button" class="btn-admin-secondary"
-                        onclick="closeModal('viewIssueModalOverlay')">Close</button>
+                <div class="modal-field">
+                    <label>Verification Photo</label>
+                    <div style="text-align:center;background:#f1f3f4;border-radius:8px;padding:8px;border:1px dashed #ccc; margin-top: 10px;">
+                        <img id="issuePhoto" src="" style="max-width:100%;max-height:300px;border-radius:4px;display:none;object-fit:contain;cursor:zoom-in" onclick="window.open(this.src, '_blank')">
+                        <div id="issueNoPhoto" style="color:#7f8c8d;font-size:13px;padding:30px;display:block;"><i class="fas fa-image-slash" style="font-size:24px;margin-bottom:8px;display:block"></i> No photo provided</div>
+                    </div>
                 </div>
+            </div>
+            <div class="admin-modal-footer">
+                <button type="button" class="btn-admin-secondary"
+                    onclick="closeModal('viewIssueModalOverlay')">Close</button>
             </div>
         </div>
     </div>
@@ -1068,6 +1085,35 @@
     <div class="admin-toast d-none" id="adminToast">
         <i class="fas fa-check-circle"></i>
         <span id="adminToastMsg">Done!</span>
+    </div>
+
+    <!-- ===== VIEW REPORT MODAL ===== -->
+    <div class="admin-modal-overlay" id="viewReportModalOverlay" onclick="closeModal('viewReportModalOverlay')">
+        <div class="admin-modal" style="max-width:450px" onclick="event.stopPropagation()">
+            <div class="admin-modal-header" style="background:linear-gradient(135deg,#1a3a5c,#0f2236)">
+                <h4 style="color:#fff;margin:0"><i class="fas fa-eye" style="color:#5b9bd5;margin-right:8px"></i> View Issue Report</h4>
+                <button class="admin-modal-close" onclick="closeModal('viewReportModalOverlay')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="admin-modal-body">
+                <div style="font-size:12px;color:rgba(0,0,0,0.5);text-transform:uppercase;margin-bottom:4px;font-weight:700">Category</div>
+                <div id="vrCategory" style="margin-bottom:14px;font-size:15px;font-weight:600"></div>
+
+                <div style="font-size:12px;color:rgba(0,0,0,0.5);text-transform:uppercase;margin-bottom:4px;font-weight:700">Location</div>
+                <div id="vrLocation" style="margin-bottom:14px;font-size:14px"></div>
+
+                <div style="font-size:12px;color:rgba(0,0,0,0.5);text-transform:uppercase;margin-bottom:4px;font-weight:700">Description</div>
+                <div id="vrDescription" style="margin-bottom:14px;font-size:14px;line-height:1.5;white-space:pre-wrap;background:#f8f9fa;padding:12px;border-radius:6px;border:1px solid #e0e0e0"></div>
+
+                <div style="font-size:12px;color:rgba(0,0,0,0.5);text-transform:uppercase;margin-bottom:6px;font-weight:700">Verification Photo</div>
+                <div style="text-align:center;background:#f1f3f4;border-radius:6px;padding:8px;border:1px dashed #ccc">
+                    <img id="vrPhoto" src="" style="max-width:100%;max-height:300px;border-radius:4px;display:none;object-fit:contain;cursor:zoom-in" onclick="window.open(this.src, '_blank')">
+                    <div id="vrNoPhoto" style="color:#7f8c8d;font-size:13px;padding:30px;display:none"><i class="fas fa-image-slash" style="font-size:24px;margin-bottom:8px;display:block"></i> No photo provided</div>
+                </div>
+            </div>
+            <div class="admin-modal-footer">
+                <button type="button" class="btn-admin-secondary" style="width:100%" onclick="closeModal('viewReportModalOverlay')">Close Window</button>
+            </div>
+        </div>
     </div>
 
     <!-- Bootstrap JS -->

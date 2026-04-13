@@ -300,7 +300,7 @@ async function loadDocRequests() {
   const buildDocQuery = (barangayColumn) => {
     let query = supabaseClient
       .from("document_requests")
-      .select("id,resident_id,request_type,barangay,created_at,status,processed_at,notified_at")
+      .select("id,resident_id,request_type,barangay,purpose,address,created_at,status,processed_at,notified_at")
       .order("created_at", { ascending: false });
 
     if (isBarangayAdmin() && barangayColumn) {
@@ -336,6 +336,8 @@ async function loadDocRequests() {
     residentEmail: emailMap.get(r.resident_id) || "",
     type: r.request_type,
     barangay: r.barangay || "-",
+    address: r.address || "",
+    purpose: r.purpose || "",
     date: formatDate(new Date(r.created_at)),
     status: mapDocStatus(r.status),
     processedAt: r.processed_at || null,
@@ -379,7 +381,7 @@ async function loadIssueReports() {
   const buildReportsQuery = (barangayColumn) => {
     let query = supabaseClient
       .from("issue_reports")
-      .select("id,category,location,description,status,created_at,resident_id,barangay")
+      .select("id,category,location,description,status,created_at,resident_id,barangay,photo_url")
       .order("created_at", { ascending: false });
 
     if (isBarangayAdmin() && barangayColumn) {
@@ -414,7 +416,8 @@ async function loadIssueReports() {
     reporter: nameMap.get(r.resident_id) || "Resident",
     barangay: r.barangay,
     date: formatDate(new Date(r.created_at)),
-    status: mapReportStatus(r.status)
+    status: mapReportStatus(r.status),
+    photoUrl: r.photo_url || null
   }));
 }
 
@@ -1249,6 +1252,19 @@ function showIssueDetails(id) {
   document.getElementById("issueDate").textContent = escapeHtml(issue.date || "-");
   document.getElementById("issueStatus").textContent = escapeHtml(issue.status || "-");
 
+  const photoEl = document.getElementById("issuePhoto");
+  const noPhotoEl = document.getElementById("issueNoPhoto");
+
+  if (issue.photoUrl) {
+    photoEl.src = issue.photoUrl;
+    photoEl.style.display = "inline-block";
+    noPhotoEl.style.display = "none";
+  } else {
+    photoEl.src = "";
+    photoEl.style.display = "none";
+    noPhotoEl.style.display = "block";
+  }
+
   // Open the modal
   openModal("viewIssueModalOverlay");
 }
@@ -1539,6 +1555,35 @@ function initFormHandlers() {
       const content = document.getElementById("annContent").value.trim();
 
       if (!title || !content) return;
+      
+      const fileInput = document.getElementById("annMedia");
+      const file = fileInput?.files[0];
+      let mediaUrl = null;
+      let mediaType = null;
+
+      if (file) {
+        showAdminToast("Uploading media...");
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        
+        const { data: uploadData, error: uploadError } = await supabaseClient.storage
+          .from("announcements-media")
+          .upload(fileName, file, { upsert: false });
+
+        if (uploadError) {
+          showAdminToast("Upload failed: " + uploadError.message);
+          return;
+        }
+
+        const { data: urlData } = supabaseClient.storage
+          .from("announcements-media")
+          .getPublicUrl(fileName);
+        
+        if (urlData && urlData.publicUrl) {
+          mediaUrl = urlData.publicUrl;
+          mediaType = file.type.startsWith("video/") ? "video" : "image";
+        }
+      }
 
       const scope = isBarangayAdmin() ? getScopedBarangay() : (barangay === "All" ? "City-Wide" : barangay);
       const { error } = await supabaseClient.from("announcements").insert({
@@ -1546,6 +1591,8 @@ function initFormHandlers() {
         category,
         barangay_scope: scope,
         content,
+        media_url: mediaUrl,
+        media_type: mediaType,
         published_at: new Date().toISOString(),
         created_by: currentUser.id
       });
@@ -1765,17 +1812,36 @@ function initCharts() {
 
   const typeCtx = document.getElementById("adminTypeChart");
   if (typeCtx) {
-    const typeMap = {};
-    docRequests.forEach((r) => { typeMap[r.type] = (typeMap[r.type] || 0) + 1; });
+    const typeMap = {
+      "Barangay ID": 0,
+      "Barangay Clearance": 0,
+      "Job Seeker Cert.": 0,
+      "Indigency Certificate": 0,
+      "Residency Certificate": 0
+    };
+
+    docRequests.forEach((r) => {
+      let t = "Job Seeker Cert.";
+      const v = String(r.type || "").toLowerCase();
+      if (v.includes("barangay id") || v === "id") t = "Barangay ID";
+      else if (v.includes("clearance")) t = "Barangay Clearance";
+      else if (v.includes("indigency")) t = "Indigency Certificate";
+      else if (v.includes("residency")) t = "Residency Certificate";
+
+      if (typeMap[t] !== undefined) {
+        typeMap[t] += 1;
+      }
+    });
 
     const labels = Object.keys(typeMap);
     const values = Object.values(typeMap);
+    const chartColors = ["#1a3a52", "#d4a574", "#4cde80", "#9b59b6", "#e67e22"];
 
     new Chart(typeCtx, {
       type: "doughnut",
       data: {
-        labels: labels.length ? labels : ["No Data"],
-        datasets: [{ data: values.length ? values : [1], backgroundColor: ["#1a3a52", "#d4a574", "#2c5282", "#4cde80"], borderWidth: 3, borderColor: "#fff" }]
+        labels: labels,
+        datasets: [{ data: values, backgroundColor: chartColors, borderWidth: 3, borderColor: "#fff" }]
       },
       options: { responsive: true, cutout: "65%", plugins: { legend: { position: "bottom" } } }
     });
@@ -2192,11 +2258,17 @@ async function openFillDocModal(reqId, redownload = false) {
   // Find resident profile for extra fields
   const { data: profile } = await supabaseClient
     .from("profiles")
-    .select("full_name,phone,barangay")
+    .select("full_name,phone,barangay,age")
     .eq("id", req.residentId)
     .maybeSingle();
 
-  const today = new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
+  const dateObj = new Date();
+  const day = dateObj.getDate();
+  const month = dateObj.toLocaleDateString("en-PH", { month: "long" });
+  const year = dateObj.getFullYear();
+  const dayOrdinal = day + (day > 0 ? ['th', 'st', 'nd', 'rd'][(day > 3 && day < 21) || day % 10 > 3 ? 0 : day % 10] : '');
+  const dateFormal = `${dayOrdinal} day of ${month}, ${year}`;
+  const today = dateObj.toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
 
   fillDocContext = {
     reqId,
@@ -2234,12 +2306,17 @@ async function openFillDocModal(reqId, redownload = false) {
     // Build editable fields grid
     const fields = [
       { key: "resident_name",  label: "Resident Name",    value: req.name },
+      { key: "age",            label: "Age",              value: profile?.age || "" },
       { key: "date_today",     label: "Date",              value: today },
+      { key: "date_formal",    label: "Formal Date",       value: dateFormal },
+      { key: "day_ordinal",    label: "Day (Ordinal)",     value: dayOrdinal },
+      { key: "month",          label: "Month",             value: month },
+      { key: "year",           label: "Year",              value: String(year) },
       { key: "barangay_name",  label: "Barangay",          value: req.barangay },
       { key: "captain_name",   label: "Barangay Captain",  value: captainName },
-      { key: "purpose",        label: "Purpose",           value: "" },
+      { key: "purpose",        label: "Purpose",           value: req.purpose || "" },
       { key: "ref_no",         label: "Reference No.",     value: req.ref },
-      { key: "address",        label: "Address",           value: profile?.barangay || req.barangay },
+      { key: "address",        label: "Address",           value: req.address || profile?.barangay || req.barangay },
       { key: "phone",          label: "Phone",             value: profile?.phone || "" },
       { key: "document_type",  label: "Document Type",     value: req.type }
     ];
@@ -2294,8 +2371,10 @@ async function generateFilledDocx() {
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...'; }
 
   try {
-    // 1. Download the template .docx (which is just a ZIP file)
-    const response = await fetch(fillDocContext.templateUrl);
+    // 1. Download the template .docx (which is just a ZIP file), using a cache-buster
+    const cacheBustedUrl = new URL(fillDocContext.templateUrl);
+    cacheBustedUrl.searchParams.append("t", Date.now());
+    const response = await fetch(cacheBustedUrl.toString());
     if (!response.ok) throw new Error("Could not download template file. Make sure the bucket is public.");
     const arrayBuffer = await response.arrayBuffer();
 
@@ -2311,8 +2390,8 @@ async function generateFilledDocx() {
     //    collapses those splits so replacement works even on "damaged" templates.
     //    It removes any XML tags found between {{ and }} so the placeholder
     //    becomes a single plain string again.
-    xml = xml.replace(/\{\{((?:[^{}]|<[^>]+>)*?)\}\}/g, (match) => {
-      return match.replace(/<[^>]+>/g, ""); // strip XML tags inside {{ }}
+    xml = xml.replace(/\{((?:<[^>]+>|\s)*)\{((?:[^{}]|<[^>]+>|\s)*?)\}((?:<[^>]+>|\s)*)\}/g, (match) => {
+      return match.replace(/<[^>]+>|\s+/g, ""); // strip XML tags and spaces inside {{ }}
     });
 
     // 4. Replace each {{key}} with its XML-safe value

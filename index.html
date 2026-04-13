@@ -390,6 +390,55 @@
                                 <span class="apply-hint user-only" style="color:var(--t-green)">Logged in ✓</span>
                             </button>
                         </div>
+
+                        <div class="doc-service-card">
+                            <div class="dsc-icon-wrap"><i class="fas fa-hand-holding-heart"></i></div>
+                            <div class="dsc-body">
+                                <h3>Indigency Certificate</h3>
+                                <p>Official proof of indigency status. Required for financial aid, scholarships, and medical assistance.</p>
+                                <div class="dsc-tags">
+                                    <span class="dsc-tag"><i class="fas fa-clock"></i> Same day</span>
+                                    <span class="dsc-tag"><i class="fas fa-tag"></i> Free</span>
+                                </div>
+                                <div class="dsc-reqs">
+                                    <strong>Requirements:</strong>
+                                    <ul>
+                                        <li>Valid government-issued ID</li>
+                                        <li>Proof of barangay residency</li>
+                                        <li>Interview / Assessment</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <button class="btn-apply" onclick="handleDocAction('Indigency Certificate')">
+                                <span><i class="fas fa-file-pen"></i> Apply Now</span>
+                                <span class="apply-hint guest-only">Login required</span>
+                                <span class="apply-hint user-only" style="color:var(--t-green)">Logged in ✓</span>
+                            </button>
+                        </div>
+
+                        <div class="doc-service-card">
+                            <div class="dsc-icon-wrap"><i class="fas fa-home"></i></div>
+                            <div class="dsc-body">
+                                <h3>Residency Certificate</h3>
+                                <p>Official proof of residency in the barangay. Required for bank accounts, voter registration, and IDs.</p>
+                                <div class="dsc-tags">
+                                    <span class="dsc-tag"><i class="fas fa-clock"></i> Same day</span>
+                                    <span class="dsc-tag"><i class="fas fa-tag"></i> Free</span>
+                                </div>
+                                <div class="dsc-reqs">
+                                    <strong>Requirements:</strong>
+                                    <ul>
+                                        <li>Valid government-issued ID</li>
+                                        <li>Proof of billing or lease</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <button class="btn-apply" onclick="handleDocAction('Residency Certificate')">
+                                <span><i class="fas fa-file-pen"></i> Apply Now</span>
+                                <span class="apply-hint guest-only">Login required</span>
+                                <span class="apply-hint user-only" style="color:var(--t-green)">Logged in ✓</span>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Application form modal trigger / How-it-works for guests -->
@@ -509,6 +558,11 @@
                                             <label>Description</label>
                                             <textarea id="reportDescription" class="glass-input" rows="4"
                                                 placeholder="Describe the issue..."></textarea>
+                                        </div>
+                                        <div class="glass-field">
+                                            <label>Photo Verification <span style="color:red">*</span></label>
+                                            <input type="file" id="reportPhoto" class="glass-input" accept="image/*" required style="padding: 10px;">
+                                            <p style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"><i class="fas fa-camera"></i> Please attach a clear photo of the issue for verification.</p>
                                         </div>
                                         <button type="submit" class="btn-gold w-full">
                                             <i class="fas fa-paper-plane"></i> Submit Report
@@ -988,16 +1042,16 @@
                     </button>
                 </div>
 
-                <div class="ann-comments-section">
+                <div class="ann-comments-section" style="display:flex;flex-direction:column;min-height:200px;">
                     <h4 style="font-size:14px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Comments</h4>
                     
-                    <div class="ann-comment-input-area" style="display:flex;gap:10px;margin-bottom:20px;">
-                        <input type="text" id="annCommentInput" class="glass-input" placeholder="Write a comment..." style="flex:1" onkeypress="if(event.key === 'Enter') postAnnouncementComment()">
-                        <button onclick="postAnnouncementComment()" class="btn-gold" style="padding:0 20px; border-radius: 8px;"><i class="fas fa-paper-plane"></i></button>
+                    <div id="annCommentsList" style="display:flex;flex-direction:column;gap:16px; margin-bottom:20px; flex: 1;">
+                        <!-- Comments will be injected here -->
                     </div>
 
-                    <div id="annCommentsList" style="display:flex;flex-direction:column;gap:16px;">
-                        <!-- Comments will be injected here -->
+                    <div class="ann-comment-input-area" style="display:flex;gap:10px; position:sticky; bottom: -24px; background: linear-gradient(180deg, transparent 0%, #0c1c2e 20%, #0c1c2e 100%); padding: 20px 0 10px; margin:-10px 0; z-index: 10;">
+                        <input type="text" id="annCommentInput" class="glass-input" placeholder="Write a comment..." style="flex:1" onkeypress="if(event.key === 'Enter') postAnnouncementComment()">
+                        <button onclick="postAnnouncementComment()" class="btn-gold" style="padding:0 20px; border-radius: 8px;"><i class="fas fa-paper-plane"></i></button>
                     </div>
                 </div>
             </div>

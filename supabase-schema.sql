@@ -56,6 +56,8 @@ create table if not exists public.announcements (
   title text not null,
   content text not null,
   category text,
+  media_url text,
+  media_type text check (media_type in ('image', 'video')),
   barangay_scope text not null default 'City-Wide',
   published_at timestamptz not null default now(),
   created_by uuid references public.profiles(id),
@@ -428,4 +430,22 @@ USING (
       AND p.role = 'barangay_admin'
       AND p.barangay = coalesce(public.issue_reports.barangay, p.barangay)
   )
+);
+
+-- Storage buckets initialization
+insert into storage.buckets (id, name, public) 
+values ('announcements-media', 'announcements-media', true)
+on conflict (id) do nothing;
+
+create policy "Public Access to Announcements Media"
+on storage.objects for select
+to public
+using ( bucket_id = 'announcements-media' );
+
+create policy "Admins Can Upload Announcements Media"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'announcements-media'
+  and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('super_admin', 'barangay_admin'))
 );
