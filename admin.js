@@ -1984,6 +1984,32 @@ async function loadDocTemplates() {
     return;
   }
   docTemplates = data || [];
+
+  // For super admin: populate and show the barangay selector
+  if (isSuperAdmin()) {
+    initDocTemplateBarangayFilter();
+  }
+}
+
+function initDocTemplateBarangayFilter() {
+  const sel = document.getElementById("doctplBarangayFilter");
+  const uploadBtn = document.getElementById("doctplUploadBtn");
+  if (!sel) return;
+
+  // Collect unique barangay names from loaded templates + master barangays list
+  const fromTemplates = docTemplates.map(t => t.barangay_name).filter(Boolean);
+  const fromList = barangays.map(b => b.name).filter(Boolean);
+  const allNames = [...new Set([...fromList, ...fromTemplates])].sort();
+
+  const currentVal = sel.value;
+  sel.innerHTML = `<option value="">— Select a Barangay —</option>` +
+    allNames.map(n => `<option value="${escapeHtml(n)}"${n === currentVal ? " selected" : ""}>${escapeHtml(n)}</option>`).join("");
+
+  sel.style.display = "block";
+
+  // Lock upload button until a barangay is chosen
+  const chosen = sel.value;
+  if (uploadBtn) uploadBtn.style.display = chosen ? "" : "none";
 }
 
 function renderDocTemplatesPanel() {
@@ -1991,7 +2017,24 @@ function renderDocTemplatesPanel() {
   if (!grid) return;
 
   const typeFilter = document.getElementById("doctplTypeFilter")?.value || "";
-  const scopedBarangay = getScopedBarangay();
+  const uploadBtn = document.getElementById("doctplUploadBtn");
+
+  // ── Determine which barangay to display ──────────────────────────────
+  let scopedBarangay;
+  if (isBarangayAdmin()) {
+    scopedBarangay = getScopedBarangay();
+  } else if (isSuperAdmin()) {
+    // Super admin must pick a barangay from the dropdown
+    scopedBarangay = document.getElementById("doctplBarangayFilter")?.value || "";
+    if (uploadBtn) uploadBtn.style.display = scopedBarangay ? "" : "none";
+    if (!scopedBarangay) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted);">
+        <i class="fas fa-building" style="font-size:32px;margin-bottom:12px;display:block;"></i>
+        <strong>Select a barangay above</strong> to view and manage its document templates.
+      </div>`;
+      return;
+    }
+  }
 
   // Group templates by document type for display
   const docTypes = [
@@ -2004,14 +2047,8 @@ function renderDocTemplatesPanel() {
 
   const typesToShow = typeFilter ? [typeFilter] : docTypes;
 
-  // Filter by scope
-  let scopedTemplates = isBarangayAdmin()
-    ? docTemplates.filter(t => t.barangay_name === scopedBarangay)
-    : docTemplates;
-
-  if (grid.children.length === 0 && scopedTemplates.length === 0 && !typeFilter) {
-    // Show empty state
-  }
+  // Always filter by the resolved scopedBarangay
+  const scopedTemplates = docTemplates.filter(t => t.barangay_name === scopedBarangay);
 
   grid.innerHTML = typesToShow.map(docType => {
     const tpl = scopedTemplates.find(t => t.document_type === docType);
@@ -2078,6 +2115,15 @@ function openUploadTemplateModal(presetDocType = "", presetBarangay = "") {
   const fileNameEl = document.getElementById("tplFileName");
   const fileInput = document.getElementById("tplFileInput");
   const docTypeErr = document.getElementById("tplDocTypeError");
+
+  // If no preset barangay was passed, infer it from context
+  if (!presetBarangay) {
+    if (isBarangayAdmin()) {
+      presetBarangay = getScopedBarangay();
+    } else if (isSuperAdmin()) {
+      presetBarangay = document.getElementById("doctplBarangayFilter")?.value || "";
+    }
+  }
   const brgyErr = document.getElementById("tplBarangayError");
   const fileErr = document.getElementById("tplFileError");
 

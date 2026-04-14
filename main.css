@@ -673,12 +673,20 @@ canvas {
 }
 
 /* Chart canvas wrappers — need explicit height when maintainAspectRatio:false */
-.chart-card-lg > div:last-child,
-.chart-card-sm > div:last-child {
+.chart-card-lg {
+    display: flex;
+    flex-direction: column;
+}
+.chart-card-lg > div:last-child {
+    flex: 1;
     position: relative;
+    min-height: 0;
 }
 .chart-card-lg canvas {
-    height: 220px !important;
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
 }
 .chart-card-sm canvas {
     height: 200px !important;

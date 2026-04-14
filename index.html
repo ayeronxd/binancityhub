@@ -183,7 +183,7 @@
                                     </div>
                                     <span class="live-chip"><span class="live-dot sm"></span> Live</span>
                                 </div>
-                                <div style="padding:16px"><canvas id="docTrendChart" height="130"></canvas></div>
+                                <div style="padding:12px 16px 8px;height:200px;position:relative;"><canvas id="docTrendChart"></canvas></div>
                             </div>
                             <div class="glass-card chart-card-sm">
                                 <div class="gc-header">
@@ -220,7 +220,7 @@
                         </div>
 
                         <!-- Skills Chart -->
-                        <div class="glass-card" style="margin-top:18px">
+                        <div class="glass-card" style="margin-top:18px;">
                             <div class="gc-header">
                                 <h4><i class="fas fa-hammer"></i> Most Searched Skills This Month</h4>
                             </div>
@@ -275,12 +275,12 @@
                         </div>
 
                         <!-- Top Workers -->
-                        <div class="glass-card aside-card" style="margin-top:14px">
+                        <div class="glass-card aside-card" style="margin-top:14px;display:flex;flex-direction:column;min-height:260px;">
                             <div class="gc-header">
                                 <h4><i class="fas fa-star"></i> Top Rated Workers</h4>
                                 <button class="gc-link-btn" onclick="switchTab('workers')">Browse All</button>
                             </div>
-                            <div id="topWorkersList" style="padding:8px 14px 14px"></div>
+                            <div id="topWorkersList" style="padding:8px 14px 14px;flex:1;overflow-y:auto;max-height:320px;"></div>
                         </div>
 
                     </aside>
@@ -591,6 +591,7 @@
                                             <tr>
                                                 <th>Category</th>
                                                 <th>Location</th>
+                                                <th>Barangay</th>
                                                 <th>Date</th>
                                                 <th>Status</th>
                                             </tr>
@@ -854,6 +855,34 @@
             <a id="contactEmail" href="#" class="btn-glass-modal">
                 <i class="fas fa-envelope"></i> <span id="contactEmailTxt"></span>
             </a>
+            <!-- Rate this worker -->
+            <div id="contactRateWrap" style="margin-top:14px;display:none;">
+                <button class="btn-glass-modal w-full" onclick="openRateWorkerModal()" style="border-color:rgba(212,165,116,0.35);color:var(--gold);">
+                    <i class="fas fa-star" style="margin-right:6px;"></i><span id="contactRateLabel">Rate this Worker</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== RATE WORKER MODAL ===== -->
+    <div class="modal-backdrop" id="rateWorkerModal">
+        <div class="login-modal" style="max-width:340px;text-align:center;">
+            <button class="modal-x" onclick="closeRateWorkerModal()" aria-label="Close rating"><i class="fas fa-times"></i></button>
+            <div class="modal-ico" style="background:rgba(212,165,116,0.12);"><i class="fas fa-star" style="color:var(--gold);"></i></div>
+            <h3 id="rateWorkerName" style="margin-bottom:4px;">Rate Worker</h3>
+            <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px;">How was your experience?</p>
+            <!-- Star row -->
+            <div id="starRow" style="display:flex;justify-content:center;gap:10px;margin-bottom:22px;">
+                <i class="fas fa-star rate-star" data-val="1" style="font-size:32px;cursor:pointer;color:rgba(255,255,255,0.15);transition:color 0.15s;" onmouseover="hoverStars(1)" onmouseout="resetStars()" onclick="selectStar(1)"></i>
+                <i class="fas fa-star rate-star" data-val="2" style="font-size:32px;cursor:pointer;color:rgba(255,255,255,0.15);transition:color 0.15s;" onmouseover="hoverStars(2)" onmouseout="resetStars()" onclick="selectStar(2)"></i>
+                <i class="fas fa-star rate-star" data-val="3" style="font-size:32px;cursor:pointer;color:rgba(255,255,255,0.15);transition:color 0.15s;" onmouseover="hoverStars(3)" onmouseout="resetStars()" onclick="selectStar(3)"></i>
+                <i class="fas fa-star rate-star" data-val="4" style="font-size:32px;cursor:pointer;color:rgba(255,255,255,0.15);transition:color 0.15s;" onmouseover="hoverStars(4)" onmouseout="resetStars()" onclick="selectStar(4)"></i>
+                <i class="fas fa-star rate-star" data-val="5" style="font-size:32px;cursor:pointer;color:rgba(255,255,255,0.15);transition:color 0.15s;" onmouseover="hoverStars(5)" onmouseout="resetStars()" onclick="selectStar(5)"></i>
+            </div>
+            <p id="rateStarLabel" style="color:var(--text-muted);font-size:13px;min-height:18px;margin-bottom:16px;"></p>
+            <button id="rateSubmitBtn" class="btn-gold w-full" onclick="submitWorkerRating()" disabled style="opacity:0.5;">
+                <i class="fas fa-paper-plane"></i> Submit Rating
+            </button>
         </div>
     </div>
 

@@ -149,15 +149,14 @@ async function loadWorkers() {
     .order("full_name", { ascending: true });
 
   workersData = (data || []).map((row) => ({
-    id: row.id,
-    name: row.full_name,
-    specialty: row.service_category,
-    barangay: row.barangay || "Unassigned",
-    category: row.category || "blue-collar",
-    phone: row.contact_phone || "N/A",
-    email: row.contact_email || "N/A",
-    rating: Number(row.rating_avg || 0),
-    reviews: Number(row.reviews_count || 0)
+    id:        row.id,
+    name:      row.full_name || row.name || "Worker",
+    specialty: row.service_category || row.category || "General",
+    barangay:  row.barangay || "",
+    phone:     row.contact_phone || "",
+    email:     row.contact_email || "",
+    rating:    Number(row.rating_avg || 0),
+    reviews:   Number(row.reviews_count || 0)
   }));
 }
 
@@ -249,13 +248,14 @@ async function loadBarangaysAndMetrics() {
 async function loadIssueReports() {
   const { data } = await supabaseClient
     .from("issue_reports")
-    .select("category,location,status,created_at")
+    .select("category,location,status,created_at,barangay")
     .order("created_at", { ascending: false })
     .limit(20);
 
   reportsData = (data || []).map((r) => ({
     category: r.category,
     location: r.location,
+    barangay: r.barangay || "—",
     status: mapReportStatus(r.status),
     date: formatDate(new Date(r.created_at))
   }));
@@ -685,7 +685,8 @@ function renderBarangayTable() {
     soon: { cls: "soon", label: "Coming Soon" }
   };
 
-  tbody.innerHTML = barangaysData.map((b) => {
+  const LIMIT = 5;
+  const buildRow = (b) => {
     const p = pillMap[b.status] || pillMap.pending;
     return `<tr>
       <td><strong>${escapeHtml(b.name)}</strong></td>
@@ -694,7 +695,54 @@ function renderBarangayTable() {
       <td>${Number(b.workers || 0).toLocaleString()}</td>
       <td><span class="tpill ${p.cls}">${p.label}</span></td>
     </tr>`;
-  }).join("");
+  };
+
+  const visible = barangaysData.slice(0, LIMIT);
+  const hidden  = barangaysData.slice(LIMIT);
+
+  tbody.innerHTML = visible.map(buildRow).join("");
+
+  // Remove any old toggle row
+  const existingToggle = document.getElementById("barangayTableToggleRow");
+  if (existingToggle) existingToggle.remove();
+
+  if (hidden.length > 0) {
+    // Inject hidden rows
+    const hiddenRows = hidden.map(buildRow).join("");
+    const toggleRow = document.createElement("tr");
+    toggleRow.id = "barangayTableToggleRow";
+    toggleRow.innerHTML = `<td colspan="5" style="text-align:center;padding:8px 0">
+      <button onclick="toggleBarangayRows(this)" style="
+        background:rgba(255,255,255,0.04);border:1px solid var(--glass-border);
+        color:var(--text-muted);font-size:12px;font-weight:600;padding:5px 18px;
+        border-radius:8px;cursor:pointer;">
+        <i class="fas fa-chevron-down" style="margin-right:5px"></i>Show ${hidden.length} more barangay${hidden.length > 1 ? 's' : ''}
+      </button>
+    </td>`;
+    tbody.appendChild(toggleRow);
+
+    // Store hidden rows for the toggle to reveal
+    tbody.dataset.hiddenRows = hiddenRows;
+    tbody.dataset.hiddenCount = hidden.length;
+  }
+}
+
+function toggleBarangayRows(btn) {
+  const tbody = document.getElementById("barangayTableBody");
+  if (!tbody) return;
+  const toggleRow = document.getElementById("barangayTableToggleRow");
+  const isCollapsed = btn.innerHTML.includes("fa-chevron-down");
+
+  if (isCollapsed) {
+    // Insert hidden rows before the toggle row
+    toggleRow.insertAdjacentHTML("beforebegin", tbody.dataset.hiddenRows || "");
+    btn.innerHTML = `<i class="fas fa-chevron-up" style="margin-right:5px"></i>Show less`;
+  } else {
+    // Remove all rows except the first 5 and the toggle row
+    const rows = [...tbody.querySelectorAll("tr")];
+    rows.slice(5).forEach(r => { if (r.id !== "barangayTableToggleRow") r.remove(); });
+    btn.innerHTML = `<i class="fas fa-chevron-down" style="margin-right:5px"></i>Show ${tbody.dataset.hiddenCount} more barangay${Number(tbody.dataset.hiddenCount) > 1 ? 's' : ''}`;
+  }
 }
 
 function buildAnnCard(a) {
@@ -944,7 +992,39 @@ async function postAnnouncementComment() {
 
 function renderAnnouncementsSidebar() {
   const el = document.getElementById("announcementsFeed");
-  if (el) el.innerHTML = announcementsData.slice(0, 3).map(buildAnnCard).join("");
+  if (!el) return;
+
+  const LIMIT = 3;
+  const all = announcementsData;
+  const visible = all.slice(0, LIMIT);
+  const hidden  = all.slice(LIMIT);
+
+  let html = visible.map(buildAnnCard).join("");
+
+  if (hidden.length > 0) {
+    const hiddenHtml = hidden.map(buildAnnCard).join("");
+    html += `
+      <div id="annSidebarExtra" style="display:none">${hiddenHtml}</div>
+      <button onclick="toggleAnnSidebar(this)" style="
+        width:100%;margin:6px 0 2px;padding:7px 0;background:rgba(255,255,255,0.04);
+        border:1px solid var(--glass-border);border-radius:8px;color:var(--text-muted);
+        font-size:12px;font-weight:600;cursor:pointer;letter-spacing:0.3px;
+        transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+        <i class="fas fa-chevron-down" style="margin-right:5px"></i>Show ${hidden.length} more announcement${hidden.length > 1 ? 's' : ''}
+      </button>`;
+  }
+
+  el.innerHTML = html;
+}
+
+function toggleAnnSidebar(btn) {
+  const extra = document.getElementById("annSidebarExtra");
+  if (!extra) return;
+  const isHidden = extra.style.display === "none";
+  extra.style.display = isHidden ? "block" : "none";
+  btn.innerHTML = isHidden
+    ? `<i class="fas fa-chevron-up" style="margin-right:5px"></i>Show less`
+    : `<i class="fas fa-chevron-down" style="margin-right:5px"></i>Show ${announcementsData.length - 3} more announcement${announcementsData.length - 3 > 1 ? 's' : ''}`;
 }
 
 function renderAnnouncementsPage() {
@@ -970,7 +1050,7 @@ function renderTopWorkersSidebar() {
     .slice(0, 5);
 
   el.innerHTML = top.map((w) => `
-    <div class="top-worker-item" onclick="handleWorkerContact('${escapeAttr(w.name)}','${escapeAttr(w.specialty)}','${escapeAttr(w.phone)}','${escapeAttr(w.email)}')">
+    <div class="top-worker-item" onclick="handleWorkerContact('${escapeAttr(w.name)}','${escapeAttr(w.specialty)}','${escapeAttr(w.phone)}','${escapeAttr(w.email)}','${escapeAttr(w.id || '')}')">
       <div class="tw-avatar"><i class="fas fa-user"></i></div>
       <div class="tw-info">
         <span class="tw-name">${escapeHtml(w.name)}</span>
@@ -1000,8 +1080,8 @@ function renderWorkers(workers) {
         <div class="worker-rating">${Number(w.reviews || 0) > 0 ? `${Number(w.rating || 0).toFixed(1)} · <span style="color:rgba(255,255,255,0.3)">${Number(w.reviews || 0)} reviews</span>` : "<span style='color:rgba(255,255,255,0.45)'>No ratings yet</span>"}</div>
       </div>
       <div class="worker-contact">
-        <button class="btn-contact" onclick="handleWorkerContact('${escapeAttr(w.name)}','${escapeAttr(w.specialty)}','${escapeAttr(w.phone)}','${escapeAttr(w.email)}')"><i class="fas fa-phone"></i> Call</button>
-        <button class="btn-contact" onclick="handleWorkerContact('${escapeAttr(w.name)}','${escapeAttr(w.specialty)}','${escapeAttr(w.phone)}','${escapeAttr(w.email)}')"><i class="fas fa-envelope"></i> Email</button>
+        <button class="btn-contact" onclick="handleWorkerContact('${escapeAttr(w.name)}','${escapeAttr(w.specialty)}','${escapeAttr(w.phone)}','${escapeAttr(w.email)}','${escapeAttr(w.id || '')}')"><i class="fas fa-phone"></i> Call</button>
+        <button class="btn-contact" onclick="handleWorkerContact('${escapeAttr(w.name)}','${escapeAttr(w.specialty)}','${escapeAttr(w.phone)}','${escapeAttr(w.email)}','${escapeAttr(w.id || '')}')"><i class="fas fa-envelope"></i> Email</button>
       </div>
     </div>
   `).join("");
@@ -1068,11 +1148,17 @@ function applyWorkerFilters() {
   updateWorkerCount(filtered.length);
 }
 
-function handleWorkerContact(name, specialty, phone, email) {
+let ratingContext = { workerId: null, workerName: "", selectedStar: 0 };
+
+function handleWorkerContact(name, specialty, phone, email, workerId) {
   if (!currentUser) {
     requireLogin("contact");
     return;
   }
+
+  ratingContext.workerId   = workerId || null;
+  ratingContext.workerName = name;
+  ratingContext.selectedStar = 0;
 
   setText("contactName", name);
   setText("contactSpec", specialty);
@@ -1086,11 +1172,115 @@ function handleWorkerContact(name, specialty, phone, email) {
   if (phoneEl) phoneEl.href = "tel:" + phone;
   if (emailEl) emailEl.href = "mailto:" + email;
 
+  // Show rate button only if logged in and worker id is known
+  const rateWrap = document.getElementById("contactRateWrap");
+  if (rateWrap) rateWrap.style.display = (currentUser && workerId) ? "block" : "none";
+
+  // Check if resident already rated this worker
+  if (currentUser && workerId && supabaseClient) {
+    supabaseClient
+      .from("worker_ratings")
+      .select("rating")
+      .eq("worker_id", workerId)
+      .eq("resident_id", currentUser.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        const label = document.getElementById("contactRateLabel");
+        if (label) label.textContent = data ? `Your rating: ${"★".repeat(data.rating)} — Update` : "Rate this Worker";
+      });
+  }
+
   document.getElementById("contactModal")?.classList.add("open");
 }
 
 function closeContactModal() {
   document.getElementById("contactModal")?.classList.remove("open");
+}
+
+// ── Rating modal ─────────────────────────────────────────────
+
+function openRateWorkerModal() {
+  if (!currentUser) { requireLogin("contact"); return; }
+  closeContactModal();
+  ratingContext.selectedStar = 0;
+  setText("rateWorkerName", ratingContext.workerName);
+  resetStars();
+  const btn = document.getElementById("rateSubmitBtn");
+  if (btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
+  document.getElementById("rateStarLabel").textContent = "";
+
+  // Pre-fill if existing rating
+  if (ratingContext.workerId && supabaseClient) {
+    supabaseClient
+      .from("worker_ratings")
+      .select("rating")
+      .eq("worker_id", ratingContext.workerId)
+      .eq("resident_id", currentUser.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.rating) selectStar(data.rating);
+      });
+  }
+
+  document.getElementById("rateWorkerModal")?.classList.add("open");
+}
+
+function closeRateWorkerModal() {
+  document.getElementById("rateWorkerModal")?.classList.remove("open");
+}
+
+const starLabels = ["", "Poor", "Fair", "Good", "Very Good", "Excellent"];
+
+function hoverStars(val) {
+  document.querySelectorAll(".rate-star").forEach((s) => {
+    s.style.color = Number(s.dataset.val) <= val ? "#f1c40f" : "rgba(255,255,255,0.15)";
+  });
+  document.getElementById("rateStarLabel").textContent = starLabels[val] || "";
+}
+
+function resetStars() {
+  const sel = ratingContext.selectedStar;
+  document.querySelectorAll(".rate-star").forEach((s) => {
+    s.style.color = Number(s.dataset.val) <= sel ? "#f1c40f" : "rgba(255,255,255,0.15)";
+  });
+  document.getElementById("rateStarLabel").textContent = sel ? starLabels[sel] : "";
+}
+
+function selectStar(val) {
+  ratingContext.selectedStar = val;
+  resetStars();
+  const btn = document.getElementById("rateSubmitBtn");
+  if (btn) { btn.disabled = false; btn.style.opacity = "1"; }
+}
+
+async function submitWorkerRating() {
+  const { workerId, selectedStar } = ratingContext;
+  if (!workerId || !selectedStar || !currentUser) return;
+
+  const btn = document.getElementById("rateSubmitBtn");
+  if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Submitting...`; }
+
+  const { error } = await supabaseClient
+    .from("worker_ratings")
+    .upsert(
+      { worker_id: workerId, resident_id: currentUser.id, rating: selectedStar },
+      { onConflict: "worker_id,resident_id" }
+    );
+
+  if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fas fa-paper-plane"></i> Submit Rating`; btn.style.opacity = "1"; }
+
+  if (error) {
+    showToast("Failed to submit rating. Please try again.", "error");
+    return;
+  }
+
+  showToast(`Thanks! You rated ${ratingContext.workerName} ${"★".repeat(selectedStar)}`, "success");
+  closeRateWorkerModal();
+
+  // Refresh worker list so the updated avg shows immediately
+  await loadWorkers();
+  renderTopWorkersSidebar();
+  applyWorkerFilters(); // Re-render the main grid
 }
 
 function handleDocAction(docName) {
@@ -1506,14 +1696,54 @@ function renderReportsTable() {
   if (!tbody) return;
 
   const pillMap = { Pending: "pending", Processing: "processing", Resolved: "active" };
-  tbody.innerHTML = reportsData.map((r) => `
+  const buildRow = (r) => `
     <tr>
       <td>${escapeHtml(r.category)}</td>
       <td>${escapeHtml(r.location)}</td>
+      <td style="text-align:left;padding-left:0"><span style="font-size:11px;background:rgba(212,165,116,0.12);color:var(--gold);border:1px solid rgba(212,165,116,0.25);border-radius:10px;padding:2px 8px;white-space:nowrap;display:inline-block;"><i class="fas fa-map-marker-alt" style="margin-right:4px;font-size:10px;"></i>${escapeHtml(r.barangay)}</span></td>
       <td style="color:rgba(255,255,255,0.4)">${escapeHtml(r.date)}</td>
       <td><span class="tpill ${pillMap[r.status] || "pending"}">${escapeHtml(r.status)}</span></td>
-    </tr>
-  `).join("");
+    </tr>`;
+
+  const LIMIT = 5;
+  const visible = reportsData.slice(0, LIMIT);
+  const hidden  = reportsData.slice(LIMIT);
+
+  tbody.innerHTML = visible.map(buildRow).join("");
+
+  const existingToggle = document.getElementById("reportsTableToggleRow");
+  if (existingToggle) existingToggle.remove();
+
+  if (hidden.length > 0) {
+    const toggleRow = document.createElement("tr");
+    toggleRow.id = "reportsTableToggleRow";
+    toggleRow.innerHTML = `<td colspan="5" style="text-align:center;padding:8px 0">
+      <button onclick="toggleReportRows(this)" style="
+        background:rgba(255,255,255,0.04);border:1px solid var(--glass-border);
+        color:var(--text-muted);font-size:12px;font-weight:600;padding:5px 18px;
+        border-radius:8px;cursor:pointer;">
+        <i class="fas fa-chevron-down" style="margin-right:5px"></i>Show ${hidden.length} more report${hidden.length > 1 ? "s" : ""}
+      </button>
+    </td>`;
+    tbody.appendChild(toggleRow);
+    tbody.dataset.hiddenRows = hidden.map(buildRow).join("");
+    tbody.dataset.hiddenCount = hidden.length;
+  }
+}
+
+function toggleReportRows(btn) {
+  const tbody = document.getElementById("reportsTableBody");
+  if (!tbody) return;
+  const toggleRow = document.getElementById("reportsTableToggleRow");
+  const isCollapsed = btn.innerHTML.includes("fa-chevron-down");
+
+  if (isCollapsed) {
+    toggleRow.insertAdjacentHTML("beforebegin", tbody.dataset.hiddenRows || "");
+    btn.innerHTML = `<i class="fas fa-chevron-up" style="margin-right:5px"></i>Show less`;
+  } else {
+    [...tbody.querySelectorAll("tr")].slice(5).forEach(r => { if (r.id !== "reportsTableToggleRow") r.remove(); });
+    btn.innerHTML = `<i class="fas fa-chevron-down" style="margin-right:5px"></i>Show ${tbody.dataset.hiddenCount} more report${Number(tbody.dataset.hiddenCount) > 1 ? "s" : ""}`;
+  }
 }
 
 const loginModalCopy = {
@@ -1541,9 +1771,10 @@ document.addEventListener("click", (e) => {
   if (e.target.id === "loginModal") closeLoginModal();
   if (e.target.id === "applyModal") closeApplyModal();
   if (e.target.id === "contactModal") closeContactModal();
+  if (e.target.id === "rateWorkerModal") closeRateWorkerModal();
   if (e.target.id === "profileModal") closeProfileModal();
   if (e.target.id === "changePasswordModal") closeChangePasswordModal();
-
+  if (e.target.id === "announcementModal") closeAnnouncementModal();
 });
 
 document.addEventListener("keydown", (e) => {

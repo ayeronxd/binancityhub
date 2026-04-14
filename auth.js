@@ -334,10 +334,23 @@ async function handleSignup() {
     return;
   }
 
+  // ── Pre-check: is this email already registered? ─────────────────────
+  setButtonLoading("signupSubmitBtn", true);
+  const { data: existingProfile } = await supabaseClient
+    .from("profiles")
+    .select("id")
+    .ilike("email", email)
+    .limit(1);
+
+  if (existingProfile && existingProfile.length > 0) {
+    setButtonLoading("signupSubmitBtn", false);
+    showFieldError("signupEmailError", "This email is already associated with an account. Please log in or use a different email.");
+    document.getElementById("signupEmail")?.focus();
+    return;
+  }
+
   const barangay = toBarangayDisplay(barangayRaw);
   const fullName = `${firstName} ${lastName}`.trim();
-
-  setButtonLoading("signupSubmitBtn", true);
 
   const { data, error } = await supabaseClient.auth.signUp({
     email,
@@ -360,11 +373,17 @@ async function handleSignup() {
   setButtonLoading("signupSubmitBtn", false);
 
   if (error) {
-    showToast(error.message, "error");
+    // Catch any remaining Supabase-level duplicate errors just in case
+    const msg = String(error.message || "").toLowerCase();
+    if (msg.includes("already registered") || msg.includes("already in use") || msg.includes("duplicate")) {
+      showFieldError("signupEmailError", "This email is already registered. Please log in instead.");
+    } else {
+      showToast(error.message, "error");
+    }
     return;
   }
 
-  showToast("Account created. Check your email if confirmation is enabled, then login.", "success");
+  showToast("Account created! Check your email to confirm, then log in.", "success");
   setTimeout(() => { switchTab("login"); }, 1000);
 }
 
