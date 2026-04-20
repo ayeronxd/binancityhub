@@ -5,15 +5,13 @@ Barangay Hub is a serverless web application designed as a smart city portal. It
 
 ## Key Features
 
-*   **Role-Based Access Control**: Securely manages user experiences for different roles:
-    *   **Public/Guest**: Can browse public city information like announcements, worker directories, and analytics summaries.
-    *   **Resident**: Authenticated users can submit document requests, report community issues, and manage their applications in a personal portal.
-    *   **Admin (`barangay_admin`, `super_admin`)**: Can manage city and barangay operations from a dedicated administrative dashboard.
-*   **Dynamic Analytics Dashboard**: The public portal and admin panel feature live counters and charts that visualize real-time operational data, such as document request trends, service distribution, and barangay metrics.
-*   **Resident Services Portal**: Allows residents to apply for official documents (e.g., Barangay ID, Clearance) and track the status of their requests online.
-*   **Community Engagement**: Features an announcements feed for official news and an issue reporting system for residents to submit reports on infrastructure problems like road damage or water supply issues.
-*   **Skilled Worker Directory**: A searchable directory of verified skilled workers (e.g., plumbers, electricians, accountants) within the community.
-*   **Comprehensive Admin Panel**: A powerful interface for administrators to manage barangays, users, document requests, announcements, issue reports, and the worker registry.
+*   **Role-Based Access Control**: Securely manages user experiences for different roles.
+*   **Dynamic Analytics Dashboard**: Live counters and charts visualize real-time operational data.
+*   **Resident Services Portal**: Allows residents to apply for official documents and track status.
+*   **Interactive Community Announcements**: Features an announcements feed with social engagement. Authenticated users can "Like" and leave comments on official announcements.
+*   **Skilled Worker Directory & Ratings**: A searchable directory of verified skilled workers. Residents can submit 1-to-5 star ratings for workers they have hired, contributing to community trust.
+*   **Human-Computer Interaction (HCI) Compliant**: Strict adherence to accessibility (A11y) standards including ARIA labels, standardized visual feedback (scale animations, focus rings), and consistent affordances.
+*   **Comprehensive Admin Panel**: A powerful interface for administrators to manage city operations.
 
 ## Technology Stack
 

@@ -83,7 +83,7 @@
                         <span class="unp-role">Resident</span>
                     </div>
                 </button>
-                <button class="btn-logout" onclick="doLogout()" title="Logout">
+                <button class="btn-logout" onclick="doLogout()" aria-label="Logout">
                     <i class="fas fa-sign-out-alt"></i>
                 </button>
             </div>
@@ -852,13 +852,13 @@
             <a id="contactPhone" href="#" class="btn-gold w-full" style="margin-bottom:10px">
                 <i class="fas fa-phone"></i> <span id="contactPhoneTxt"></span>
             </a>
-            <a id="contactEmail" href="#" class="btn-glass-modal">
+            <a id="contactEmail" href="#" class="btn-glass-modal w-full">
                 <i class="fas fa-envelope"></i> <span id="contactEmailTxt"></span>
             </a>
             <!-- Rate this worker -->
             <div id="contactRateWrap" style="margin-top:14px;display:none;">
-                <button class="btn-glass-modal w-full" onclick="openRateWorkerModal()" style="border-color:rgba(212,165,116,0.35);color:var(--gold);">
-                    <i class="fas fa-star" style="margin-right:6px;"></i><span id="contactRateLabel">Rate this Worker</span>
+                <button class="btn-glass-modal w-full" onclick="openRateWorkerModal()">
+                    <i class="fas fa-star" style="margin-right:6px;color:var(--gold);"></i><span id="contactRateLabel">Rate this Worker</span>
                 </button>
             </div>
         </div>
@@ -1080,7 +1080,7 @@
 
                     <div class="ann-comment-input-area" style="display:flex;gap:10px; position:sticky; bottom: -24px; background: linear-gradient(180deg, transparent 0%, #0c1c2e 20%, #0c1c2e 100%); padding: 20px 0 10px; margin:-10px 0; z-index: 10;">
                         <input type="text" id="annCommentInput" class="glass-input" placeholder="Write a comment..." style="flex:1" onkeypress="if(event.key === 'Enter') postAnnouncementComment()">
-                        <button onclick="postAnnouncementComment()" class="btn-gold" style="padding:0 20px; border-radius: 8px;"><i class="fas fa-paper-plane"></i></button>
+                        <button onclick="postAnnouncementComment()" class="btn-gold" style="padding:0 20px; border-radius: 8px;" aria-label="Post comment"><i class="fas fa-paper-plane"></i></button>
                     </div>
                 </div>
             </div>

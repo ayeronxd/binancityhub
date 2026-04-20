@@ -926,6 +926,16 @@ function renderAnnComments(comments) {
   container.innerHTML = html;
 }
 
+// -----------------------------------------------------------------------------
+// FEATURE: Interactive Community Announcements (Likes & Comments)
+// -----------------------------------------------------------------------------
+
+/**
+ * Toggles the "Like" status of the currently open announcement.
+ * - Guards against unauthenticated guests.
+ * - Optimistically updates the UI counter and icon before server response for responsiveness.
+ * - Interfaces securely with `announcement_likes` Supabase table via RLS.
+ */
 async function toggleAnnouncementLike() {
   if (!currentUser) return requireLogin("like announcements");
   if (!currentOpenAnnId) return;
@@ -936,28 +946,37 @@ async function toggleAnnouncementLike() {
   let count = parseInt(countEl.innerText) || 0;
 
   if (currentAnnIsLiked) {
-    // Unlike
+    // Unliking: Revert UI state immediately (optimistic UI)
     btn.classList.remove("liked");
     icon.classList.remove("fas");
     icon.classList.add("far");
     countEl.innerText = Math.max(0, count - 1);
     currentAnnIsLiked = false;
+    
+    // Perform secure delete constrained by RLS (user can only delete their own like)
     await supabaseClient.from("announcement_likes")
       .delete()
       .eq("announcement_id", currentOpenAnnId)
       .eq("resident_id", currentUser.id);
   } else {
-    // Like
+    // Liking: Update UI state immediately
     btn.classList.add("liked");
     icon.classList.remove("far");
     icon.classList.add("fas");
     countEl.innerText = count + 1;
     currentAnnIsLiked = true;
+    
+    // Perform secure insert
     await supabaseClient.from("announcement_likes")
       .insert({ announcement_id: currentOpenAnnId, resident_id: currentUser.id });
   }
 }
 
+/**
+ * Submits a new comment to an announcement.
+ * - Ensures input contains text to prevent empty payloads.
+ * - Disables input during network transaction to prevent spamming.
+ */
 async function postAnnouncementComment() {
   if (!currentUser) return requireLogin("comment on announcements");
   if (!currentOpenAnnId) return;
@@ -966,6 +985,7 @@ async function postAnnouncementComment() {
   const text = input.value.trim();
   if (!text) return;
   
+  // Disable user input to prevent duplicate submission clicks
   input.disabled = true;
   
   const payload = {
@@ -974,19 +994,23 @@ async function postAnnouncementComment() {
     content: text
   };
   
+  // Append parent ID if this is a nested reply
   if (activeReplyParentId) {
     payload.parent_id = activeReplyParentId;
   }
   
+  // Submit securely to Supabase (RLS blocks missing/wrong resident_id)
   const { error } = await supabaseClient.from("announcement_comments").insert(payload);
     
+  // Re-enable and reset on success
   input.disabled = false;
   if (error) {
     showToast("Failed to post comment.");
   } else {
     input.value = "";
     clearReplyParent();
-    loadAnnouncementSocials(currentOpenAnnId); // reload comments fully
+    // Dispatch full reload of comments to pull new data including user profile name
+    loadAnnouncementSocials(currentOpenAnnId); 
   }
 }
 
@@ -1253,13 +1277,26 @@ function selectStar(val) {
   if (btn) { btn.disabled = false; btn.style.opacity = "1"; }
 }
 
+// -----------------------------------------------------------------------------
+// FEATURE: Worker Ratings
+// -----------------------------------------------------------------------------
+
+/**
+ * Commits a star rating from an authenticated resident for a specific worker.
+ * - Validates authentication state and selected rating.
+ * - Provides immediate UI feedback using animated FontAwesome spinners.
+ * - Calls `upsert` so it intelligently handles both new ratings and updates
+ *   to existing ratings based on the composite unique key (worker_id, resident_id)
+ */
 async function submitWorkerRating() {
   const { workerId, selectedStar } = ratingContext;
   if (!workerId || !selectedStar || !currentUser) return;
 
+  // Block further clicks and display loading UI
   const btn = document.getElementById("rateSubmitBtn");
   if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Submitting...`; }
 
+  // Execute database upsert: inserts new or overrides existing rating strictly constrained by user session
   const { error } = await supabaseClient
     .from("worker_ratings")
     .upsert(
@@ -1267,6 +1304,7 @@ async function submitWorkerRating() {
       { onConflict: "worker_id,resident_id" }
     );
 
+  // Restore button default state
   if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fas fa-paper-plane"></i> Submit Rating`; btn.style.opacity = "1"; }
 
   if (error) {
@@ -1277,10 +1315,10 @@ async function submitWorkerRating() {
   showToast(`Thanks! You rated ${ratingContext.workerName} ${"★".repeat(selectedStar)}`, "success");
   closeRateWorkerModal();
 
-  // Refresh worker list so the updated avg shows immediately
+  // Trigger grid and UI reload so the newly calculated average rating propagates across the interface
   await loadWorkers();
   renderTopWorkersSidebar();
-  applyWorkerFilters(); // Re-render the main grid
+  applyWorkerFilters(); 
 }
 
 function handleDocAction(docName) {
