@@ -1,0 +1,8 @@
+{
+  "name": "binancityhub",
+  "version": "1.0.0",
+  "description": "Smart City Digital Portal",
+  "scripts": {
+    "build": "node build-env.cjs"
+  }
+}
