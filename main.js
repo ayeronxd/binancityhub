@@ -1005,7 +1005,7 @@ async function postAnnouncementComment() {
   // Re-enable and reset on success
   input.disabled = false;
   if (error) {
-    showToast("Failed to post comment.");
+    showToast("Failed to post comment.", "error");
   } else {
     input.value = "";
     clearReplyParent();
@@ -1368,7 +1368,7 @@ function setupProfileForm() {
     e.preventDefault();
 
     if (!currentUser || !supabaseClient) {
-      showToast("Please login to update your profile.");
+      showToast("Please login to update your profile.", "error");
       return;
     }
 
@@ -1377,7 +1377,7 @@ function setupProfileForm() {
     const phone = document.getElementById("profileEditPhone")?.value.trim() || null;
 
     if (!fullName || !barangay) {
-      showToast("Full name and barangay are required.");
+      showToast("Full name and barangay are required.", "error");
       return;
     }
 
@@ -1395,7 +1395,7 @@ function setupProfileForm() {
       }
 
       if (error) {
-        showToast(error.message);
+        showToast(error.message, "error");
         return;
       }
 
@@ -1457,7 +1457,7 @@ function closeChangePasswordModal() {
 // Because the user IS logged in, we know their email — no redirect needed.
 async function openPortalForgotPassword() {
   if (!supabaseClient || !currentUser) {
-    showToast("Please make sure you are logged in.");
+    showToast("Please make sure you are logged in.", "error");
     return;
   }
 
@@ -1467,7 +1467,7 @@ async function openPortalForgotPassword() {
   });
 
   if (error) {
-    showToast(error.message || "Failed to send reset email.");
+    showToast(error.message || "Failed to send reset email.", "error");
     return;
   }
 
@@ -1480,7 +1480,7 @@ function setupChangePasswordForm() {
     e.preventDefault();
 
     if (!currentUser || !supabaseClient) {
-      showToast("Please login to change password.");
+      showToast("Please login to change password.", "error");
       return;
     }
 
@@ -1489,22 +1489,22 @@ function setupChangePasswordForm() {
     const confirmPassword = document.getElementById("confirmNewPassword")?.value || "";
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      showToast("All password fields are required.");
+      showToast("All password fields are required.", "error");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      showToast("New passwords do not match.");
+      showToast("New passwords do not match.", "error");
       return;
     }
 
     if (newPassword.length < 6) {
-      showToast("New password must be at least 6 characters.");
+      showToast("New password must be at least 6 characters.", "error");
       return;
     }
 
     if (currentPassword === newPassword) {
-      showToast("New password must be different from current password.");
+      showToast("New password must be different from current password.", "error");
       return;
     }
 
@@ -1520,7 +1520,7 @@ function setupChangePasswordForm() {
       });
 
       if (signInError) {
-        showToast("Current password is incorrect.");
+        showToast("Current password is incorrect.", "error");
         return;
       }
 
@@ -1530,7 +1530,7 @@ function setupChangePasswordForm() {
       });
 
       if (updateError) {
-        showToast(updateError.message || "Failed to update password.");
+        showToast(updateError.message || "Failed to update password.", "error");
         return;
       }
 
@@ -1550,7 +1550,7 @@ function setupApplyForm() {
     e.preventDefault();
 
     if (!currentUser || !supabaseClient) {
-      showToast("Please login to submit applications.");
+      showToast("Please login to submit applications.", "error");
       return;
     }
 
@@ -1571,7 +1571,7 @@ function setupApplyForm() {
       });
 
       if (error) {
-        showToast(error.message);
+        showToast(error.message, "error");
         return;
       }
 
@@ -1634,7 +1634,7 @@ function setupReportForm() {
     const description = document.getElementById("reportDescription")?.value || "";
 
     if (!barangay) {
-      showToast("Please select a barangay.");
+      showToast("Please select a barangay.", "error");
       return;
     }
 
@@ -1648,7 +1648,7 @@ function setupReportForm() {
       let photoUrl = null;
 
       if (!file) {
-        showToast("Please upload a photo for verification.");
+        showToast("Please upload a photo for verification.", "error");
         if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
         return;
       }
@@ -1661,7 +1661,7 @@ function setupReportForm() {
         .upload(fileName, file, { upsert: false });
 
       if (uploadError) {
-        showToast("Photo upload failed: " + uploadError.message);
+        showToast("Photo upload failed: " + uploadError.message, "error");
         if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
         return;
       }
@@ -1685,7 +1685,7 @@ function setupReportForm() {
       });
 
       if (error) {
-        showToast(error.message);
+        showToast(error.message, "error");
         return;
       }
 
@@ -1838,12 +1838,22 @@ function setupStatusBarClock() {
 }
 
 let toastTimer;
-function showToast(msg) {
+function showToast(msg, type = "success") {
   const el = document.getElementById("portalToast");
   const span = document.getElementById("portalToastMsg");
   if (!el || !span) return;
 
   span.textContent = msg;
+
+  const icon = el.querySelector("i");
+  if (type === "error") {
+      el.classList.add("error");
+      if (icon) icon.className = "fas fa-exclamation-circle";
+  } else {
+      el.classList.remove("error");
+      if (icon) icon.className = "fas fa-check-circle";
+  }
+
   el.classList.add("show");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove("show"), 4000);

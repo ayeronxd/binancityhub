@@ -2163,6 +2163,11 @@ button:disabled,
     max-width: 380px;
 }
 
+.portal-toast.error {
+    background: #e74c3c;
+    box-shadow: 0 8px 28px rgba(231, 76, 60, 0.35);
+}
+
 .portal-toast.show {
     opacity: 1;
     transform: translateY(0);
