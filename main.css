@@ -63,7 +63,8 @@
 
 html {
     scroll-behavior: smooth;
-    overflow-x: hidden; /* prevent horizontal scroll at root level */
+    overflow-x: hidden;
+    /* prevent horizontal scroll at root level */
 }
 
 body {
@@ -142,7 +143,8 @@ body.logged-in .user-only.block-el {
 
 .topbar.scrolled {
     background: rgba(7, 20, 31, 0.95);
-    border-bottom: 1px solid rgba(212, 165, 116, 0.15); /* Subtle gold glass border */
+    border-bottom: 1px solid rgba(212, 165, 116, 0.15);
+    /* Subtle gold glass border */
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 
@@ -657,12 +659,12 @@ body.logged-in .user-only.block-el {
 }
 
 /* All grid layout children: allow shrinking below content size */
-.portal-layout > *,
-.charts-row > *,
-.stat-cards-row > *,
-.portal-aside > *,
-.portal-two-col > *,
-.community-layout > * {
+.portal-layout>*,
+.charts-row>*,
+.stat-cards-row>*,
+.portal-aside>*,
+.portal-two-col>*,
+.community-layout>* {
     min-width: 0;
 }
 
@@ -672,24 +674,14 @@ canvas {
     max-width: 100%;
 }
 
-/* Chart canvas wrappers — need explicit height when maintainAspectRatio:false */
-.chart-card-lg canvas {
-    display: block;
-    width: 100% !important;
-    height: 100% !important;
-}
-.chart-card-sm canvas {
-    height: 200px !important;
-}
-#skillsChart {
-    height: 200px !important;
-}
+
+
 
 .chart-legend-custom {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 4px 16px 16px;
+    padding: 4px 16px 12px;
 }
 
 /* Glass Card */
@@ -1027,7 +1019,7 @@ canvas {
 /* Facebook-style Announcements */
 .ann-card.fb-layout {
     background: transparent;
-    border-bottom: 4px solid rgba(0,0,0,0.2);
+    border-bottom: 4px solid rgba(0, 0, 0, 0.2);
     padding: 16px 0 8px;
     display: flex;
     flex-direction: column;
@@ -1035,7 +1027,8 @@ canvas {
 
 .aside-card .ann-card.fb-layout {
     padding: 12px 0 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05); /* Lighter border for sidebar */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    /* Lighter border for sidebar */
     margin-bottom: 10px;
 }
 
@@ -1098,7 +1091,7 @@ canvas {
     font-weight: 700;
     text-transform: uppercase;
     color: var(--text-dark);
-    background: rgba(255,255,255,0.8);
+    background: rgba(255, 255, 255, 0.8);
     padding: 3px 8px;
     border-radius: 12px;
 }
@@ -1121,7 +1114,8 @@ canvas {
 
 .fb-content {
     font-size: 14px;
-    color: #e4e6eb; /* closely matches FB dark mode text */
+    color: #e4e6eb;
+    /* closely matches FB dark mode text */
     line-height: 1.5;
     white-space: pre-wrap;
     display: -webkit-box;
@@ -1142,7 +1136,8 @@ canvas {
     cursor: pointer;
 }
 
-.fb-media-wrapper img, .fb-media-wrapper video {
+.fb-media-wrapper img,
+.fb-media-wrapper video {
     width: 100%;
     max-height: 500px;
     object-fit: cover;
@@ -1172,7 +1167,8 @@ canvas {
     flex: 1;
     background: transparent;
     border: none;
-    color: #b0b3b8; /* FB dark mode icon color */
+    color: #b0b3b8;
+    /* FB dark mode icon color */
     font-size: 14.5px;
     font-weight: 600;
     padding: 8px 0;
@@ -1186,7 +1182,7 @@ canvas {
 }
 
 .fb-action-btn:hover {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 /* Announcement Comments - Threaded */
@@ -1200,10 +1196,12 @@ canvas {
 
 .ann-comment-item {
     padding: 12px 16px;
-    background: #242526; /* Facebook dark mode comment background */
+    background: #242526;
+    /* Facebook dark mode comment background */
     border-radius: 16px;
     margin-bottom: 4px;
-    display: inline-block; /* allows the bubble to wrap content width if needed */
+    display: inline-block;
+    /* allows the bubble to wrap content width if needed */
     max-width: 90%;
     text-align: left;
 }
@@ -1218,7 +1216,8 @@ canvas {
 }
 
 .ann-comment-item.reply-item {
-    background: #3A3B3C; /* Slightly lighter shade for distinction */
+    background: #3A3B3C;
+    /* Slightly lighter shade for distinction */
 }
 
 .btn-like.liked {
@@ -1746,7 +1745,8 @@ canvas {
 }
 
 .glass-input[type="file"]::-webkit-file-upload-button {
-    background: rgba(212, 165, 116, 0.15); /* Gold tint */
+    background: rgba(212, 165, 116, 0.15);
+    /* Gold tint */
     border: 1px solid rgba(212, 165, 116, 0.3);
     color: var(--accent-gold);
     border-radius: var(--radius-sm);
@@ -1760,7 +1760,8 @@ canvas {
 }
 
 .glass-input[type="file"]::file-selector-button {
-    background: rgba(212, 165, 116, 0.15); /* Gold tint */
+    background: rgba(212, 165, 116, 0.15);
+    /* Gold tint */
     border: 1px solid rgba(212, 165, 116, 0.3);
     color: var(--accent-gold);
     border-radius: var(--radius-sm);
@@ -1917,14 +1918,18 @@ button.modal-x:active {
     transform: scale(0.96) translateY(1px);
 }
 
-button:disabled, .btn-gold:disabled, .btn-hollow:disabled {
+button:disabled,
+.btn-gold:disabled,
+.btn-hollow:disabled {
     opacity: 0.6;
     cursor: not-allowed !important;
     pointer-events: none;
     filter: grayscale(0.6);
 }
 
-.btn-gold.w-full, .btn-glass-modal.w-full, .w-full {
+.btn-gold.w-full,
+.btn-glass-modal.w-full,
+.w-full {
     width: 100%;
     justify-content: center;
 }
@@ -2291,13 +2296,33 @@ button:disabled, .btn-gold:disabled, .btn-hollow:disabled {
 
 
 /* Logged-in display corrections per element type */
-body.logged-in #userTopbarActions { display: flex !important; }
-body.logged-in #mobUserInfo { display: flex !important; }
-body.logged-in .tnav-link.user-only { display: inline-flex !important; }
-body.logged-in li.user-only { display: list-item !important; }
-body.logged-in .apply-hint.user-only { display: inline !important; }
-body.logged-in .glass-card.user-only { display: block !important; }
-body.logged-in #reportForm.user-only { display: block !important; }
+body.logged-in #userTopbarActions {
+    display: flex !important;
+}
+
+body.logged-in #mobUserInfo {
+    display: flex !important;
+}
+
+body.logged-in .tnav-link.user-only {
+    display: inline-flex !important;
+}
+
+body.logged-in li.user-only {
+    display: list-item !important;
+}
+
+body.logged-in .apply-hint.user-only {
+    display: inline !important;
+}
+
+body.logged-in .glass-card.user-only {
+    display: block !important;
+}
+
+body.logged-in #reportForm.user-only {
+    display: block !important;
+}
 
 /* ====================================================
    NOTIFICATION BELL
@@ -2344,8 +2369,13 @@ body.logged-in #reportForm.user-only { display: block !important; }
 }
 
 @keyframes badgePop {
-    from { transform: scale(0); }
-    to   { transform: scale(1); }
+    from {
+        transform: scale(0);
+    }
+
+    to {
+        transform: scale(1);
+    }
 }
 
 /* ====================================================
@@ -2383,8 +2413,10 @@ body.logged-in #reportForm.user-only { display: block !important; }
     inset: 0;
     z-index: 1999;
     background: transparent;
-    pointer-events: none; /* never block clicks unless explicitly activated */
-    display: block !important; /* always in the DOM; interactivity controlled by pointer-events */
+    pointer-events: none;
+    /* never block clicks unless explicitly activated */
+    display: block !important;
+    /* always in the DOM; interactivity controlled by pointer-events */
 }
 
 .notif-panel-overlay.active {
@@ -2639,8 +2671,15 @@ body.logged-in #reportForm.user-only { display: block !important; }
 }
 
 @keyframes activePulse {
-    0%, 100% { box-shadow: 0 0 0 4px rgba(212, 165, 116, 0.12); }
-    50%       { box-shadow: 0 0 0 8px rgba(212, 165, 116, 0.05); }
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 4px rgba(212, 165, 116, 0.12);
+    }
+
+    50% {
+        box-shadow: 0 0 0 8px rgba(212, 165, 116, 0.05);
+    }
 }
 
 /* Rejected step */
@@ -2741,20 +2780,25 @@ body.logged-in #reportForm.user-only { display: block !important; }
         grid-template-columns: 1fr;
         padding: 0 16px 28px;
     }
+
     .portal-aside {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 14px;
     }
+
     .charts-row {
         grid-template-columns: 1fr;
     }
+
     .stat-cards-row {
         grid-template-columns: repeat(2, 1fr);
     }
+
     .portal-two-col {
         grid-template-columns: 1fr;
     }
+
     .community-layout {
         grid-template-columns: 1fr;
     }
@@ -2762,6 +2806,7 @@ body.logged-in #reportForm.user-only { display: block !important; }
 
 /* ── Phablet (≤ 768px) ───────────────────────────────────── */
 @media (max-width: 768px) {
+
     /* Topbar inner: tighter padding on mobile */
     .topbar-inner {
         padding: 0 14px;
@@ -2791,107 +2836,122 @@ body.logged-in #reportForm.user-only { display: block !important; }
     .online-indicator {
         display: none;
     }
+
     .portal-layout {
         padding: 0 12px 24px;
     }
+
     .portal-aside {
         grid-template-columns: 1fr;
     }
+
     .stat-cards-row {
         grid-template-columns: repeat(2, 1fr);
         gap: 10px;
     }
+
     .charts-row {
         grid-template-columns: 1fr;
         gap: 12px;
     }
-    /* Limit chart heights so the donut doesn't fill the whole screen */
-    .chart-card-sm {
-        max-height: 360px;
-    }
-    .chart-card-sm canvas,
-    #docTypeChart {
-        max-height: 220px !important;
-    }
-    .chart-card-lg canvas,
-    #docTrendChart,
-    #skillsChart {
-        max-height: 200px !important;
-    }
+
+
+
     .table-responsive {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
+
     .portal-table {
         min-width: 520px;
     }
+
     .doc-services-grid {
         grid-template-columns: 1fr;
     }
+
     .community-layout {
         grid-template-columns: 1fr;
         gap: 14px;
     }
+
     .worker-grid {
         grid-template-columns: 1fr;
     }
+
     .glass-filter-bar {
         flex-direction: column;
         gap: 10px;
     }
+
     .filter-search {
         width: 100%;
     }
+
     .filter-select {
         width: 100%;
     }
+
     .tab-content-wrap {
         padding: 0 14px;
     }
+
     .tab-page-header {
         padding: 24px 14px 14px;
     }
+
     .tab-page-header h2 {
         font-size: 18px;
     }
+
     .hs-steps {
         flex-wrap: wrap;
         gap: 12px;
         justify-content: center;
     }
+
     .hs-line {
         display: none;
     }
+
     .hs-step {
         flex: 0 0 calc(50% - 12px);
     }
+
     .myportal-welcome {
         padding: 20px 14px;
     }
+
     .mpw-main {
         flex-direction: column;
         text-align: center;
         gap: 10px;
     }
+
     .mpw-main h2 {
         font-size: 20px;
     }
+
     .portal-two-col {
         grid-template-columns: 1fr;
         gap: 14px;
     }
+
     .status-bar {
         font-size: 11px;
         padding: 0 12px;
     }
+
     .login-modal {
         margin: 16px;
         padding: 28px 20px;
     }
+
     .modal-backdrop {
         align-items: flex-start;
         padding-top: 60px;
     }
+
     .notif-panel {
         width: 100%;
         right: 0;
@@ -2905,63 +2965,80 @@ body.logged-in #reportForm.user-only { display: block !important; }
     :root {
         --nav-h: 60px;
     }
+
     .brand-sub {
         display: none;
     }
+
     .stat-cards-row {
         grid-template-columns: repeat(2, 1fr);
         gap: 8px;
     }
+
     .stat-card {
         padding: 12px 12px;
         gap: 10px;
     }
+
     .sc-icon {
         width: 36px;
         height: 36px;
         font-size: 15px;
     }
+
     .sc-value {
         font-size: 22px;
     }
+
     .sc-label {
         font-size: 10px;
     }
+
     .sc-trend {
         font-size: 10px;
     }
+
     .worker-grid {
         grid-template-columns: 1fr;
         gap: 10px;
     }
+
     .ann-item {
         padding: 12px 14px;
     }
+
     .gc-header {
         padding: 12px 14px;
         flex-wrap: wrap;
         gap: 8px;
     }
+
     .gc-header h4 {
         font-size: 13px;
     }
+
     .quick-doc-btn {
         padding: 10px 12px;
     }
+
     .hs-step {
         flex: 0 0 calc(50% - 8px);
     }
+
     .hs-step p {
         font-size: 11px;
     }
+
     .login-modal {
         margin: 10px;
         padding: 24px 16px;
         max-width: calc(100vw - 20px);
     }
+
     .tab-page-header h2 {
         font-size: 16px;
     }
+
     .tab-page-header p {
         font-size: 13px;
     }
@@ -2972,12 +3049,15 @@ body.logged-in #reportForm.user-only { display: block !important; }
     .stat-cards-row {
         grid-template-columns: 1fr;
     }
+
     .portal-layout {
         padding: 0 10px 20px;
     }
+
     .tab-content-wrap {
         padding: 0 10px;
     }
+
     .tab-page-header {
         padding: 16px 10px 10px;
     }
