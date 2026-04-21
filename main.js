@@ -827,15 +827,29 @@ let activeReplyParentId = null;
 
 function setReplyParent(parentId, name) {
   activeReplyParentId = parentId;
+  
+  // Show reply banner
+  const banner = document.getElementById("annReplyBanner");
+  const bannerText = document.getElementById("annReplyBannerText");
+  if (banner && bannerText) {
+    bannerText.innerHTML = `Replying to <strong style="color:var(--gold)">${escapeHtml(name)}</strong>`;
+    banner.style.display = "flex";
+  }
+  
   const input = document.getElementById("annCommentInput");
-  input.placeholder = `Replying to ${name}...`;
+  input.placeholder = "Write your reply...";
   input.focus();
 }
 
 function clearReplyParent() {
   activeReplyParentId = null;
+  
+  // Hide reply banner
+  const banner = document.getElementById("annReplyBanner");
+  if (banner) banner.style.display = "none";
+  
   const input = document.getElementById("annCommentInput");
-  if(input) input.placeholder = "Write a comment...";
+  if (input) input.placeholder = "Write a comment...";
 }
 
 async function loadAnnouncementSocials(id) {
@@ -878,6 +892,48 @@ async function loadAnnouncementSocials(id) {
   } catch (e) {}
 }
 
+/**
+ * Recursively builds a threaded comment node for any depth level.
+ * @param {Object} comment - The comment to render
+ * @param {Object} commentMap - Map of id -> comment
+ * @param {Object} childrenMap - Map of parent_id -> array of child comments
+ * @param {number} depth - Current nesting depth (0 = root)
+ */
+function buildCommentNode(comment, commentMap, childrenMap, depth) {
+  const name = comment.profiles ? comment.profiles.full_name : "Resident";
+  const d = new Date(comment.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  
+  // Show a "replying to @name" indicator if this is a nested reply
+  let replyToTag = "";
+  if (comment.parent_id && commentMap[comment.parent_id]) {
+    const parentName = commentMap[comment.parent_id].profiles?.full_name || "Resident";
+    replyToTag = `<div class="ann-reply-to-tag"><i class="fas fa-reply"></i> <span>${escapeHtml(parentName)}</span></div>`;
+  }
+  
+  // Build children recursively
+  const children = childrenMap[comment.id] || [];
+  const childrenHtml = children.map(child => buildCommentNode(child, commentMap, childrenMap, depth + 1)).join("");
+  
+  // Dynamic depth styling — cap visual indent at 3 to avoid going too narrow
+  const isReply = depth > 0;
+  const depthClass = isReply ? `ann-comment-item reply-depth-${Math.min(depth, 3)}` : "ann-comment-item";
+  
+  return `
+    <div class="ann-comment-thread ${isReply ? 'is-reply' : ''}">
+      <div class="${depthClass}">
+        ${replyToTag}
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;gap:8px;">
+          <strong class="ann-commenter-name">${escapeHtml(name)}</strong>
+          <span class="ann-comment-time">${d}</span>
+        </div>
+        <p class="ann-comment-body">${escapeHtml(comment.content)}</p>
+        <button class="ann-reply-btn" onclick="setReplyParent('${escapeHtml(comment.id)}', '${escapeHtml(name)}')"><i class="fas fa-reply"></i> Reply</button>
+      </div>
+      ${childrenHtml ? `<div class="ann-replies-list">${childrenHtml}</div>` : ""}
+    </div>
+  `;
+}
+
 function renderAnnComments(comments) {
   const container = document.getElementById("annCommentsList");
   if (!comments || comments.length === 0) {
@@ -885,44 +941,22 @@ function renderAnnComments(comments) {
     return;
   }
   
-  // Group comments
-  const rootComments = comments.filter(c => !c.parent_id);
-  const childComments = comments.filter(c => c.parent_id);
+  // Build lookup maps for O(n) rendering of arbitrary depth trees
+  const commentMap = {};
+  const childrenMap = {};
   
-  const html = rootComments.map(c => {
-    const name = c.profiles ? c.profiles.full_name : "Resident";
-    const d = new Date(c.created_at).toLocaleDateString("en-US", { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" });
-    
-    // Find replies for this comment
-    const replies = childComments.filter(child => child.parent_id === c.id);
-    const repliesHtml = replies.map(child => {
-      const cName = child.profiles ? child.profiles.full_name : "Resident";
-      const cD = new Date(child.created_at).toLocaleDateString("en-US", { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" });
-      return `
-        <div class="ann-comment-item reply-item">
-          <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
-            <strong style="font-size:13px;color:var(--white)">${escapeHtml(cName)}</strong>
-            <span style="font-size:11px;color:rgba(255,255,255,0.4)">${cD}</span>
-          </div>
-          <p style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.5;margin:0;">${escapeHtml(child.content)}</p>
-        </div>
-      `;
-    }).join("");
-
-    return `
-      <div class="ann-comment-thread">
-        <div class="ann-comment-item">
-          <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
-            <strong style="font-size:13px;color:var(--white)">${escapeHtml(name)}</strong>
-            <span style="font-size:11px;color:rgba(255,255,255,0.4)">${d}</span>
-          </div>
-          <p style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.5;margin:0 0 6px 0;">${escapeHtml(c.content)}</p>
-          <div style="font-size:12px;color:var(--gold);cursor:pointer;font-weight:600;display:inline-block;" onclick="setReplyParent('${escapeHtml(c.id)}', '${escapeHtml(name)}')">Reply</div>
-        </div>
-        ${repliesHtml ? `<div class="ann-replies-list">${repliesHtml}</div>` : ''}
-      </div>
-    `;
-  }).join("");
+  comments.forEach(c => {
+    commentMap[c.id] = c;
+    if (c.parent_id) {
+      if (!childrenMap[c.parent_id]) childrenMap[c.parent_id] = [];
+      childrenMap[c.parent_id].push(c);
+    }
+  });
+  
+  // Only render root-level comments (parent_id is null)
+  const rootComments = comments.filter(c => !c.parent_id);
+  
+  const html = rootComments.map(c => buildCommentNode(c, commentMap, childrenMap, 0)).join("");
   container.innerHTML = html;
 }
 
