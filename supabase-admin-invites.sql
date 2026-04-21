@@ -2,7 +2,7 @@
 -- BARANGAY ADMIN INVITE SYSTEM
 -- Purpose: Pre-approve an email address as a barangay admin.
 --          When the person signs up normally, a trigger
---          automatically promotes their profile to role='admin'
+--          automatically promotes their profile to role='barangay_admin'
 --          and assigns the correct barangay. No manual editing needed.
 --
 -- Run this ONCE in the Supabase SQL Editor.
@@ -113,7 +113,8 @@ BEGIN
 
     IF FOUND THEN
         -- Promote the profile before it is written to disk
-        NEW.role     := 'admin';
+        -- IMPORTANT: must match the exact portal_role enum value
+        NEW.role     := 'barangay_admin';
         NEW.barangay := v_invite.barangay;
 
         -- Mark the invite as consumed so it cannot be reused
@@ -149,7 +150,7 @@ CREATE TRIGGER trg_apply_admin_invite
 --   );
 --
 -- After that, the person just signs up normally via your login page.
--- Their account will automatically have role = 'admin' and the correct barangay.
+-- Their account will automatically have role = 'barangay_admin' and the correct barangay.
 -- ─────────────────────────────────────────────────────────────────────────────
 
 
