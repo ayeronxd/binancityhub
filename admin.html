@@ -106,6 +106,13 @@
                         <i class="fas fa-gear"></i> <span>Settings</span>
                     </a>
                 </li>
+                <!-- Super-admin only: manage barangay admin invites -->
+                <li id="navAdminInvitesItem" style="display:none">
+                    <a href="#" class="admin-nav-link" data-panel="admin-invites" id="navAdminInvitesLink">
+                        <i class="fas fa-user-shield"></i> <span>Admin Invites</span>
+                        <span class="nav-badge" id="navInvitePendingCount">0</span>
+                    </a>
+                </li>
             </ul>
         </nav>
 
@@ -639,8 +646,129 @@
                 </div>
             </div>
 
+            <!-- ===== ADMIN INVITES PANEL (Super Admin Only) ===== -->
+            <div class="admin-panel" id="panel-admin-invites">
+                <div class="panel-toolbar">
+                    <h4 class="mb-0 me-3">Admin Invite Manager</h4>
+                    <button class="btn-admin-primary" onclick="openCreateInviteModal()">
+                        <i class="fas fa-plus"></i> Create Invite
+                    </button>
+                </div>
+
+                <!-- Summary counters -->
+                <div class="brgy-summary-row">
+                    <div class="brgy-summary-item active-brgy-summary">
+                        <i class="fas fa-clock"></i>
+                        <div>
+                            <strong id="invitePendingCountCard">0</strong>
+                            <span>Pending</span>
+                        </div>
+                    </div>
+                    <div class="brgy-summary-item total-brgy-summary">
+                        <i class="fas fa-circle-check"></i>
+                        <div>
+                            <strong id="inviteUsedCountCard">0</strong>
+                            <span>Used (Claimed)</span>
+                        </div>
+                    </div>
+                    <div class="brgy-summary-item pending-brgy-summary">
+                        <i class="fas fa-envelope-open-text"></i>
+                        <div>
+                            <strong id="inviteTotalCountCard">0</strong>
+                            <span>Total Invites</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- How it works info box -->
+                <div class="admin-table-card mb-3">
+                    <div class="table-card-header">
+                        <h4><i class="fas fa-circle-info" style="color:var(--accent-gold)"></i> How it works</h4>
+                    </div>
+                    <div class="px-4 pb-3" style="font-size:13px;color:var(--text-muted);line-height:1.8">
+                        <ol style="margin:0;padding-left:18px">
+                            <li>Click <strong>Create Invite</strong>, enter the person's email and their barangay.</li>
+                            <li>Send them the normal signup link — they sign up as a regular user.</li>
+                            <li>The database trigger <strong>automatically</strong> promotes them to Barangay Admin with the correct barangay.</li>
+                            <li>The invite is marked <em>Used</em> and cannot be reused.</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Invites table -->
+                <div class="admin-table-card">
+                    <div class="table-card-header">
+                        <h4>All Invites</h4>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <select class="admin-select" id="inviteStatusFilter" onchange="renderInvitesTable()">
+                                <option value="">All</option>
+                                <option value="pending">Pending</option>
+                                <option value="used">Used</option>
+                            </select>
+                            <button class="btn-table-action" onclick="loadAdminInvites()"><i class="fas fa-rotate"></i> Refresh</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Email</th>
+                                    <th>Barangay Assigned</th>
+                                    <th>Note</th>
+                                    <th>Created</th>
+                                    <th>Status</th>
+                                    <th>Used At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invitesTableBody">
+                                <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </div><!-- end admin-content -->
     </div><!-- end admin-main -->
+
+    <!-- Create Admin Invite Modal -->
+    <div class="admin-modal-overlay" id="createInviteModalOverlay">
+        <div class="admin-modal" style="max-width:480px">
+            <div class="admin-modal-header">
+                <h4><i class="fas fa-user-shield"></i> Create Barangay Admin Invite</h4>
+                <button class="admin-modal-close" onclick="closeModal('createInviteModalOverlay')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="admin-modal-body">
+                <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">The person will sign up normally. Their account will <strong>automatically</strong> be set as a Barangay Admin for the selected barangay.</p>
+                <form id="createInviteForm">
+                    <div class="modal-field">
+                        <label>Email Address *</label>
+                        <input type="email" class="admin-input" id="inviteEmail" placeholder="admin@example.com" required>
+                        <span class="modal-field-error" id="inviteEmailError"></span>
+                    </div>
+                    <div class="modal-field">
+                        <label>Assign Barangay *</label>
+                        <select class="admin-select admin-input" id="inviteBarangay" required>
+                            <option value="">— Select Barangay —</option>
+                        </select>
+                        <span class="modal-field-error" id="inviteBarangayError"></span>
+                    </div>
+                    <div class="modal-field">
+                        <label>Internal Note <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
+                        <input type="text" class="admin-input" id="inviteNote" placeholder="e.g. Coordinated via Capt. Reyes — 09XXXXXXXXX">
+                    </div>
+                    <div class="admin-modal-footer">
+                        <button type="button" class="btn-admin-secondary" onclick="closeModal('createInviteModalOverlay')">Cancel</button>
+                        <button type="submit" class="btn-admin-primary" id="btnSubmitInvite">
+                            <i class="fas fa-envelope"></i> Send Invite
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <!-- ======= MODALS ======= -->
 

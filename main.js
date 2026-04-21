@@ -824,6 +824,8 @@ function closeAnnouncementModal() {
 }
 
 let activeReplyParentId = null;
+// Stores edit_history arrays keyed by comment id for the history modal.
+const _commentHistoryCache = {};
 
 function setReplyParent(parentId, name) {
   activeReplyParentId = parentId;
@@ -880,7 +882,8 @@ async function loadAnnouncementSocials(id) {
     const { data: commentsData, error: cErr } = await supabaseClient
       .from("announcement_comments")
       .select(`
-        id, content, created_at, parent_id,
+        id, content, created_at, parent_id, resident_id,
+        is_deleted, edited_at, edit_history,
         profiles:resident_id ( full_name )
       `)
       .eq("announcement_id", id)
@@ -894,44 +897,85 @@ async function loadAnnouncementSocials(id) {
 
 /**
  * Recursively builds a threaded comment node for any depth level.
- * @param {Object} comment - The comment to render
- * @param {Object} commentMap - Map of id -> comment
- * @param {Object} childrenMap - Map of parent_id -> array of child comments
+ * Supports soft-delete (replies preserved), edit history, and owner actions.
+ * @param {Object} comment - The comment object from Supabase
+ * @param {Object} commentMap - id -> comment lookup
+ * @param {Object} childrenMap - parent_id -> child array lookup
  * @param {number} depth - Current nesting depth (0 = root)
  */
 function buildCommentNode(comment, commentMap, childrenMap, depth) {
+  const isDeleted = !!comment.is_deleted;
   const name = comment.profiles ? comment.profiles.full_name : "Resident";
   const d = new Date(comment.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-  
-  // Show a "replying to @name" indicator if this is a nested reply
+  const isOwn = !!(currentUser && comment.resident_id === currentUser.id);
+  const isEdited = !isDeleted && !!comment.edited_at;
+  const safeId = escapeHtml(comment.id);
+
+  // Cache edit history for the modal
+  if (isEdited && comment.edit_history) {
+    _commentHistoryCache[comment.id] = comment.edit_history;
+  }
+
+  // "Replying to" tag — shows [deleted] if parent was soft-deleted
   let replyToTag = "";
   if (comment.parent_id && commentMap[comment.parent_id]) {
-    const parentName = commentMap[comment.parent_id].profiles?.full_name || "Resident";
-    replyToTag = `<div class="ann-reply-to-tag"><i class="fas fa-reply"></i> <span>${escapeHtml(parentName)}</span></div>`;
+    const parent = commentMap[comment.parent_id];
+    const isParentDeleted = !!parent.is_deleted;
+    const parentName = isParentDeleted ? "[deleted]" : (parent.profiles?.full_name || "Resident");
+    replyToTag = `<div class="ann-reply-to-tag${isParentDeleted ? ' parent-deleted' : ''}"><i class="fas fa-reply"></i> <span>${escapeHtml(parentName)}</span></div>`;
   }
-  
-  // Build children recursively
+
+  // Build children recursively regardless of deleted state
   const children = childrenMap[comment.id] || [];
   const childrenHtml = children.map(child => buildCommentNode(child, commentMap, childrenMap, depth + 1)).join("");
-  
-  // Dynamic depth styling — cap visual indent at 3 to avoid going too narrow
+
   const isReply = depth > 0;
   const depthClass = isReply ? `ann-comment-item reply-depth-${Math.min(depth, 3)}` : "ann-comment-item";
-  
-  return `
+
+  // ── DELETED COMMENT ──────────────────────────────────────────
+  if (isDeleted) {
+    return `
     <div class="ann-comment-thread ${isReply ? 'is-reply' : ''}">
-      <div class="${depthClass}">
+      <div class="${depthClass} ann-comment-deleted-state">
         ${replyToTag}
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;gap:8px;">
-          <strong class="ann-commenter-name">${escapeHtml(name)}</strong>
-          <span class="ann-comment-time">${d}</span>
-        </div>
-        <p class="ann-comment-body">${escapeHtml(comment.content)}</p>
-        <button class="ann-reply-btn" onclick="setReplyParent('${escapeHtml(comment.id)}', '${escapeHtml(name)}')"><i class="fas fa-reply"></i> Reply</button>
+        <div class="ann-deleted-msg"><i class="fas fa-circle-minus"></i> This comment was deleted.</div>
       </div>
       ${childrenHtml ? `<div class="ann-replies-list">${childrenHtml}</div>` : ""}
-    </div>
-  `;
+    </div>`;
+  }
+
+  // ── EDITED BADGE ─────────────────────────────────────────────
+  const editedBadge = isEdited
+    ? `<button class="ann-edited-badge" onclick="showCommentEditHistory('${safeId}')" title="See edit history"><i class="fas fa-pen-square"></i> edited</button>`
+    : "";
+
+  // ── OWNER ACTIONS (edit + delete, visible on hover) ──────────
+  const ownerActions = isOwn
+    ? `<div class="ann-owner-actions" id="ann-actions-${safeId}">
+         <button class="ann-action-btn ann-edit-btn" onclick="startEditComment('${safeId}')" title="Edit"><i class="fas fa-pen"></i></button>
+         <button class="ann-action-btn ann-delete-btn" onclick="deleteComment('${safeId}')" title="Delete"><i class="fas fa-trash"></i></button>
+       </div>`
+    : "";
+
+  return `
+    <div class="ann-comment-thread ${isReply ? 'is-reply' : ''}">
+      <div class="${depthClass}" id="ann-bubble-${safeId}">
+        ${replyToTag}
+        <div class="ann-comment-header">
+          <strong class="ann-commenter-name">${escapeHtml(name)}</strong>
+          <div class="ann-comment-header-right">
+            ${editedBadge}
+            <span class="ann-comment-time">${d}</span>
+            ${ownerActions}
+          </div>
+        </div>
+        <div id="ann-body-${safeId}" data-content="${escapeAttr(comment.content)}">
+          <p class="ann-comment-body">${escapeHtml(comment.content)}</p>
+        </div>
+        <button class="ann-reply-btn" id="ann-reply-btn-${safeId}" onclick="setReplyParent('${safeId}', '${escapeHtml(name)}')"><i class="fas fa-reply"></i> Reply</button>
+      </div>
+      ${childrenHtml ? `<div class="ann-replies-list">${childrenHtml}</div>` : ""}
+    </div>`;
 }
 
 function renderAnnComments(comments) {
@@ -958,6 +1002,173 @@ function renderAnnComments(comments) {
   
   const html = rootComments.map(c => buildCommentNode(c, commentMap, childrenMap, 0)).join("");
   container.innerHTML = html;
+}
+
+// =============================================================================
+// COMMENT EDIT / DELETE / HISTORY
+// =============================================================================
+
+/** Enters inline edit mode for a comment bubble. */
+function startEditComment(id) {
+  const bodyEl   = document.getElementById(`ann-body-${id}`);
+  const actionsEl = document.getElementById(`ann-actions-${id}`);
+  const replyBtn  = document.getElementById(`ann-reply-btn-${id}`);
+  if (!bodyEl) return;
+
+  const currentContent = bodyEl.dataset.content ||
+    bodyEl.querySelector('.ann-comment-body')?.textContent || '';
+  bodyEl.dataset.originalContent = currentContent;
+
+  bodyEl.innerHTML = `
+    <textarea id="ann-edit-input-${id}" class="ann-edit-textarea">${escapeHtml(currentContent)}</textarea>
+    <div class="ann-edit-btns">
+      <button class="ann-edit-save-btn" onclick="saveEditComment('${id}')"><i class='fas fa-check'></i> Save</button>
+      <button class="ann-edit-cancel-btn" onclick="cancelEditComment('${id}')"><i class='fas fa-times'></i> Cancel</button>
+    </div>`;
+
+  if (actionsEl) actionsEl.style.display = 'none';
+  if (replyBtn)  replyBtn.style.display  = 'none';
+  document.getElementById(`ann-edit-input-${id}`)?.focus();
+}
+
+/** Restores the original comment content, cancelling the edit state. */
+function cancelEditComment(id) {
+  const bodyEl    = document.getElementById(`ann-body-${id}`);
+  const actionsEl = document.getElementById(`ann-actions-${id}`);
+  const replyBtn  = document.getElementById(`ann-reply-btn-${id}`);
+  if (!bodyEl) return;
+
+  const original = bodyEl.dataset.originalContent || bodyEl.dataset.content || '';
+  bodyEl.innerHTML = `<p class="ann-comment-body">${escapeHtml(original)}</p>`;
+
+  if (actionsEl) actionsEl.style.display = '';
+  if (replyBtn)  replyBtn.style.display  = '';
+}
+
+/**
+ * Saves an edited comment:
+ *   - Fetches the existing edit_history from Supabase
+ *   - Pushes the old content into the array
+ *   - Updates content, edited_at, and edit_history
+ */
+async function saveEditComment(id) {
+  if (!currentUser || !supabaseClient) return;
+
+  const bodyEl  = document.getElementById(`ann-body-${id}`);
+  const inputEl = document.getElementById(`ann-edit-input-${id}`);
+  if (!bodyEl || !inputEl) return;
+
+  const newContent = inputEl.value.trim();
+  if (!newContent) { showToast('Comment cannot be empty.', 'error'); return; }
+
+  const oldContent = bodyEl.dataset.originalContent || '';
+
+  // Fetch current history before appending
+  const { data: existing } = await supabaseClient
+    .from('announcement_comments')
+    .select('edit_history')
+    .eq('id', id)
+    .maybeSingle();
+
+  const history = Array.isArray(existing?.edit_history) ? existing.edit_history : [];
+  history.push({ content: oldContent, edited_at: new Date().toISOString() });
+
+  const { error } = await supabaseClient
+    .from('announcement_comments')
+    .update({
+      content: newContent,
+      edited_at: new Date().toISOString(),
+      edit_history: history
+    })
+    .eq('id', id);
+
+  if (error) {
+    showToast('Failed to save edit.', 'error');
+  } else {
+    showToast('Comment updated.');
+    loadAnnouncementSocials(currentOpenAnnId);
+  }
+}
+
+/**
+ * Soft-deletes a comment: marks is_deleted=true so replies are preserved
+ * but the content is replaced with a "deleted" placeholder in the UI.
+ * Shows an inline Yes/No confirm instead of a browser dialog.
+ */
+function deleteComment(id) {
+  if (!currentUser || !supabaseClient) return;
+
+  const actionsEl = document.getElementById(`ann-actions-${id}`);
+  if (!actionsEl) return;
+
+  // Replace action buttons with inline confirmation
+  actionsEl.innerHTML = `
+    <span style="font-size:11px;color:rgba(255,255,255,0.45);margin-right:2px;">Delete?</span>
+    <button class="ann-action-btn ann-confirm-yes" onclick="_confirmDeleteComment('${id}')" title="Confirm"><i class="fas fa-check"></i></button>
+    <button class="ann-action-btn" onclick="_cancelDeleteComment('${id}')" title="Cancel"><i class="fas fa-times"></i></button>`;
+}
+
+function _cancelDeleteComment(id) {
+  const actionsEl = document.getElementById(`ann-actions-${id}`);
+  if (!actionsEl) return;
+  actionsEl.innerHTML = `
+    <button class="ann-action-btn ann-edit-btn" onclick="startEditComment('${id}')" title="Edit"><i class="fas fa-pen"></i></button>
+    <button class="ann-action-btn ann-delete-btn" onclick="deleteComment('${id}')" title="Delete"><i class="fas fa-trash"></i></button>`;
+}
+
+async function _confirmDeleteComment(id) {
+  const { error } = await supabaseClient
+    .from('announcement_comments')
+    .update({ is_deleted: true })
+    .eq('id', id);
+
+  if (error) {
+    showToast('Failed to delete comment.', 'error');
+    _cancelDeleteComment(id);
+  } else {
+    showToast('Comment deleted.');
+    loadAnnouncementSocials(currentOpenAnnId);
+  }
+}
+
+/**
+ * Opens the edit-history modal for the given comment id.
+ * History is keyed in _commentHistoryCache, set during renderAnnComments.
+ */
+function showCommentEditHistory(id) {
+  const modal = document.getElementById('commentEditHistoryModal');
+  const list  = document.getElementById('commentEditHistoryList');
+  if (!modal || !list) return;
+
+  const history = _commentHistoryCache[id] || [];
+
+  if (!history.length) {
+    list.innerHTML = `<p style="color:rgba(255,255,255,0.35);text-align:center;font-size:13px;padding:16px 0;">No edit history found for this comment.</p>`;
+  } else {
+    // Display most-recent first (the last push = last edit = most recent earlier version)
+    const items = [...history].reverse();
+    list.innerHTML = items.map((entry, i) => {
+      const vNum = history.length - i;
+      const ts = new Date(entry.edited_at).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+      return `
+      <div class="edit-history-entry">
+        <div class="edit-history-meta">
+          <span class="edit-history-ver">v${vNum}</span>
+          <span class="edit-history-time">${ts}</span>
+        </div>
+        <p class="edit-history-content">${escapeHtml(entry.content)}</p>
+      </div>`;
+    }).join('');
+  }
+
+  modal.classList.add('open');
+}
+
+function closeCommentEditHistoryModal() {
+  document.getElementById('commentEditHistoryModal')?.classList.remove('open');
 }
 
 // -----------------------------------------------------------------------------

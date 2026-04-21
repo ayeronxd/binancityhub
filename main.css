@@ -1331,6 +1331,238 @@ canvas {
     font-weight: 900;
 }
 
+/* ── Deleted comment placeholder ── */
+.ann-comment-deleted-state {
+    opacity: 0.55;
+}
+
+.ann-deleted-msg {
+    font-size: 13px;
+    color: rgba(255,255,255,0.35);
+    font-style: italic;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 2px 0;
+}
+
+.ann-deleted-msg i {
+    font-size: 12px;
+    color: rgba(255,255,255,0.2);
+}
+
+/* Reply-to tag when parent was soft-deleted */
+.ann-reply-to-tag.parent-deleted span {
+    color: rgba(255,255,255,0.3);
+    font-style: italic;
+}
+
+/* ── Comment header row (name + meta) ── */
+.ann-comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 4px;
+    gap: 8px;
+}
+
+.ann-comment-header-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* ── Owner action buttons (hidden, revealed on hover) ── */
+.ann-owner-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.18s;
+}
+
+.ann-comment-item:hover .ann-owner-actions {
+    opacity: 1;
+}
+
+.ann-action-btn {
+    background: none;
+    border: none;
+    padding: 3px 5px;
+    border-radius: 5px;
+    font-size: 11px;
+    cursor: pointer;
+    color: rgba(255,255,255,0.35);
+    transition: background 0.14s, color 0.14s;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    line-height: 1;
+    font-family: 'Inter', sans-serif;
+}
+
+.ann-action-btn:hover {
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.7);
+}
+
+.ann-edit-btn:hover {
+    background: rgba(93,173,226,0.12);
+    color: #5dade2;
+}
+
+.ann-delete-btn:hover {
+    background: rgba(231,76,60,0.12);
+    color: #e74c3c;
+}
+
+.ann-confirm-yes:hover {
+    background: rgba(46,204,113,0.12);
+    color: #2ecc71;
+}
+
+/* ── "edited" clickable badge ── */
+.ann-edited-badge {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 10.5px;
+    color: rgba(255,255,255,0.28);
+    cursor: pointer;
+    font-style: italic;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    transition: color 0.14s;
+    font-family: 'Inter', sans-serif;
+    white-space: nowrap;
+}
+
+.ann-edited-badge:hover {
+    color: var(--gold);
+    text-decoration: underline;
+}
+
+.ann-edited-badge i {
+    font-size: 9px;
+}
+
+/* ── Inline edit textarea + buttons ── */
+.ann-edit-textarea {
+    width: 100%;
+    min-height: 68px;
+    resize: vertical;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    margin-bottom: 7px;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+    display: block;
+}
+
+.ann-edit-textarea:focus {
+    border-color: rgba(212,165,116,0.4);
+}
+
+.ann-edit-btns {
+    display: flex;
+    gap: 6px;
+}
+
+.ann-edit-save-btn {
+    background: rgba(212,165,116,0.14);
+    border: 1px solid rgba(212,165,116,0.28);
+    color: var(--gold);
+    padding: 5px 13px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.15s;
+}
+
+.ann-edit-save-btn:hover {
+    background: rgba(212,165,116,0.25);
+}
+
+.ann-edit-cancel-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.5);
+    padding: 5px 13px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.15s;
+}
+
+.ann-edit-cancel-btn:hover {
+    background: rgba(255,255,255,0.09);
+    color: rgba(255,255,255,0.7);
+}
+
+/* ── Edit History Modal ── */
+.edit-history-entry {
+    padding: 13px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.edit-history-entry:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.edit-history-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 7px;
+}
+
+.edit-history-ver {
+    font-size: 10px;
+    font-weight: 700;
+    background: rgba(212,165,116,0.12);
+    color: var(--gold);
+    padding: 2px 8px;
+    border-radius: 100px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.edit-history-time {
+    font-size: 11px;
+    color: rgba(255,255,255,0.33);
+}
+
+.edit-history-content {
+    font-size: 13px;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.55;
+    margin: 0;
+    word-break: break-word;
+    background: rgba(255,255,255,0.03);
+    padding: 8px 11px;
+    border-radius: 8px;
+    border-left: 2px solid rgba(255,255,255,0.08);
+}
+
 /* â”€â”€ TAB CONTENT PAGES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .tab-content-wrap {
     max-width: 1260px;

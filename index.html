@@ -1107,6 +1107,27 @@
         </div>
     </div>
 
+    <!-- ===== COMMENT EDIT HISTORY MODAL ===== -->
+    <div class="modal-backdrop" id="commentEditHistoryModal" onclick="closeCommentEditHistoryModal()" style="z-index:106;">
+        <div class="login-modal" style="max-width:460px;padding:0;overflow:hidden" onclick="event.stopPropagation()">
+            <!-- Header -->
+            <div style="background:linear-gradient(135deg,#1a3a52,#0f2236);padding:18px 22px;display:flex;align-items:center;justify-content:space-between">
+                <div style="display:flex;align-items:center;gap:10px">
+                    <div style="width:34px;height:34px;background:rgba(212,165,116,0.18);border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:14px">
+                        <i class="fas fa-clock-rotate-left"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:600;text-transform:uppercase;letter-spacing:1px">Comment</div>
+                        <div style="font-size:15px;font-weight:700;color:#fff">Edit History</div>
+                    </div>
+                </div>
+                <button class="modal-x" onclick="closeCommentEditHistoryModal()" aria-label="Close edit history" style="position:relative;top:unset;right:unset"><i class="fas fa-times"></i></button>
+            </div>
+            <!-- History list -->
+            <div id="commentEditHistoryList" style="padding:6px 22px 20px;max-height:420px;overflow-y:auto;"></div>
+        </div>
+    </div>
+
     <!-- ===== SUCCESS TOAST ===== -->
     <div class="portal-toast" id="portalToast">
         <i class="fas fa-check-circle"></i>

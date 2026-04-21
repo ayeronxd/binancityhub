@@ -22,6 +22,7 @@ let issueReports = [];
 let workersRegistry = [];
 let portalSettings = null;
 let docTemplates = [];
+let adminInvites = [];
 let fillDocContext = { reqId: null, barangay: "", docType: "", residentName: "", ref: "", purpose: "", phone: "", templateUrl: null, templateFileName: "" };
 
 // Admin bootstrap: secure gate -> role-aware UI -> scoped data load -> panel render.
@@ -156,6 +157,9 @@ function applyRoleScopedUI() {
     if (settingsPanel) settingsPanel.style.display = "";
     if (settingsCityCard) settingsCityCard.style.display = "";
     if (settingsPortalCard) settingsPortalCard.style.display = "";
+    // Show Admin Invites nav (super admin only)
+    const adminInvitesNavItem = document.getElementById("navAdminInvitesItem");
+    if (adminInvitesNavItem) adminInvitesNavItem.style.display = "";
     return;
   }
 
@@ -189,7 +193,8 @@ async function loadAdminData() {
     loadIssueReports(),
     loadWorkers(),
     loadPortalSettings(),
-    loadDocTemplates()
+    loadDocTemplates(),
+    loadAdminInvites()
   ]);
 }
 
@@ -512,6 +517,176 @@ function renderAllPanels() {
   renderWorkersTable();
   renderAnnouncementsGrid();
   renderDocTemplatesPanel();
+  renderInvitesTable();
+}
+
+// =============================================================================
+// ADMIN INVITE MANAGEMENT (Super Admin Only)
+// =============================================================================
+
+/** Fetches all invites from admin_invites and refreshes the panel. */
+async function loadAdminInvites() {
+  if (!isSuperAdmin()) return;
+
+  const { data, error } = await supabaseClient
+    .from("admin_invites")
+    .select("id, email, barangay, note, created_at, used_at")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    // Gracefully handle missing table (migration not run yet)
+    const msg = String(error.message || "").toLowerCase();
+    if (msg.includes("admin_invites") && msg.includes("does not exist")) {
+      adminInvites = [];
+      renderInvitesTable();
+      showAdminToast("Run supabase-admin-invites.sql first to enable this feature.");
+    } else {
+      showAdminToast(error.message);
+    }
+    return;
+  }
+
+  adminInvites = data || [];
+  renderInvitesTable();
+  updateInviteSummary();
+  updateInviteNavBadge();
+}
+
+function updateInviteSummary() {
+  const pending = adminInvites.filter(i => !i.used_at).length;
+  const used    = adminInvites.filter(i =>  i.used_at).length;
+  setText("invitePendingCountCard", String(pending));
+  setText("inviteUsedCountCard",   String(used));
+  setText("inviteTotalCountCard",  String(adminInvites.length));
+}
+
+function updateInviteNavBadge() {
+  const pending = adminInvites.filter(i => !i.used_at).length;
+  setText("navInvitePendingCount", String(pending));
+}
+
+function renderInvitesTable() {
+  const tbody  = document.getElementById("invitesTableBody");
+  if (!tbody) return;
+
+  const filter = document.getElementById("inviteStatusFilter")?.value || "";
+  let list = adminInvites;
+  if (filter === "pending") list = list.filter(i => !i.used_at);
+  if (filter === "used")    list = list.filter(i =>  i.used_at);
+
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px">No invites found.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map((inv, i) => {
+    const isPending = !inv.used_at;
+    const statusHtml = isPending
+      ? `<span class="status-pill pending">Pending</span>`
+      : `<span class="status-pill active">Used</span>`;
+    const usedAt = inv.used_at
+      ? formatDate(new Date(inv.used_at))
+      : `<span style="color:var(--text-muted)">—</span>`;
+    const deleteBtn = isPending
+      ? `<button class="tbl-btn tbl-btn-delete" onclick="cancelAdminInvite('${escapeAttr(inv.id)}')" title="Cancel invite"><i class="fas fa-trash"></i></button>`
+      : `<span style="color:var(--text-muted);font-size:12px">—</span>`;
+
+    return `
+    <tr>
+      <td>${i + 1}</td>
+      <td><strong>${escapeHtml(inv.email)}</strong></td>
+      <td>${escapeHtml(inv.barangay)}</td>
+      <td style="max-width:180px;white-space:normal;font-size:12px;color:var(--text-muted)">${escapeHtml(inv.note || "—")}</td>
+      <td>${formatDate(new Date(inv.created_at))}</td>
+      <td>${statusHtml}</td>
+      <td>${usedAt}</td>
+      <td>${deleteBtn}</td>
+    </tr>`;
+  }).join("");
+}
+
+/** Opens the create invite modal and populates barangay dropdown from loaded data. */
+function openCreateInviteModal() {
+  if (!isSuperAdmin()) return;
+
+  // Clear previous values
+  const form = document.getElementById("createInviteForm");
+  if (form) form.reset();
+  setText("inviteEmailError", "");
+  setText("inviteBarangayError", "");
+
+  // Populate barangay dropdown from already-loaded barangays
+  const sel = document.getElementById("inviteBarangay");
+  if (sel) {
+    sel.innerHTML = `<option value="">— Select Barangay —</option>`
+      + barangays.map(b => `<option value="${escapeAttr(b.name)}">${escapeHtml(b.name)}</option>`).join("");
+  }
+
+  openModal("createInviteModalOverlay");
+}
+
+/** Submits the create invite form to Supabase admin_invites. */
+async function submitCreateInvite(e) {
+  e.preventDefault();
+
+  const email    = document.getElementById("inviteEmail")?.value.trim().toLowerCase();
+  const barangay = document.getElementById("inviteBarangay")?.value;
+  const note     = document.getElementById("inviteNote")?.value.trim();
+  const btn      = document.getElementById("btnSubmitInvite");
+
+  // Validation
+  let valid = true;
+  if (!email) {
+    setText("inviteEmailError", "Email is required."); valid = false;
+  } else { setText("inviteEmailError", ""); }
+
+  if (!barangay) {
+    setText("inviteBarangayError", "Please select a barangay."); valid = false;
+  } else { setText("inviteBarangayError", ""); }
+
+  if (!valid) return;
+
+  // Disable submit while saving
+  if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Saving...`; }
+
+  const { error } = await supabaseClient
+    .from("admin_invites")
+    .insert({ email, barangay, note: note || null });
+
+  if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fas fa-envelope"></i> Send Invite`; }
+
+  if (error) {
+    if (String(error.message).includes("unique") || String(error.code) === "23505") {
+      setText("inviteEmailError", "An invite for this email already exists.");
+    } else {
+      showAdminToast(error.message);
+    }
+    return;
+  }
+
+  closeModal("createInviteModalOverlay");
+  showAdminToast(`Invite created for ${email}`);
+  await loadAdminInvites();
+}
+
+/** Soft-cancel (delete) a pending invite. */
+async function cancelAdminInvite(id) {
+  if (!id) return;
+
+  // Inline confirm in the table row button — ask via toast-style confirm
+  if (!window.confirm("Cancel this invite? The person will no longer be auto-promoted when they sign up.")) return;
+
+  const { error } = await supabaseClient
+    .from("admin_invites")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    showAdminToast(error.message);
+  } else {
+    showAdminToast("Invite cancelled.");
+    await loadAdminInvites();
+  }
 }
 
 function renderOverviewStats() {
@@ -688,7 +863,7 @@ function initMobileSidebar() {
 
 function showPanel(panelId) {
   // Defense in depth: block direct function calls to restricted panels.
-  if (isBarangayAdmin() && (panelId === "barangays" || panelId === "settings")) {
+  if (isBarangayAdmin() && (panelId === "barangays" || panelId === "settings" || panelId === "admin-invites")) {
     panelId = "overview";
     showAdminToast("This section is available only to Super Admin accounts.");
   }
@@ -708,7 +883,8 @@ function showPanel(panelId) {
     reports: ["Issue Reports", "Review community-submitted infrastructure reports"],
     workers: ["Workers Registry", "Manage the skilled worker directory"],
     doctemplates: ["Document Templates", "Upload and manage per-barangay document templates"],
-    settings: ["Settings", "System configuration and admin account"]
+    settings: ["Settings", "System configuration and admin account"],
+    "admin-invites": ["Admin Invites", "Pre-approve barangay admin accounts"]
   };
 
   const title = titles[panelId] || ["Admin", ""];
@@ -2501,6 +2677,19 @@ async function rejectFromFillModal() {
   await loadDocRequests();
   renderAllPanels();
   showAdminToast("Request rejected.");
+}
+
+/**
+ * Binds form submit events that cannot use inline onsubmit attributes
+ * (because the handler functions are defined after DOMContentLoaded).
+ * Called early during bootstrap so the forms are ready before data loads.
+ */
+function initFormHandlers() {
+  // Create Admin Invite form
+  document.getElementById("createInviteForm")
+    ?.addEventListener("submit", submitCreateInvite);
+
+  // Any other forms that need JS binding can be added here.
 }
 
 
