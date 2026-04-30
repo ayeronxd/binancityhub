@@ -357,32 +357,44 @@ body {
 
 .admin-notif-btn {
     position: relative;
-    width: 36px;
-    height: 36px;
-    background: var(--light-bg);
-    border-radius: 10px;
+    width: 44px;
+    height: 44px;
+    background: var(--white);
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 15px;
-    color: var(--text-muted);
+    font-size: 20px;
+    color: var(--primary-navy);
     transition: var(--transition);
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 8px rgba(26, 58, 82, 0.05);
 }
 
 .admin-notif-btn:hover {
-    background: var(--border);
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(212, 165, 116, 0.15);
+}
+
+@keyframes pulse-dot {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(231, 76, 60, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
 }
 
 .notif-dot {
     position: absolute;
-    top: 7px;
-    right: 7px;
-    width: 8px;
-    height: 8px;
+    top: 8px;
+    right: 8px;
+    width: 10px;
+    height: 10px;
     background: #e74c3c;
     border-radius: 50%;
     border: 2px solid var(--white);
+    animation: pulse-dot 2s infinite;
 }
 
 .admin-header-date {
@@ -1119,6 +1131,9 @@ textarea.admin-input {
     box-shadow: 0 24px 60px rgba(15, 34, 54, 0.25);
     animation: slideModal 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
 }
 
 @keyframes slideModal {
@@ -1176,6 +1191,7 @@ textarea.admin-input {
 
 .admin-modal-body {
     padding: 22px 24px;
+    overflow-y: auto;
 }
 
 .modal-field {

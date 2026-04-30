@@ -32,7 +32,7 @@
         <div class="topbar-inner">
 
             <!-- Brand -->
-            <a class="topbar-brand" href="#">
+            <a class="topbar-brand" href="#" onclick="switchTab('analytics'); closeMobile(); return false;">
                 <div class="brand-icon-box"><i class="fas fa-city"></i></div>
                 <div class="brand-text">
                     <span class="brand-name">Barangay Hub</span>
@@ -110,7 +110,7 @@
                 <a href="login.html#signup" class="mob-signup-link">Sign Up Free</a>
             </div>
             <div class="user-only mob-user-info" id="mobUserInfo">
-                <span class="mob-user-name" id="mobUserName">-</span>
+                <span class="mob-user-name" id="mobUserName" onclick="switchTab('myportal'); closeMobile();" style="cursor:pointer;text-decoration:underline;">-</span>
                 <button onclick="doLogout()" class="mob-logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
             </div>
         </div>
