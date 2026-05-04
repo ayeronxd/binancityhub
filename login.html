@@ -213,7 +213,7 @@
                                 <label for="signupAge">Age</label>
                                 <div class="input-icon-wrap">
                                     <i class="fas fa-calendar input-icon"></i>
-                                    <input type="number" id="signupAge" class="auth-input" placeholder="18" min="18" max="120">
+                                    <input type="number" id="signupAge" class="auth-input" placeholder="15" min="15" max="120">
                                 </div>
                                 <span class="field-error" id="signupAgeError"></span>
                             </div>
@@ -278,6 +278,29 @@
                                 <div class="strength-bar" id="sb4"></div>
                             </div>
                             <span class="strength-label" id="strengthLabel">Enter a password</span>
+                        </div>
+
+                        <!-- ── Verification Documents (Required) ─────────────────────────── -->
+                        <!-- Both uploads are required. Files are stored in a private Supabase  -->
+                        <!-- Storage bucket and are only viewable by admins via signed URLs.    -->
+                        <div class="verify-docs-section">
+                            <div class="verify-docs-header">
+                                <i class="fas fa-shield-halved"></i>
+                                <span>Proof of Residency (Required)</span>
+                            </div>
+
+                            <!-- Single Verification Document Upload -->
+                            <div class="file-upload-field">
+                                <label for="signupVerifyDoc">Government ID or Proof of Billing <span style="color:#e74c3c">*</span></label>
+                                <input type="file" id="signupVerifyDoc" class="auth-file-input"
+                                    accept="image/jpeg,image/jpg,image/png,application/pdf" onchange="handleFileSelect(this, 'verifyDocLabel', 'signupVerifyDocError')">
+                                <label for="signupVerifyDoc" class="file-upload-label" id="verifyDocLabel">
+                                    <i class="fas fa-id-card"></i>
+                                    <span class="file-name-text">Click to upload Verification Document...</span>
+                                </label>
+                                <span class="file-hint">Upload EITHER a valid Government ID OR a Proof of Billing (Meralco, etc.) — JPG, PNG, or PDF.</span>
+                                <span class="field-error" id="signupVerifyDocError"></span>
+                            </div>
                         </div>
 
                         <label class="auth-checkbox terms-check">

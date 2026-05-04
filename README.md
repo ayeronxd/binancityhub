@@ -9,9 +9,9 @@ Barangay Hub is a serverless web application designed as a smart city portal. It
 *   **Dynamic Analytics Dashboard**: Live counters and charts visualize real-time operational data.
 *   **Resident Services Portal**: Allows residents to apply for official documents and track status.
 *   **Interactive Community Announcements**: Features an announcements feed with social engagement. Authenticated users can "Like" and leave comments on official announcements.
-*   **Skilled Worker Directory & Ratings**: A searchable directory of verified skilled workers. Residents can submit 1-to-5 star ratings for workers they have hired, contributing to community trust.
+*   **Verified Worker Ratings & Registry**: A searchable directory of skilled workers. Residents can submit a "Mark Job as Done" request after a service. Once verified by an Admin, the resident unlocks the ability to leave a 1-to-5 star rating, preventing spam and ensuring trust.
 *   **Human-Computer Interaction (HCI) Compliant**: Strict adherence to accessibility (A11y) standards including ARIA labels, standardized visual feedback (scale animations, focus rings), and consistent affordances.
-*   **Comprehensive Admin Panel**: A powerful interface for administrators to manage city operations.
+*   **Comprehensive Admin Panel**: A powerful interface for administrators to manage city operations, including approving document requests, announcements, and verifying completed worker services.
 
 ## Technology Stack
 

@@ -1217,9 +1217,71 @@ async function toggleAnnouncementLike() {
   }
 }
 
+// ─────────────────────────────────────────────────────────────
+// PROFANITY FILTER — Client-side Layer 1
+// Auto-censors prohibited words before they reach the database.
+// The database trigger (Layer 2) provides a server-side backup
+// that cannot be bypassed even by direct API calls.
+// ─────────────────────────────────────────────────────────────
+
+const PROFANITY_LIST = [
+  // English
+  "fuck", "f*ck", "fucker", "fucking", "fucked", "fck",
+  "shit", "sh*t", "shitty", "bullshit",
+  "bitch", "b*tch", "bitches",
+  "asshole", "ass", "a**hole",
+  "bastard", "damn", "crap",
+  "cunt", "c*nt", "dick", "cock", "pussy",
+  "whore", "slut", "retard", "idiot", "moron", "stupid",
+  "nigger", "nigga", "faggot", "fag",
+  // Filipino / Tagalog
+  "putang ina", "putangina", "puta", "p*ta", "puta",
+  "gago", "gaga", "bobo", "boba",
+  "tangina", "tang ina", "tanginamo",
+  "leche", "letse",
+  "tarantado", "tanga", "ulol",
+  "pakyu", "pak yu", "pakyo",
+  "hudas", "inutil",
+  "hayop", "hayop ka",
+  "hinayupak", "putik",
+  "lintik", "kingina", "kingkong",
+  "putang", "inamo", "ina mo",
+  "kingina mo", "kingina",
+  "anak ng puta", "anakng puta",
+  "shet", "sh*t",
+  "amputa", "ampota",
+];
+
+/**
+ * Replaces profane words/phrases in a string with asterisks.
+ * Uses whole-word and phrase matching, case-insensitive.
+ * Returns the cleaned string and a flag indicating if any censoring occurred.
+ */
+function applyProfanityFilter(text) {
+  let cleaned = text;
+  let wasCensored = false;
+
+  // Sort by length descending so multi-word phrases are matched first
+  const sorted = [...PROFANITY_LIST].sort((a, b) => b.length - a.length);
+
+  for (const word of sorted) {
+    // Escape special regex characters in the phrase
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    // Match whole word/phrase, case-insensitive, with word boundaries or spaces
+    const pattern = new RegExp(`(?<![\\w])${escaped}(?![\\w])`, "gi");
+    if (pattern.test(cleaned)) {
+      wasCensored = true;
+      cleaned = cleaned.replace(pattern, (match) => "*".repeat(match.length));
+    }
+  }
+
+  return { cleaned, wasCensored };
+}
+
 /**
  * Submits a new comment to an announcement.
  * - Ensures input contains text to prevent empty payloads.
+ * - Applies client-side profanity filter before sending.
  * - Disables input during network transaction to prevent spamming.
  */
 async function postAnnouncementComment() {
@@ -1227,26 +1289,29 @@ async function postAnnouncementComment() {
   if (!currentOpenAnnId) return;
 
   const input = document.getElementById("annCommentInput");
-  const text = input.value.trim();
-  if (!text) return;
-  
+  const rawText = input.value.trim();
+  if (!rawText) return;
+
+  // Layer 1: Apply client-side profanity filter
+  const { cleaned: text, wasCensored } = applyProfanityFilter(rawText);
+
   // Disable user input to prevent duplicate submission clicks
   input.disabled = true;
-  
+
   const payload = {
     announcement_id: currentOpenAnnId,
     resident_id: currentUser.id,
     content: text
   };
-  
+
   // Append parent ID if this is a nested reply
   if (activeReplyParentId) {
     payload.parent_id = activeReplyParentId;
   }
-  
-  // Submit securely to Supabase (RLS blocks missing/wrong resident_id)
+
+  // Submit securely to Supabase (Layer 2 DB trigger also runs server-side)
   const { error } = await supabaseClient.from("announcement_comments").insert(payload);
-    
+
   // Re-enable and reset on success
   input.disabled = false;
   if (error) {
@@ -1254,8 +1319,11 @@ async function postAnnouncementComment() {
   } else {
     input.value = "";
     clearReplyParent();
+    if (wasCensored) {
+      showToast("Your comment was posted. Some language was filtered.", "success");
+    }
     // Dispatch full reload of comments to pull new data including user profile name
-    loadAnnouncementSocials(currentOpenAnnId); 
+    loadAnnouncementSocials(currentOpenAnnId);
   }
 }
 
@@ -1419,7 +1487,7 @@ function applyWorkerFilters() {
 
 let ratingContext = { workerId: null, workerName: "", selectedStar: 0 };
 
-function handleWorkerContact(name, specialty, phone, email, workerId) {
+async function handleWorkerContact(name, specialty, phone, email, workerId) {
   if (!currentUser) {
     requireLogin("contact");
     return;
@@ -1441,22 +1509,82 @@ function handleWorkerContact(name, specialty, phone, email, workerId) {
   if (phoneEl) phoneEl.href = "tel:" + phone;
   if (emailEl) emailEl.href = "mailto:" + email;
 
-  // Show rate button only if logged in and worker id is known
+  // Check if resident has a verified service record for this worker
+  // before showing the rate button
   const rateWrap = document.getElementById("contactRateWrap");
-  if (rateWrap) rateWrap.style.display = (currentUser && workerId) ? "block" : "none";
+  const rateLabel = document.getElementById("contactRateLabel");
 
-  // Check if resident already rated this worker
+  if (rateWrap) rateWrap.style.display = "none"; // hide by default
+
   if (currentUser && workerId && supabaseClient) {
-    supabaseClient
-      .from("worker_ratings")
-      .select("rating")
-      .eq("worker_id", workerId)
-      .eq("resident_id", currentUser.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        const label = document.getElementById("contactRateLabel");
-        if (label) label.textContent = data ? `Your rating: ${"★".repeat(data.rating)} — Update` : "Rate this Worker";
-      });
+    // Run both checks in parallel: existing rating + service record
+    const [ratingRes, serviceRes] = await Promise.all([
+      supabaseClient
+        .from("worker_ratings")
+        .select("rating")
+        .eq("worker_id", workerId)
+        .eq("resident_id", currentUser.id)
+        .maybeSingle(),
+      supabaseClient
+        .from("service_records")
+        .select("id")
+        .eq("worker_id", workerId)
+        .eq("resident_id", currentUser.id)
+        .maybeSingle()
+    ]);
+
+    const hasServiceRecord = Boolean(serviceRes.data);
+    const existingRating   = ratingRes.data?.rating || 0;
+
+    if (hasServiceRecord) {
+      // Resident hired this worker — show the rate button
+      if (rateWrap) rateWrap.style.display = "block";
+      if (rateLabel) {
+        rateLabel.textContent = existingRating
+          ? `Your rating: ${"★".repeat(existingRating)} — Update`
+          : "Rate this Worker";
+      }
+    } else {
+      // --- Verified Rating Gate Logic ---
+      // The goal: Only allow residents to rate if an Admin has verified their completed job.
+  
+      // No verified service — show "Mark Job as Done" button so resident can request verification
+      if (rateWrap) {
+        rateWrap.style.display = "block";
+
+        // Check if a pending request already exists for this pair
+        const { data: existingReq } = await supabaseClient
+          .from("service_requests")
+          .select("id,status")
+          .eq("worker_id", workerId)
+          .eq("resident_id", currentUser.id)
+          .maybeSingle();
+
+        if (existingReq?.status === "pending") {
+          rateWrap.innerHTML = `
+            <div style="font-size:12px;color:rgba(255,255,255,0.45);text-align:center;padding:10px 0;border-top:1px solid rgba(255,255,255,0.08);margin-top:4px">
+              <i class="fas fa-clock" style="margin-right:6px;color:#f39c12;"></i>
+              Waiting for admin to verify your service request...
+            </div>`;
+        } else if (existingReq?.status === "rejected") {
+          rateWrap.innerHTML = `
+            <div style="font-size:12px;color:rgba(255,80,80,0.7);text-align:center;padding:10px 0;border-top:1px solid rgba(255,255,255,0.08);margin-top:4px">
+              <i class="fas fa-times-circle" style="margin-right:6px;"></i>
+              Your service request was not verified by the admin.
+            </div>`;
+        } else {
+          rateWrap.innerHTML = `
+            <button class="btn-glass-modal w-full" style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.08);padding-top:12px;"
+              onclick="submitServiceRequest('${workerId}', '${escapeHtml(ratingContext.workerName)}')">
+              <i class="fas fa-clipboard-check" style="margin-right:6px;color:#4cde80;"></i>
+              Mark Job as Done
+            </button>
+            <div style="font-size:11px;color:rgba(255,255,255,0.3);text-align:center;margin-top:6px;">
+              Hired this worker? Request admin verification to unlock rating.
+            </div>`;
+        }
+      }
+    }
   }
 
   document.getElementById("contactModal")?.classList.add("open");
@@ -1464,6 +1592,64 @@ function handleWorkerContact(name, specialty, phone, email, workerId) {
 
 function closeContactModal() {
   document.getElementById("contactModal")?.classList.remove("open");
+}
+
+/**
+ * Opens the styled "Mark Job as Done" modal (replaces native prompt).
+ * The actual DB insert happens in confirmMarkJobDone().
+ */
+async function submitServiceRequest(workerId, workerName) {
+  if (!currentUser || !supabaseClient) { requireLogin("contact"); return; }
+
+  // Store context for confirmMarkJobDone to use
+  submitServiceRequest._workerId   = workerId;
+  submitServiceRequest._workerName = workerName;
+
+  setText("markJobWorkerName", workerName);
+  const noteInput = document.getElementById("markJobNoteInput");
+  if (noteInput) noteInput.value = "";
+
+  closeContactModal();
+  document.getElementById("markJobDoneModal")?.classList.add("open");
+}
+
+function closeMarkJobDoneModal() {
+  document.getElementById("markJobDoneModal")?.classList.remove("open");
+}
+
+async function confirmMarkJobDone() {
+  const workerId    = submitServiceRequest._workerId;
+  const workerName  = submitServiceRequest._workerName;
+  const note        = document.getElementById("markJobNoteInput")?.value?.trim() || null;
+
+  if (!workerId || !currentUser) return;
+
+  const btn = document.getElementById("markJobSubmitBtn");
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Submitting...'; }
+
+  const residentName = currentProfile?.full_name || currentUser?.user_metadata?.full_name || "Resident";
+
+  const { error } = await supabaseClient.from("service_requests").upsert(
+    {
+      worker_id:     workerId,
+      resident_id:   currentUser.id,
+      worker_name:   workerName,
+      resident_name: residentName,
+      note,
+      status:        "pending"
+    },
+    { onConflict: "worker_id,resident_id" }
+  );
+
+  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Request'; }
+
+  if (error) {
+    showToast("Failed to submit request: " + error.message, "error");
+    return;
+  }
+
+  closeMarkJobDoneModal();
+  showToast("Request submitted! The admin will verify and unlock your rating.", "success");
 }
 
 // ── Rating modal ─────────────────────────────────────────────
@@ -1874,12 +2060,27 @@ function setupReportForm() {
     }
 
     const barangay = document.getElementById("reportBarangay")?.value;
-    const category = document.getElementById("reportCategory")?.value || "General";
-    const location = document.getElementById("reportLocation")?.value || "Not specified";
+    const category = document.getElementById("reportCategory")?.value;
+    const location = document.getElementById("reportLocation")?.value;
     const description = document.getElementById("reportDescription")?.value || "";
 
     if (!barangay) {
       showToast("Please select a barangay.", "error");
+      return;
+    }
+
+    if (!category) {
+      showToast("Please select a category.", "error");
+      return;
+    }
+
+    if (!location || !location.trim()) {
+      showToast("Please provide a location.", "error");
+      return;
+    }
+
+    if (category === "Other" && !description.trim()) {
+      showToast("Please provide a description for the 'Other' category.", "error");
       return;
     }
 
@@ -2055,6 +2256,7 @@ document.addEventListener("click", (e) => {
   if (e.target.id === "applyModal") closeApplyModal();
   if (e.target.id === "contactModal") closeContactModal();
   if (e.target.id === "rateWorkerModal") closeRateWorkerModal();
+  if (e.target.id === "markJobDoneModal") closeMarkJobDoneModal();
   if (e.target.id === "profileModal") closeProfileModal();
   if (e.target.id === "changePasswordModal") closeChangePasswordModal();
   if (e.target.id === "announcementModal") closeAnnouncementModal();
@@ -2065,6 +2267,7 @@ document.addEventListener("keydown", (e) => {
   closeLoginModal();
   closeApplyModal();
   closeContactModal();
+  closeMarkJobDoneModal();
   closeProfileModal();
   closeChangePasswordModal();
   closeMobile();

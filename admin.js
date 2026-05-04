@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initMobileSidebar();
   initNotificationButton();
   initFormHandlers();
-
+  initAdminInviteHandlers();
   const allowed = await enforceAdminAccess();
   if (!allowed) return;
 
@@ -194,7 +194,8 @@ async function loadAdminData() {
     loadWorkers(),
     loadPortalSettings(),
     loadDocTemplates(),
-    loadAdminInvites()
+    loadAdminInvites(),
+    loadServiceRequests()
   ]);
 }
 
@@ -710,12 +711,19 @@ function renderOverviewStats() {
 }
 
 function renderSidebarBadges() {
-  const pendingDocs = docRequests.filter((r) => r.status === "Pending" || r.status === "Processing").length;
-  const pendingIssues = issueReports.filter((r) => r.status === "Pending" || r.status === "Processing").length;
+  const pendingDocs    = docRequests.filter((r) => r.status === "Pending" || r.status === "Processing").length;
+  const pendingIssues  = issueReports.filter((r) => r.status === "Pending" || r.status === "Processing").length;
+  const pendingServReq = (window.serviceRequests || []).filter((r) => r.status === "pending").length;
 
   setText("navBarangayCount", String(barangays.length));
   setText("navDocPendingCount", String(pendingDocs));
   setText("navIssuePendingCount", String(pendingIssues));
+
+  const srBadge = document.getElementById("navServiceRequestCount");
+  if (srBadge) {
+    srBadge.textContent = String(pendingServReq);
+    srBadge.style.display = pendingServReq > 0 ? "" : "none";
+  }
 }
 
 function renderBarangaySummary() {
@@ -1016,7 +1024,7 @@ function renderUsersTable(filter = "") {
       <td>${statusPill(u.status)}</td>
       <td style="display:flex;gap:5px;flex-wrap:wrap;">
         ${verifyAction}
-        <button class="tbl-btn tbl-btn-view" onclick="showAdminToast('Viewing user ${fullName}')"><i class="fas fa-eye"></i></button>
+        <button class="tbl-btn tbl-btn-view" onclick="openViewResidentModal('${u.id}')"><i class="fas fa-eye"></i></button>
       </td>
     </tr>`;
   }).join("");
@@ -1027,6 +1035,92 @@ function renderUsersTable(filter = "") {
 
 function filterUsers() {
   renderUsersTable(document.getElementById("userSearch").value || "");
+}
+
+function openViewResidentModal(id) {
+  const user = usersData.find(u => u.id === id);
+  if (!user) return;
+
+  const fullName = `${user.first} ${user.last}`;
+  document.getElementById("vrName").textContent = fullName;
+  document.getElementById("vrEmail").textContent = user.email || "-";
+  document.getElementById("vrPhone").textContent = user.phone || "-";
+  document.getElementById("vrBarangay").textContent = user.barangay || "-";
+  document.getElementById("vrRegistered").textContent = user.registered || "-";
+  document.getElementById("vrStatus").innerHTML = statusPill(user.status);
+
+  const actionContainer = document.getElementById("vrActionContainer");
+  if (isBarangayAdmin() && !user.isVerified && user.role === "resident") {
+    actionContainer.innerHTML = `<button type="button" class="btn-admin-primary" onclick="verifyResident('${user.id}'); closeModal('viewResidentModalOverlay')"><i class="fas fa-check"></i> Verify Resident</button>`;
+  } else {
+    actionContainer.innerHTML = "";
+  }
+
+  // Reset the doc section to loading state while we fetch signed URLs
+  const verifyDocEl = document.getElementById("vrVerifyDoc");
+  if (verifyDocEl) verifyDocEl.innerHTML = `<span style="color:rgba(0,0,0,0.4);font-size:13px"><i class="fas fa-spinner fa-spin"></i> Loading...</span>`;
+
+  document.getElementById("viewResidentModalOverlay").style.display = "flex";
+
+  // Fetch the stored document paths and generate short-lived signed URLs (5 min)
+  // from the private bucket so admin can review without the files being public.
+  fetchResidentDocUrls(id, verifyDocEl);
+}
+
+async function fetchResidentDocUrls(userId, verifyDocEl) {
+  if (!supabaseClient) return;
+
+  const { data: profile } = await supabaseClient
+    .from("profiles")
+    .select("verification_doc_url")
+    .eq("id", userId)
+    .maybeSingle();
+
+  // Helper: render a document thumbnail or a "not uploaded" badge
+  function renderDocSlot(container, path, label, isPdf) {
+    if (!container) return;
+    if (!path) {
+      container.innerHTML = `
+        <div style="display:inline-flex;align-items:center;gap:6px;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:6px 10px;font-size:12px;color:#856404;">
+          <i class="fas fa-exclamation-triangle"></i> No ${label} uploaded
+        </div>`;
+      return;
+    }
+    const { data: signed } = supabaseClient.storage
+      .from("resident-verification-docs")
+      .createSignedUrl(path, 300); // 5-minute expiry
+
+    // createSignedUrl is synchronous in the JS SDK v2 when called this way;
+    // for async-safe usage we handle it as a promise.
+    supabaseClient.storage
+      .from("resident-verification-docs")
+      .createSignedUrl(path, 300)
+      .then(({ data: s, error: e }) => {
+        if (e || !s?.signedUrl) {
+          container.innerHTML = `<span style="color:#e74c3c;font-size:13px"><i class="fas fa-times-circle"></i> Could not load document.</span>`;
+          return;
+        }
+        if (isPdf) {
+          container.innerHTML = `
+            <a href="${s.signedUrl}" target="_blank" rel="noopener"
+               style="display:inline-flex;align-items:center;gap:7px;background:#f1f3f4;border:1px solid #dde3ec;border-radius:8px;padding:8px 12px;font-size:13px;color:#1a3a52;text-decoration:none;font-weight:600;">
+              <i class="fas fa-file-pdf" style="color:#e74c3c;font-size:16px"></i> View PDF (opens in new tab)
+            </a>`;
+        } else {
+          container.innerHTML = `
+            <a href="${s.signedUrl}" target="_blank" rel="noopener" title="Click to view full image">
+              <img src="${s.signedUrl}" alt="${label}"
+                   style="max-width:100%;max-height:160px;border-radius:8px;border:1px solid #dde3ec;object-fit:cover;cursor:zoom-in;transition:opacity 0.2s;"
+                   onerror="this.parentElement.innerHTML='<span style=color:#e74c3c;font-size:13px><i class=fas fa-times-circle></i> Image could not be loaded.</span>'" />
+            </a>`;
+        }
+      });
+  }
+
+  const verifyPath = profile?.verification_doc_url || null;
+  const isPdf = verifyPath && verifyPath.toLowerCase().endsWith(".pdf");
+
+  renderDocSlot(verifyDocEl, verifyPath, "Verification Document", isPdf);
 }
 
 function renderDocRequestsTable(typeFilter = "", statusFilter = "") {
@@ -1466,8 +1560,74 @@ function renderWorkersTable(filter = "") {
         <button class="tbl-btn tbl-btn-edit" onclick="openEditWorkerModal('${w.id}')"><i class="fas fa-pen"></i></button>
         <button class="tbl-btn tbl-btn-delete" onclick="deleteWorker('${w.id}')"><i class="fas fa-trash"></i></button>
       </td>
+      <td>
+        <button class="tbl-btn tbl-btn-approve" onclick="openLogServiceModal('${w.id}','${escapeAttr(w.name)}')" title="Log a completed service for this worker">
+          <i class="fas fa-clipboard-check"></i> Log
+        </button>
+      </td>
     </tr>
   `).join("");
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// SERVICE RECORDS — Log a completed service so resident can rate worker
+// ══════════════════════════════════════════════════════════════════════
+
+function openLogServiceModal(workerId, workerName) {
+  document.getElementById("logServiceWorkerId").value = workerId;
+  document.getElementById("logServiceWorkerName").value = workerName;
+  document.getElementById("logServiceDate").value = new Date().toISOString().split("T")[0];
+  document.getElementById("logServiceDescription").value = "";
+  document.getElementById("logServiceResidentError").textContent = "";
+
+  // Populate the residents dropdown scoped to this barangay
+  const residentSel = document.getElementById("logServiceResidentId");
+  residentSel.innerHTML = `<option value="">Select resident...</option>` +
+    usersData
+      .filter(u => u.role === "resident" || !u.role)
+      .map(u => `<option value="${escapeHtml(u.id)}">${escapeHtml(u.first + " " + u.last)} — ${escapeHtml(u.email)}</option>`)
+      .join("");
+
+  openModal("logServiceModalOverlay");
+}
+
+async function submitServiceRecord() {
+  const workerId    = document.getElementById("logServiceWorkerId").value;
+  const residentId  = document.getElementById("logServiceResidentId").value;
+  const serviceDate = document.getElementById("logServiceDate").value;
+  const description = document.getElementById("logServiceDescription").value.trim();
+  const errEl       = document.getElementById("logServiceResidentError");
+
+  errEl.textContent = "";
+
+  if (!residentId) {
+    errEl.textContent = "Please select a resident.";
+    return;
+  }
+
+  const btn = document.getElementById("logServiceSubmitBtn");
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...'; }
+
+  const { error } = await supabaseClient.from("service_records").upsert(
+    {
+      worker_id:    workerId,
+      resident_id:  residentId,
+      service_date: serviceDate,
+      description:  description || null,
+      logged_by:    currentUser.id
+    },
+    { onConflict: "worker_id,resident_id" }
+  );
+
+  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-clipboard-check"></i> Log Service'; }
+
+  if (error) {
+    showAdminToast("Failed to log service: " + error.message);
+    return;
+  }
+
+  closeModal("logServiceModalOverlay");
+  showAdminToast("Service logged! Resident can now rate this worker.");
 }
 
 function filterWorkers() {
@@ -2527,20 +2687,20 @@ async function openFillDocModal(reqId, redownload = false) {
 
     // Build editable fields grid
     const fields = [
-      { key: "resident_name",  label: "Resident Name",    value: req.name },
+      { key: "resident_name",  label: "Resident Name",    value: req.name, readonly: true },
       { key: "age",            label: "Age",              value: profile?.age || "" },
-      { key: "date_today",     label: "Date",              value: today },
-      { key: "date_formal",    label: "Formal Date",       value: dateFormal },
-      { key: "day_ordinal",    label: "Day (Ordinal)",     value: dayOrdinal },
-      { key: "month",          label: "Month",             value: month },
-      { key: "year",           label: "Year",              value: String(year) },
-      { key: "barangay_name",  label: "Barangay",          value: req.barangay },
-      { key: "captain_name",   label: "Barangay Captain",  value: captainName },
-      { key: "purpose",        label: "Purpose",           value: req.purpose || "" },
-      { key: "ref_no",         label: "Reference No.",     value: req.ref },
-      { key: "address",        label: "Address",           value: req.address || profile?.barangay || req.barangay },
+      { key: "date_today",     label: "Date",              value: today, readonly: true },
+      { key: "date_formal",    label: "Formal Date",       value: dateFormal, readonly: true },
+      { key: "day_ordinal",    label: "Day (Ordinal)",     value: dayOrdinal, readonly: true },
+      { key: "month",          label: "Month",             value: month, readonly: true },
+      { key: "year",           label: "Year",              value: String(year), readonly: true },
+      { key: "barangay_name",  label: "Barangay",          value: req.barangay, readonly: true },
+      { key: "captain_name",   label: "Barangay Captain",  value: captainName, readonly: true },
+      { key: "purpose",        label: "Purpose",           value: req.purpose || "", readonly: true },
+      { key: "ref_no",         label: "Reference No.",     value: req.ref, readonly: true },
+      { key: "address",        label: "Address",           value: req.address || profile?.barangay || req.barangay, readonly: true },
       { key: "phone",          label: "Phone",             value: profile?.phone || "" },
-      { key: "document_type",  label: "Document Type",     value: req.type }
+      { key: "document_type",  label: "Document Type",     value: req.type, readonly: true }
     ];
 
     const grid = document.getElementById("fillDocFieldsGrid");
@@ -2551,7 +2711,8 @@ async function openFillDocModal(reqId, redownload = false) {
           <input type="text" class="admin-input fill-doc-field-input"
                  data-key="${escapeHtml(f.key)}"
                  value="${escapeHtml(f.value)}"
-                 placeholder="${escapeHtml(f.label)}">
+                 placeholder="${escapeHtml(f.label)}"
+                 ${f.readonly ? 'readonly style="background-color: #f1f3f4; color: #7f8c8d; cursor: not-allowed; opacity: 0.8;"' : ''}>
         </div>
       `).join("");
     }
@@ -2684,7 +2845,7 @@ async function rejectFromFillModal() {
  * (because the handler functions are defined after DOMContentLoaded).
  * Called early during bootstrap so the forms are ready before data loads.
  */
-function initFormHandlers() {
+function initAdminInviteHandlers() {
   // Create Admin Invite form
   document.getElementById("createInviteForm")
     ?.addEventListener("submit", submitCreateInvite);
@@ -2797,9 +2958,111 @@ function buildTimingBadge(processedAt, notifiedAt) {
           </div>`;
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// SERVICE REQUESTS — Resident-Initiated Job Completion Verification
+// ══════════════════════════════════════════════════════════════════════
 
+window.serviceRequests = [];
 
+async function loadServiceRequests() {
+  const { data, error } = await supabaseClient
+    .from("service_requests")
+    .select("id,worker_id,resident_id,worker_name,resident_name,note,status,created_at")
+    .order("created_at", { ascending: false })
+    .limit(50);
 
+  if (error) {
+    const msg = String(error.message || "").toLowerCase();
+    if (!msg.includes("does not exist") && !msg.includes("service_requests")) {
+      showAdminToast("Service requests: " + error.message);
+    }
+    window.serviceRequests = [];
+    return;
+  }
+
+  window.serviceRequests = (data || []).map((r) => ({
+    id:           r.id,
+    workerId:     r.worker_id,
+    residentId:   r.resident_id,
+    workerName:   r.worker_name || "Unknown Worker",
+    residentName: r.resident_name || "Unknown Resident",
+    note:         r.note || "-",
+    status:       r.status,
+    date:         r.created_at ? formatDate(new Date(r.created_at)) : "-"
+  }));
+
+  renderPendingVerifications();
+  renderSidebarBadges();
+}
+
+function renderPendingVerifications() {
+  const tbody = document.getElementById("pendingVerifBody");
+  const badge = document.getElementById("pendingVerifBadge");
+  if (!tbody) return;
+
+  const pending = (window.serviceRequests || []).filter((r) => r.status === "pending");
+
+  if (badge) {
+    badge.textContent = String(pending.length);
+    badge.style.display = pending.length > 0 ? "" : "none";
+  }
+
+  if (pending.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">
+      <i class="fas fa-check-circle" style="color:#4cde80;margin-right:6px;"></i> No pending verifications
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = pending.map((r) => `
+    <tr>
+      <td><strong>${escapeHtml(r.residentName)}</strong></td>
+      <td>${escapeHtml(r.workerName)}</td>
+      <td style="max-width:200px;white-space:normal;font-size:12px;color:var(--text-muted);">${escapeHtml(r.note)}</td>
+      <td style="color:var(--text-muted);font-size:12px;">${escapeHtml(r.date)}</td>
+      <td style="display:flex;gap:6px;">
+        <button class="tbl-btn tbl-btn-approve" onclick="approveServiceRequest('${r.id}','${r.workerId}','${r.residentId}')" title="Approve">
+          <i class="fas fa-check"></i> Approve
+        </button>
+        <button class="tbl-btn tbl-btn-delete" onclick="rejectServiceRequest('${r.id}')" title="Reject">
+          <i class="fas fa-times"></i> Reject
+        </button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+async function approveServiceRequest(reqId, workerId, residentId) {
+  if (!confirm("Approve this service request? The resident will be able to rate the worker.")) return;
+
+  const { error: recErr } = await supabaseClient.from("service_records").upsert(
+    { worker_id: workerId, resident_id: residentId, service_date: new Date().toISOString().split("T")[0], logged_by: currentUser.id },
+    { onConflict: "worker_id,resident_id" }
+  );
+  if (recErr) { showAdminToast("Failed to create service record: " + recErr.message); return; }
+
+  const { error: reqErr } = await supabaseClient
+    .from("service_requests")
+    .update({ status: "approved", reviewed_by: currentUser.id, reviewed_at: new Date().toISOString() })
+    .eq("id", reqId);
+  if (reqErr) { showAdminToast("Failed to update request: " + reqErr.message); return; }
+
+  showAdminToast("Approved! The resident can now rate this worker.");
+  await loadServiceRequests();
+}
+
+async function rejectServiceRequest(reqId) {
+  if (!confirm("Reject this service request?")) return;
+
+  const { error } = await supabaseClient
+    .from("service_requests")
+    .update({ status: "rejected", reviewed_by: currentUser.id, reviewed_at: new Date().toISOString() })
+    .eq("id", reqId);
+  if (error) { showAdminToast("Failed to reject: " + error.message); return; }
+
+  showAdminToast("Request rejected.");
+  await loadServiceRequests();
+}
 
 
 

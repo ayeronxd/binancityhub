@@ -68,6 +68,38 @@ function bindForms() {
   });
 }
 
+// Updates the file upload button's appearance and shows the filename when a
+// file is selected. Called via onchange on each file input.
+function handleFileSelect(input, labelId, errorId) {
+  const label = document.getElementById(labelId);
+  const errorEl = document.getElementById(errorId);
+  if (!label) return;
+
+  const nameSpan = label.querySelector(".file-name-text");
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    const maxMb = 5;
+    if (file.size > maxMb * 1024 * 1024) {
+      if (nameSpan) nameSpan.textContent = "File too large (max 5 MB)";
+      label.classList.add("error-file");
+      label.classList.remove("has-file");
+      if (errorEl) errorEl.textContent = `File must be under ${maxMb} MB.`;
+      input.value = "";
+      return;
+    }
+    if (nameSpan) nameSpan.textContent = file.name;
+    label.classList.add("has-file");
+    label.classList.remove("error-file");
+    if (errorEl) errorEl.textContent = "";
+  } else {
+    // No file selected — reset to placeholder
+    const icon = label.querySelector("i");
+    const defaultText = labelId === "govIdLabel" ? "Click to upload Government ID..." : "Click to upload Proof of Billing...";
+    if (nameSpan) nameSpan.textContent = defaultText;
+    label.classList.remove("has-file", "error-file");
+  }
+}
+
 // Populates barangay signup dropdown from DB so choices stay current.
 async function loadBarangayOptions() {
   if (!supabaseClient) return;
@@ -305,7 +337,8 @@ async function handleSignup() {
 
   clearAllErrors([
     "signupFirstName", "signupLastName", "signupEmail", "signupPhone", "signupAge",
-    "signupBarangay", "signupPassword", "signupConfirmPassword", "agreeTerms"
+    "signupBarangay", "signupPassword", "signupConfirmPassword", "agreeTerms",
+    "signupVerifyDoc"
   ]);
 
   let valid = true;
@@ -317,8 +350,8 @@ async function handleSignup() {
     { showFieldError("signupEmailError",    "Enter a valid email address."); valid = false; }
   if (!phone     || !/^[0-9]{10,11}$/.test(phone))
     { showFieldError("signupPhoneError",    "Enter a valid phone number (10-11 digits)."); valid = false; }
-  if (!age       || isNaN(age) || parseInt(age) < 18 || parseInt(age) > 120)
-    { showFieldError("signupAgeError",      "You must be between 18 and 120 years old."); valid = false; }
+  if (!age       || isNaN(age) || parseInt(age) < 15 || parseInt(age) > 120)
+    { showFieldError("signupAgeError",      "You must be between 15 and 120 years old."); valid = false; }
   if (!barangayRaw)
     { showFieldError("signupBarangayError", "Please select your barangay."); valid = false; }
   if (!password  || password.length < 8)
@@ -327,6 +360,15 @@ async function handleSignup() {
     { showFieldError("signupConfirmPasswordError", "Passwords do not match."); valid = false; }
   if (!agreeTerms)
     { showFieldError("agreeTermsError", "You must agree to the Terms & Conditions."); valid = false; }
+  // Validate document upload — required before submitting
+  const verifyDocFile = document.getElementById("signupVerifyDoc")?.files?.[0];
+  const verifyDocLabel = document.getElementById("verifyDocLabel");
+
+  if (!verifyDocFile) {
+    showFieldError("signupVerifyDocError", "Please upload a Government ID or Proof of Billing.");
+    verifyDocLabel?.classList.add("error-file");
+    valid = false;
+  }
   if (!valid) return;
 
   if (!supabaseClient) {
@@ -359,14 +401,34 @@ async function handleSignup() {
   });
 
   if (!error && data?.user) {
+    const userId = data.user.id;
+
+    // ── Upload verification document to private Supabase Storage bucket ──
+    // File stored at: resident-verification-docs/{userId}/verify_doc.ext
+    // The bucket is private; admins view via signed URLs that expire in 5 minutes.
+    let verifyDocPath = null;
+
+    try {
+      const ext = verifyDocFile.name.split(".").pop();
+      const path = `${userId}/verify_doc.${ext}`;
+      const { error: uploadErr } = await supabaseClient.storage
+        .from("resident-verification-docs")
+        .upload(path, verifyDocFile, { upsert: true });
+      if (!uploadErr) verifyDocPath = path;
+      else console.warn("Document upload failed:", uploadErr.message);
+    } catch (e) {
+      console.warn("Document upload error:", e);
+    }
+
     await supabaseClient.from("profiles").upsert({
-      id: data.user.id,
+      id: userId,
       full_name: fullName,
       email,
       barangay,
       role: "resident",
       phone,
-      age: parseInt(age)
+      age: parseInt(age),
+      verification_doc_url: verifyDocPath
     });
   }
 

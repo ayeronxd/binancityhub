@@ -156,11 +156,13 @@ Where implemented:
 What it does:
 - Submit document request -> insert into `document_requests`
 - Submit issue report -> insert into `issue_reports`
+- Submit "Mark Job as Done" request -> insert into `service_requests` (unlocks rating after admin approval)
 - View own requests in My Portal
 
 Why it is done this way:
 - Writes happen directly from frontend to Supabase (serverless requirement).
 - RLS enforces that users only create/read allowed rows.
+- Rating gate prevents review-bombing by ensuring verified interactions.
 
 Related functions:
 - `setupApplyForm()`
@@ -183,16 +185,18 @@ What it does:
   - Document requests
   - Announcements
   - Issue reports
-  - Workers registry
+  - Workers registry (including Pending Service Verifications)
 - Supports actions:
   - Approve/update document requests
   - Create/edit/delete barangays
   - Publish/delete announcements
+  - Approve/reject Service Requests (creates `service_records` to unlock worker rating)
 
 Why it is done this way:
 - Centralized admin workflows in one dashboard.
 - Super admin and barangay admin both supported with scope filtering.
 - DB updates keep operations auditable and persistent.
+- Admin verification of worker jobs maintains the integrity of the rating system.
 
 Related functions:
 - `loadAdminData()`
@@ -216,6 +220,9 @@ Core tables:
 - `profiles`
 - `barangays`
 - `workers`
+- `worker_ratings`
+- `service_requests` (Pending verifications from residents)
+- `service_records` (Approved completed jobs ledger)
 - `announcements`
 - `document_requests`
 - `issue_reports`
