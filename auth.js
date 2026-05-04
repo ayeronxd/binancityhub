@@ -404,7 +404,7 @@ async function handleSignup() {
     const path = `${tempId}/verify_doc.${ext}`;
     const { error: uploadErr } = await supabaseClient.storage
       .from("resident-verification-docs")
-      .upload(path, verifyDocFile, { upsert: true });
+      .upload(path, verifyDocFile);
     if (!uploadErr) verifyDocPath = path;
     else console.warn("Document upload failed:", uploadErr.message);
   } catch (e) {
