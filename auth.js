@@ -394,43 +394,36 @@ async function handleSignup() {
   const barangay = toBarangayDisplay(barangayRaw);
   const fullName = `${firstName} ${lastName}`.trim();
 
+  // ── Upload verification document BEFORE signing up ──
+  // File stored at: resident-verification-docs/{randomUuid}/verify_doc.ext
+  let verifyDocPath = null;
+  const tempId = crypto.randomUUID();
+
+  try {
+    const ext = verifyDocFile.name.split(".").pop();
+    const path = `${tempId}/verify_doc.${ext}`;
+    const { error: uploadErr } = await supabaseClient.storage
+      .from("resident-verification-docs")
+      .upload(path, verifyDocFile, { upsert: true });
+    if (!uploadErr) verifyDocPath = path;
+    else console.warn("Document upload failed:", uploadErr.message);
+  } catch (e) {
+    console.warn("Document upload error:", e);
+  }
+
   const { data, error } = await supabaseClient.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName, barangay, phone, age: parseInt(age) } }
-  });
-
-  if (!error && data?.user) {
-    const userId = data.user.id;
-
-    // ── Upload verification document to private Supabase Storage bucket ──
-    // File stored at: resident-verification-docs/{userId}/verify_doc.ext
-    // The bucket is private; admins view via signed URLs that expire in 5 minutes.
-    let verifyDocPath = null;
-
-    try {
-      const ext = verifyDocFile.name.split(".").pop();
-      const path = `${userId}/verify_doc.${ext}`;
-      const { error: uploadErr } = await supabaseClient.storage
-        .from("resident-verification-docs")
-        .upload(path, verifyDocFile, { upsert: true });
-      if (!uploadErr) verifyDocPath = path;
-      else console.warn("Document upload failed:", uploadErr.message);
-    } catch (e) {
-      console.warn("Document upload error:", e);
+    options: { 
+      data: { 
+        full_name: fullName, 
+        barangay, 
+        phone, 
+        age: parseInt(age),
+        verification_doc_url: verifyDocPath
+      } 
     }
-
-    await supabaseClient.from("profiles").upsert({
-      id: userId,
-      full_name: fullName,
-      email,
-      barangay,
-      role: "resident",
-      phone,
-      age: parseInt(age),
-      verification_doc_url: verifyDocPath
-    });
-  }
+  });
 
   setButtonLoading("signupSubmitBtn", false);
 

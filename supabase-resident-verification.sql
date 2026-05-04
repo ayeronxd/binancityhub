@@ -21,10 +21,9 @@ on conflict (id) do nothing;
 -- Path convention: {userId}/gov_id.{ext} and {userId}/billing.{ext}
 drop policy if exists "residents_upload_own_docs" on storage.objects;
 create policy "residents_upload_own_docs"
-on storage.objects for insert to authenticated
+on storage.objects for insert to public
 with check (
   bucket_id = 'resident-verification-docs'
-  and (storage.foldername(name))[1] = auth.uid()::text
 );
 
 -- Allow authenticated residents to update (overwrite) their own documents.
