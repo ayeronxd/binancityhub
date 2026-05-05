@@ -298,7 +298,7 @@ async function handleLogin() {
 
   const { data: profile, error: dbErr } = await supabaseClient
     .from("profiles")
-    .select("role")
+    .select("role,is_verified")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -309,6 +309,19 @@ async function handleLogin() {
   }
 
   const role = profile?.role || "resident";
+
+  // ── Verification gate (Option A) ──────────────────────────────────────────
+  // Admins (super_admin, barangay_admin) bypass this check since they are
+  // manually promoted and never go through the resident verification workflow.
+  if (role === "resident" && profile?.is_verified === false) {
+    await supabaseClient.auth.signOut();
+    setButtonLoading("loginSubmitBtn", false);
+    showToast(
+      "Your account is pending admin approval. You will be notified once verified.",
+      "error"
+    );
+    return;
+  }
 
   if (role === "super_admin" || role === "barangay_admin") {
     showToast("Login successful. Redirecting to admin dashboard...", "success");

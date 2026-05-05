@@ -714,6 +714,8 @@ function renderSidebarBadges() {
   const pendingDocs    = docRequests.filter((r) => r.status === "Pending" || r.status === "Processing").length;
   const pendingIssues  = issueReports.filter((r) => r.status === "Pending" || r.status === "Processing").length;
   const pendingServReq = (window.serviceRequests || []).filter((r) => r.status === "pending").length;
+  // Count residents that still need admin verification.
+  const pendingVerifs  = usersData.filter((u) => u.role === "resident" && !u.isVerified).length;
 
   setText("navBarangayCount", String(barangays.length));
   setText("navDocPendingCount", String(pendingDocs));
@@ -723,6 +725,13 @@ function renderSidebarBadges() {
   if (srBadge) {
     srBadge.textContent = String(pendingServReq);
     srBadge.style.display = pendingServReq > 0 ? "" : "none";
+  }
+
+  // Show pending-verification count badge on the Users nav item.
+  const verifBadge = document.getElementById("navPendingVerifCount");
+  if (verifBadge) {
+    verifBadge.textContent = String(pendingVerifs);
+    verifBadge.style.display = pendingVerifs > 0 ? "" : "none";
   }
 }
 
@@ -994,13 +1003,20 @@ function filterBarangays() {
   renderBarangayTable(document.getElementById("barangaySearch").value || "");
 }
 
-function renderUsersTable(filter = "") {
+function renderUsersTable(filter = "", statusFilter = "") {
   const tbody = document.getElementById("usersTableBody");
   if (!tbody) return;
 
-  const roleScoped = isSuperAdmin()
+  let roleScoped = isSuperAdmin()
     ? usersData
     : usersData.filter((u) => u.role === "resident");
+
+  // Status filter: verified / pending
+  if (statusFilter === "verified") {
+    roleScoped = roleScoped.filter((u) => u.isVerified);
+  } else if (statusFilter === "pending") {
+    roleScoped = roleScoped.filter((u) => !u.isVerified);
+  }
 
   const filtered = filter
     ? roleScoped.filter((u) => `${u.first} ${u.last} ${u.email}`.toLowerCase().includes(filter.toLowerCase()))
@@ -1008,8 +1024,13 @@ function renderUsersTable(filter = "") {
 
   tbody.innerHTML = filtered.map((u, i) => {
     const fullName = `${escapeHtml(u.first)} ${escapeHtml(u.last)}`;
-    const verifyAction = isBarangayAdmin() && !u.isVerified
-      ? `<button class="tbl-btn tbl-btn-approve" onclick="verifyResident('${u.id}')"><i class="fas fa-check"></i> Verify</button>`
+    // Barangay admins see Verify + Reject for unverified residents.
+    // Super admins see the list read-only (they manage higher-level tasks).
+    const verifyBtn = (isBarangayAdmin() || isSuperAdmin()) && !u.isVerified && u.role === "resident"
+      ? `<button class="tbl-btn tbl-btn-approve" onclick="verifyResident('${u.id}')" title="Approve account"><i class="fas fa-check"></i> Approve</button>`
+      : "";
+    const rejectBtn = (isBarangayAdmin() || isSuperAdmin()) && !u.isVerified && u.role === "resident"
+      ? `<button class="tbl-btn tbl-btn-delete" onclick="rejectResident('${u.id}')" title="Reject & delete account"><i class="fas fa-ban"></i> Reject</button>`
       : "";
 
     return `
@@ -1023,7 +1044,8 @@ function renderUsersTable(filter = "") {
       <td>${escapeHtml(formatRoleLabel(u.role))}</td>
       <td>${statusPill(u.status)}</td>
       <td style="display:flex;gap:5px;flex-wrap:wrap;">
-        ${verifyAction}
+        ${verifyBtn}
+        ${rejectBtn}
         <button class="tbl-btn tbl-btn-view" onclick="openViewResidentModal('${u.id}')"><i class="fas fa-eye"></i></button>
       </td>
     </tr>`;
@@ -1034,7 +1056,77 @@ function renderUsersTable(filter = "") {
 }
 
 function filterUsers() {
-  renderUsersTable(document.getElementById("userSearch").value || "");
+  renderUsersTable(
+    document.getElementById("userSearch")?.value || "",
+    document.getElementById("userStatusFilter")?.value || ""
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// RESIDENT VERIFICATION ACTIONS
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Approves a resident account by setting is_verified = true.
+ * Called from both the users table "Approve" button and the
+ * View Resident modal's action button.
+ */
+async function verifyResident(id) {
+  if (!id) return;
+
+  const user = usersData.find(u => u.id === id);
+  const name = user ? `${user.first} ${user.last}` : "this resident";
+
+  if (!window.confirm(`Approve the account for ${name}? They will be able to log in immediately.`)) return;
+
+  const { error } = await supabaseClient
+    .from("profiles")
+    .update({ is_verified: true })
+    .eq("id", id);
+
+  if (error) {
+    showAdminToast(`Failed to approve: ${error.message}`);
+    return;
+  }
+
+  showAdminToast(`✅ Account approved for ${name}.`);
+
+  // Close modal if open, then reload residents and refresh all panels.
+  closeModal("viewResidentModalOverlay");
+  await loadResidents();
+  renderAllPanels();
+}
+
+/**
+ * Rejects a resident by deleting their profile row (cascades to auth.users
+ * via the on-delete-cascade FK, removing the account entirely).
+ * Only admins scoped to the same barangay can do this (RLS enforced in DB).
+ */
+async function rejectResident(id) {
+  if (!id) return;
+
+  const user = usersData.find(u => u.id === id);
+  const name = user ? `${user.first} ${user.last}` : "this resident";
+
+  if (!window.confirm(
+    `Reject and DELETE the account for ${name}?\n\nThis is permanent — the resident will need to sign up again.`
+  )) return;
+
+  // Delete the profile row; the ON DELETE CASCADE on auth.users will remove the auth record too.
+  const { error } = await supabaseClient
+    .from("profiles")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    showAdminToast(`Failed to reject: ${error.message}`);
+    return;
+  }
+
+  showAdminToast(`Account for ${name} has been rejected and removed.`);
+  closeModal("viewResidentModalOverlay");
+  await loadResidents();
+  renderAllPanels();
 }
 
 function openViewResidentModal(id) {
@@ -1050,8 +1142,14 @@ function openViewResidentModal(id) {
   document.getElementById("vrStatus").innerHTML = statusPill(user.status);
 
   const actionContainer = document.getElementById("vrActionContainer");
-  if (isBarangayAdmin() && !user.isVerified && user.role === "resident") {
-    actionContainer.innerHTML = `<button type="button" class="btn-admin-primary" onclick="verifyResident('${user.id}'); closeModal('viewResidentModalOverlay')"><i class="fas fa-check"></i> Verify Resident</button>`;
+  if ((isBarangayAdmin() || isSuperAdmin()) && !user.isVerified && user.role === "resident") {
+    actionContainer.innerHTML = `
+      <button type="button" class="btn-admin-primary" onclick="verifyResident('${user.id}')">
+        <i class="fas fa-check"></i> Approve
+      </button>
+      <button type="button" class="btn-admin-danger" onclick="rejectResident('${user.id}')">
+        <i class="fas fa-ban"></i> Reject
+      </button>`;
   } else {
     actionContainer.innerHTML = "";
   }

@@ -64,6 +64,7 @@
                 <li>
                     <a href="#" class="admin-nav-link" data-panel="users">
                         <i class="fas fa-users"></i> <span>Users / Residents</span>
+                        <span class="nav-badge pending" id="navPendingVerifCount" style="display:none">0</span>
                     </a>
                 </li>
                 <li>
@@ -332,7 +333,7 @@
                     <div class="toolbar-filters">
                         <select id="userStatusFilter" class="admin-select" onchange="filterUsers()">
                             <option value="">All Status</option>
-                            <option value="active">Active</option>
+                            <option value="verified">Verified</option>
                             <option value="pending">Pending Verification</option>
                         </select>
                         <select id="userBarangayFilter" class="admin-select" onchange="filterUsers()">

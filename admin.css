@@ -902,6 +902,29 @@ body {
     background: var(--light-bg);
 }
 
+.btn-admin-danger {
+    background: #e74c3c;
+    color: var(--white);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.btn-admin-danger:hover {
+    background: #c0392b;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(192, 57, 43, 0.35);
+}
+
 /* =========================================
    BARANGAY SUMMARY
    ========================================= */
