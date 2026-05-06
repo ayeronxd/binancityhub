@@ -1109,72 +1109,77 @@
 
     <!-- ===== ANNOUNCEMENT DETAILS MODAL ===== -->
     <div class="modal-backdrop" id="announcementModalOverlay" onclick="closeAnnouncementModal()" style="z-index: 3000;">
-        <div class="login-modal" id="announcementModalCard" onclick="event.stopPropagation()"
-            style="max-width:600px;padding:0;overflow:hidden;text-align:left;">
-            <!-- Header gradient -->
-            <div
-                style="background:linear-gradient(135deg,#1a3a52,#0f2236);padding:22px 24px;display:flex;align-items:center;justify-content:space-between">
-                <div style="display:flex;align-items:center;gap:12px">
-                    <div
-                        style="width:38px;height:38px;background:rgba(212,165,116,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:16px">
-                        <i class="fas fa-bullhorn"></i>
-                    </div>
-                    <div>
-                        <div
-                            style="font-size:11px;color:rgba(255,255,255,0.4);font-weight:600;text-transform:uppercase;letter-spacing:1px">
-                            <i class="fas fa-tag"></i> <span id="annModalCategory">-</span>
-                        </div>
-                        <div style="font-size:16px;font-weight:700;color:#fff" id="annModalTitle">-</div>
-                    </div>
-                </div>
-                <button class="modal-x" onclick="closeAnnouncementModal()" aria-label="Close"
-                    style="position:relative;top:unset;right:unset"><i class="fas fa-times"></i></button>
+        <div class="login-modal ig-modal-layout" id="announcementModalCard" onclick="event.stopPropagation()">
+            
+            <div id="annModalMediaLeft" class="ig-modal-left">
+                <div id="annModalMedia"></div>
             </div>
 
-            <div style="padding: 24px; max-height: calc(100vh - 200px); overflow-y: auto;">
-                <div style="font-size:12px;color:var(--gold);display:flex;gap:12px;margin-bottom:16px">
-                    <span><i class="fas fa-calendar-alt"></i> <span id="annModalDate">-</span></span>
+            <div id="annModalRightSide" class="ig-modal-right">
+                <!-- Header gradient -->
+                <div class="ig-modal-header">
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <div
+                            style="width:38px;height:38px;background:rgba(212,165,116,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:16px">
+                            <i class="fas fa-bullhorn"></i>
+                        </div>
+                        <div>
+                            <div
+                                style="font-size:11px;color:rgba(255,255,255,0.4);font-weight:600;text-transform:uppercase;letter-spacing:1px">
+                                <i class="fas fa-tag"></i> <span id="annModalCategory">-</span>
+                            </div>
+                            <div style="font-size:16px;font-weight:700;color:#fff" id="annModalTitle">-</div>
+                        </div>
+                    </div>
+                    <button class="modal-x" onclick="closeAnnouncementModal()" aria-label="Close"
+                        style="position:relative;top:unset;right:unset"><i class="fas fa-times"></i></button>
                 </div>
-                <div id="annModalContent"
-                    style="color:rgba(255,255,255,0.85);font-size:15px;line-height:1.6;white-space:pre-wrap;margin-bottom:24px;">
-                </div>
-                <div id="annModalMedia" style="margin-bottom:24px;display:none;"></div>
 
-                <div class="ann-social-bar"
-                    style="display:flex;align-items:center;gap:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);margin-bottom:20px;">
-                    <button id="annLikeBtn" onclick="toggleAnnouncementLike()" class="btn-like"
-                        style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--text-main);padding:8px 16px;border-radius:100px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;cursor:pointer;transition:all 0.2s;">
-                        <i class="far fa-heart" id="annLikeIcon"></i> <span id="annLikeCount">0</span> Likes
-                    </button>
-                </div>
+                <div class="ig-modal-body">
+                    <div style="font-size:12px;color:var(--gold);display:flex;gap:12px;margin-bottom:16px">
+                        <span><i class="fas fa-calendar-alt"></i> <span id="annModalDate">-</span></span>
+                    </div>
+                    <div id="annModalContent"
+                        style="color:rgba(255,255,255,0.85);font-size:15px;line-height:1.6;white-space:pre-wrap;margin-bottom:8px;">
+                    </div>
+                    <button id="annModalSeeMoreBtn" style="display:none; background:none; border:none; color:var(--text-muted); font-size:13px; font-weight:600; cursor:pointer; padding:0; margin-bottom:16px; text-align:left;">See more...</button>
 
-                <div class="ann-comments-section" style="display:flex;flex-direction:column;min-height:200px;">
-                    <h4
-                        style="font-size:14px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">
-                        Comments</h4>
-
-                    <div id="annCommentsList"
-                        style="display:flex;flex-direction:column;gap:16px; margin-bottom:20px; flex: 1;">
-                        <!-- Comments will be injected here -->
+                    <div class="ann-social-bar"
+                        style="display:flex;align-items:center;gap:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);margin-bottom:20px;">
+                        <button id="annLikeBtn" onclick="toggleAnnouncementLike()" class="btn-like"
+                            style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--text-main);padding:8px 16px;border-radius:100px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;cursor:pointer;transition:all 0.2s;">
+                            <i class="far fa-heart" id="annLikeIcon"></i> <span id="annLikeCount">0</span> Likes
+                        </button>
                     </div>
 
-                    <div class="ann-comment-input-area"
-                        style="position:sticky; bottom: -24px; background: linear-gradient(180deg, transparent 0%, #0c1c2e 20%, #0c1c2e 100%); padding: 20px 0 10px; margin:-10px 0; z-index: 10;">
-                        <!-- Reply context banner -->
-                        <div id="annReplyBanner"
-                            style="display:none;align-items:center;gap:8px;background:rgba(212,165,116,0.08);border:1px solid rgba(212,165,116,0.2);border-radius:8px;padding:6px 12px;margin-bottom:8px;font-size:12px;color:rgba(255,255,255,0.65);">
-                            <i class="fas fa-reply" style="color:var(--gold);font-size:11px;"></i>
-                            <span id="annReplyBannerText">Replying to <strong style="color:var(--gold)"></strong></span>
-                            <button onclick="clearReplyParent()"
-                                style="margin-left:auto;background:none;border:none;color:rgba(255,255,255,0.4);font-size:13px;cursor:pointer;padding:0 2px;line-height:1;"
-                                title="Cancel reply"><i class="fas fa-times"></i></button>
+                    <div class="ann-comments-section" style="display:flex;flex-direction:column;flex: 1;">
+                        <h4
+                            style="font-size:14px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">
+                            Comments</h4>
+
+                        <div id="annCommentsList"
+                            style="display:flex;flex-direction:column;gap:16px; margin-bottom:20px; flex: 1;">
+                            <!-- Comments will be injected here -->
                         </div>
-                        <div style="display:flex;gap:10px;">
-                            <input type="text" id="annCommentInput" class="glass-input" placeholder="Write a comment..."
-                                style="flex:1" onkeypress="if(event.key === 'Enter') postAnnouncementComment()">
-                            <button onclick="postAnnouncementComment()" class="btn-gold"
-                                style="padding:0 20px; border-radius: 8px;" aria-label="Post comment"><i
-                                    class="fas fa-paper-plane"></i></button>
+
+                        <div class="ann-comment-input-area"
+                            style="position:sticky; bottom: -24px; padding: 20px 0 10px; margin:-10px 0; z-index: 10;">
+                            <!-- Reply context banner -->
+                            <div id="annReplyBanner"
+                                style="display:none;align-items:center;gap:8px;background:rgba(212,165,116,0.08);border:1px solid rgba(212,165,116,0.2);border-radius:8px;padding:6px 12px;margin-bottom:8px;font-size:12px;color:rgba(255,255,255,0.65);">
+                                <i class="fas fa-reply" style="color:var(--gold);font-size:11px;"></i>
+                                <span id="annReplyBannerText">Replying to <strong style="color:var(--gold)"></strong></span>
+                                <button onclick="clearReplyParent()"
+                                    style="margin-left:auto;background:none;border:none;color:rgba(255,255,255,0.4);font-size:13px;cursor:pointer;padding:0 2px;line-height:1;"
+                                    title="Cancel reply"><i class="fas fa-times"></i></button>
+                            </div>
+                            <div style="display:flex;gap:10px;">
+                                <input type="text" id="annCommentInput" class="glass-input" placeholder="Write a comment..."
+                                    style="flex:1" onkeypress="if(event.key === 'Enter') postAnnouncementComment()">
+                                <button onclick="postAnnouncementComment()" class="btn-gold"
+                                    style="padding:0 20px; border-radius: 8px;" aria-label="Post comment"><i
+                                        class="fas fa-paper-plane"></i></button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1184,7 +1189,7 @@
 
     <!-- ===== COMMENT EDIT HISTORY MODAL ===== -->
     <div class="modal-backdrop" id="commentEditHistoryModal" onclick="closeCommentEditHistoryModal()"
-        style="z-index:106;">
+        style="z-index:3100;">
         <div class="login-modal" style="max-width:460px;padding:0;overflow:hidden" onclick="event.stopPropagation()">
             <!-- Header -->
             <div

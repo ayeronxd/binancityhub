@@ -801,20 +801,56 @@ async function openAnnouncement(id) {
   setText("annModalTitle", ann.title);
   setText("annModalDate", ann.date);
   setText("annModalCategory", ann.category);
-  setText("annModalContent", ann.content);
+
+  const contentEl = document.getElementById("annModalContent");
+  const seeMoreBtn = document.getElementById("annModalSeeMoreBtn");
+
+  if (contentEl) {
+      const MAX_CHARS = 250;
+      let isCollapsed = false;
+      
+      if (ann.content.length > MAX_CHARS) {
+          isCollapsed = true;
+          contentEl.textContent = ann.content.substring(0, MAX_CHARS) + "...";
+          
+          if (seeMoreBtn) {
+              seeMoreBtn.style.display = "inline-block";
+              seeMoreBtn.textContent = "See more...";
+              seeMoreBtn.onclick = () => {
+                  isCollapsed = !isCollapsed;
+                  if (isCollapsed) {
+                      contentEl.textContent = ann.content.substring(0, MAX_CHARS) + "...";
+                      seeMoreBtn.textContent = "See more...";
+                  } else {
+                      contentEl.textContent = ann.content;
+                      seeMoreBtn.textContent = "See less";
+                  }
+              };
+          }
+      } else {
+          contentEl.textContent = ann.content;
+          if (seeMoreBtn) {
+              seeMoreBtn.style.display = "none";
+          }
+      }
+  }
 
   const mediaContainer = document.getElementById("annModalMedia");
+  const modalCard = document.getElementById("announcementModalCard");
+
   if (mediaContainer) {
     if (ann.media_url) {
       if (ann.media_type === 'video') {
-        mediaContainer.innerHTML = `<div class="fb-media-wrapper"><video controls src="${escapeAttr(ann.media_url)}" style="width:100%;max-height:500px;background:#000;display:block;border-radius:8px;"></video></div>`;
+        mediaContainer.innerHTML = `<video controls src="${escapeAttr(ann.media_url)}" style="max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;background:#000;display:block;border-radius:0;"></video>`;
       } else {
-        mediaContainer.innerHTML = `<div class="fb-media-wrapper"><img src="${escapeAttr(ann.media_url)}" alt="Attachment" style="width:100%;object-fit:cover;max-height:500px;display:block;border-radius:8px;cursor:pointer;" onclick="openLightbox('${escapeAttr(ann.media_url)}')"></div>`;
+        mediaContainer.innerHTML = `<img src="${escapeAttr(ann.media_url)}" alt="Attachment" style="max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;display:block;border-radius:0;cursor:pointer;" onclick="openLightbox('${escapeAttr(ann.media_url)}')">`;
       }
-      mediaContainer.style.display = "block";
+      mediaContainer.style.display = "flex";
+      if (modalCard) modalCard.classList.remove("no-media");
     } else {
       mediaContainer.innerHTML = "";
       mediaContainer.style.display = "none";
+      if (modalCard) modalCard.classList.add("no-media");
     }
   }
 

@@ -3400,3 +3400,107 @@ body.logged-in #reportForm.user-only {
         padding: 16px 10px 10px;
     }
 }
+
+/* Instagram-like Announcement Modal Layout */
+.ig-modal-layout {
+    max-width: 1100px !important;
+    width: 90vw !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    text-align: left !important;
+    display: flex;
+    flex-direction: row;
+    height: 85vh;
+    max-height: 800px;
+    background: var(--navy-dark) !important;
+}
+
+.ig-modal-left {
+    flex: 1.5;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border-right: 1px solid rgba(255,255,255,0.05);
+}
+
+.ig-modal-left #annModalMedia {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ig-modal-right {
+    flex: 1;
+    max-width: 550px;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, #1a3a52, #0f2236);
+}
+
+.ig-modal-header {
+    padding: 22px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.ig-modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Modifiers when there is no media */
+.ig-modal-layout.no-media {
+    max-width: 600px !important;
+    height: auto !important;
+    max-height: 85vh !important;
+}
+
+.ig-modal-layout.no-media .ig-modal-left {
+    display: none !important;
+}
+
+.ig-modal-layout.no-media .ig-modal-right {
+    max-width: 100%;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 800px) {
+    .ig-modal-layout {
+        flex-direction: column;
+        height: 90vh;
+        width: 95vw !important;
+    }
+    
+    .ig-modal-left {
+        flex: none;
+        height: 40vh; /* Adjust height for image on mobile */
+        border-right: none;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .ig-modal-right {
+        flex: 1;
+        max-width: 100%;
+    }
+}
+
+/* Comment input styling for less transparency */
+.ann-comment-input-area .glass-input {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.ann-comment-input-area .glass-input:focus {
+    background: rgba(0, 0, 0, 0.25);
+    border-color: rgba(212, 165, 116, 0.5);
+}
