@@ -1108,9 +1108,9 @@
     </div>
 
     <!-- ===== ANNOUNCEMENT DETAILS MODAL ===== -->
-    <div class="modal-backdrop" id="announcementModalOverlay" onclick="closeAnnouncementModal()" style="z-index: 105;">
+    <div class="modal-backdrop" id="announcementModalOverlay" onclick="closeAnnouncementModal()" style="z-index: 3000;">
         <div class="login-modal" id="announcementModalCard" onclick="event.stopPropagation()"
-            style="max-width:600px;padding:0;overflow:hidden">
+            style="max-width:600px;padding:0;overflow:hidden;text-align:left;">
             <!-- Header gradient -->
             <div
                 style="background:linear-gradient(135deg,#1a3a52,#0f2236);padding:22px 24px;display:flex;align-items:center;justify-content:space-between">
@@ -1138,6 +1138,7 @@
                 <div id="annModalContent"
                     style="color:rgba(255,255,255,0.85);font-size:15px;line-height:1.6;white-space:pre-wrap;margin-bottom:24px;">
                 </div>
+                <div id="annModalMedia" style="margin-bottom:24px;display:none;"></div>
 
                 <div class="ann-social-bar"
                     style="display:flex;align-items:center;gap:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);margin-bottom:20px;">
@@ -1205,6 +1206,14 @@
             </div>
             <!-- History list -->
             <div id="commentEditHistoryList" style="padding:6px 22px 20px;max-height:420px;overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <!-- ===== IMAGE LIGHTBOX MODAL ===== -->
+    <div class="modal-backdrop" id="lightboxModal" onclick="closeLightbox()" style="z-index: 4000; padding: 20px;">
+        <div style="position:relative; max-width:90vw; max-height:90vh; display:flex; align-items:center; justify-content:center;" onclick="event.stopPropagation()">
+            <button class="modal-x" onclick="closeLightbox()" aria-label="Close" style="position:absolute; top:-40px; right:-20px; background:rgba(0,0,0,0.5); color:#fff; border-radius:50%;"><i class="fas fa-times"></i></button>
+            <img id="lightboxImage" src="" style="max-width:100%; max-height:90vh; object-fit:contain; border-radius:8px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
         </div>
     </div>
 

@@ -803,6 +803,21 @@ async function openAnnouncement(id) {
   setText("annModalCategory", ann.category);
   setText("annModalContent", ann.content);
 
+  const mediaContainer = document.getElementById("annModalMedia");
+  if (mediaContainer) {
+    if (ann.media_url) {
+      if (ann.media_type === 'video') {
+        mediaContainer.innerHTML = `<div class="fb-media-wrapper"><video controls src="${escapeAttr(ann.media_url)}" style="width:100%;max-height:500px;background:#000;display:block;border-radius:8px;"></video></div>`;
+      } else {
+        mediaContainer.innerHTML = `<div class="fb-media-wrapper"><img src="${escapeAttr(ann.media_url)}" alt="Attachment" style="width:100%;object-fit:cover;max-height:500px;display:block;border-radius:8px;cursor:pointer;" onclick="openLightbox('${escapeAttr(ann.media_url)}')"></div>`;
+      }
+      mediaContainer.style.display = "block";
+    } else {
+      mediaContainer.innerHTML = "";
+      mediaContainer.style.display = "none";
+    }
+  }
+
   document.getElementById("announcementModalOverlay").classList.add("open");
   document.getElementById("annLikeCount").innerText = "0"; // To be updated by load
   document.getElementById("annCommentsList").innerHTML = ""; // Clear old comments
@@ -821,6 +836,24 @@ async function openAnnouncement(id) {
 function closeAnnouncementModal() {
   document.getElementById("announcementModalOverlay").classList.remove("open");
   currentOpenAnnId = null;
+}
+
+function openLightbox(src) {
+  const lightbox = document.getElementById("lightboxModal");
+  const img = document.getElementById("lightboxImage");
+  if (lightbox && img) {
+    img.src = src;
+    lightbox.classList.add("open");
+  }
+}
+
+function closeLightbox() {
+  const lightbox = document.getElementById("lightboxModal");
+  const img = document.getElementById("lightboxImage");
+  if (lightbox && img) {
+    lightbox.classList.remove("open");
+    setTimeout(() => { img.src = ""; }, 200); // clear src after animation
+  }
 }
 
 let activeReplyParentId = null;
