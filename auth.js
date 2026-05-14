@@ -61,6 +61,9 @@ function bindForms() {
 
   document.querySelectorAll(".auth-input").forEach((input) => {
     input.addEventListener("input", function () {
+      if (this.id === "signupPhone" || this.id === "signupAge") {
+        this.value = this.value.replace(/[^0-9]/g, "");
+      }
       this.classList.remove("error");
       const errorEl = document.getElementById(this.id + "Error");
       if (errorEl) errorEl.textContent = "";
