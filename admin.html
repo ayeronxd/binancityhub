@@ -22,7 +22,7 @@
 
 <body>
 
-<!--
+    <!--
   File: admin.html
   What this file does:
   - Defines the admin operational workspace (overview, CRUD panels, charts, modals).
@@ -53,6 +53,11 @@
                 <li>
                     <a href="#" class="admin-nav-link active" data-panel="overview">
                         <i class="fas fa-chart-pie"></i> <span>Overview</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="admin-nav-link" data-panel="analytics">
+                        <i class="fas fa-chart-line"></i> <span>Analytics</span>
                     </a>
                 </li>
                 <li>
@@ -88,15 +93,20 @@
                         <span class="nav-badge pending" id="navIssuePendingCount">0</span>
                     </a>
                 </li>
-                <li>
+                <!-- <li>
                     <a href="#" class="admin-nav-link" data-panel="workers">
                         <i class="fas fa-briefcase"></i> <span>Workers Registry</span>
                         <span class="nav-badge pending" id="navServiceRequestCount" style="display:none">0</span>
                     </a>
-                </li>
+                </li> -->
                 <li>
                     <a href="#" class="admin-nav-link" data-panel="doctemplates">
                         <i class="fas fa-file-word"></i> <span>Doc Templates</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="admin-nav-link" data-panel="health-schedules">
+                        <i class="fas fa-notes-medical"></i> <span>Health Schedules</span>
                     </a>
                 </li>
             </ul>
@@ -177,7 +187,8 @@
                             <span class="table-count-badge" id="adminRoleContext">City-Wide</span>
                         </div>
                     </div>
-                    <div class="px-4 pb-3 text-muted" id="roleModeDesc">Global operations across all barangays and system users.</div>
+                    <div class="px-4 pb-3 text-muted" id="roleModeDesc">Global operations across all barangays and
+                        system users.</div>
                 </div>
                 <!-- Stat Cards -->
                 <div class="stat-cards-row">
@@ -186,7 +197,8 @@
                         <div class="stat-card-info">
                             <span class="stat-label">Total Residents</span>
                             <span class="stat-value" id="statResidents">0</span>
-                            <span class="stat-trend neutral" id="statResidentsTrend"><i class="fas fa-database"></i> Live from database</span>
+                            <span class="stat-trend neutral" id="statResidentsTrend"><i class="fas fa-database"></i>
+                                Live from database</span>
                         </div>
                     </div>
                     <div class="stat-card">
@@ -194,7 +206,8 @@
                         <div class="stat-card-info">
                             <span class="stat-label">Document Requests</span>
                             <span class="stat-value" id="statDocRequests">0</span>
-                            <span class="stat-trend neutral" id="statDocTrend"><i class="fas fa-clock"></i> 0 pending</span>
+                            <span class="stat-trend neutral" id="statDocTrend"><i class="fas fa-clock"></i> 0
+                                pending</span>
                         </div>
                     </div>
                     <div class="stat-card">
@@ -202,7 +215,8 @@
                         <div class="stat-card-info">
                             <span class="stat-label">Registered Workers</span>
                             <span class="stat-value" id="statWorkers">0</span>
-                            <span class="stat-trend neutral" id="statWorkersTrend"><i class="fas fa-check-circle"></i> 0 active</span>
+                            <span class="stat-trend neutral" id="statWorkersTrend"><i class="fas fa-check-circle"></i> 0
+                                active</span>
                         </div>
                     </div>
                     <div class="stat-card">
@@ -210,53 +224,173 @@
                         <div class="stat-card-info">
                             <span class="stat-label">Pending Reports</span>
                             <span class="stat-value" id="statPendingReports">0</span>
-                            <span class="stat-trend neutral" id="statReportsTrend"><i class="fas fa-clipboard-check"></i> 0 resolved</span>
+                            <span class="stat-trend neutral" id="statReportsTrend"><i
+                                    class="fas fa-clipboard-check"></i> 0 resolved</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Center Tables -->
+                <div class="overview-tables-row">
+                    <!-- Recent Document Requests -->
+                    <div class="admin-table-card">
+                        <div class="table-card-header">
+                            <h4>Recent Document Requests</h4>
+                            <button class="btn-table-action" onclick="showPanel('documents')">View All</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Ref No.</th>
+                                        <th>Resident</th>
+                                        <th>Document</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="overviewRequestsBody">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Recent Issue Reports -->
+                    <div class="admin-table-card">
+                        <div class="table-card-header">
+                            <h4>Recent Issue Reports</h4>
+                            <button class="btn-table-action" onclick="showPanel('reports')">View All</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Category</th>
+                                        <th>Location</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="overviewReportsBody">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== ANALYTICS PANEL ===== -->
+            <div class="admin-panel" id="panel-analytics"
+                style="background:var(--navy); padding: 24px; min-height: 100%;">
+
+                <!-- Stat Cards -->
+                <div class="legacy-stat-cards-row">
+                    <div class="glass-card legacy-stat-card">
+                        <div class="sc-icon blue"><i class="fas fa-users"></i></div>
+                        <div class="sc-body">
+                            <span class="sc-label">Total Residents</span>
+                            <span class="sc-value" id="anlStatResidents">0</span>
+                            <span class="sc-trend positive" id="anlStatResidentsTrend"><i class="fas fa-arrow-up"></i> 0
+                                this month</span>
+                        </div>
+                    </div>
+                    <div class="glass-card legacy-stat-card">
+                        <div class="sc-icon gold"><i class="fas fa-file-circle-check"></i></div>
+                        <div class="sc-body">
+                            <span class="sc-label">Documents Processed</span>
+                            <span class="sc-value" id="anlStatDocs">0</span>
+                            <span class="sc-trend positive" id="anlStatDocsTrend"><i class="fas fa-arrow-up"></i> 0 this
+                                month</span>
+                        </div>
+                    </div>
+                    <div class="glass-card legacy-stat-card">
+                        <div class="sc-icon green"><i class="fas fa-briefcase"></i></div>
+                        <div class="sc-body">
+                            <span class="sc-label">Registered Workers</span>
+                            <span class="sc-value" id="anlStatWorkers">0</span>
+                            <span class="sc-trend positive" id="anlStatWorkersTrend"><i class="fas fa-arrow-up"></i> 0
+                                active</span>
+                        </div>
+                    </div>
+                    <div class="glass-card legacy-stat-card">
+                        <div class="sc-icon red"><i class="fas fa-triangle-exclamation"></i></div>
+                        <div class="sc-body">
+                            <span class="sc-label">Open Issue Reports</span>
+                            <span class="sc-value" id="anlStatIssues">0</span>
+                            <span class="sc-trend positive" id="anlStatIssuesTrend"><i class="fas fa-arrow-up"></i> 0
+                                resolved</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Charts Row -->
-                <div class="charts-row">
-                    <div class="admin-chart-card large">
-                        <div class="chart-header">
-                            <h4>Document Requests - Monthly</h4>
-                            <span class="chart-period">Last 6 months</span>
+                <div class="legacy-charts-row">
+                    <div class="glass-card legacy-chart-card-lg">
+                        <div class="gc-header">
+                            <div>
+                                <h4><i class="fas fa-chart-line"></i> Document Request Trends</h4>
+                                <span class="gc-sub">Monthly volume - Barangay Poblacion</span>
+                            </div>
+                            <span class="live-chip"><span class="live-dot sm"></span> Live</span>
                         </div>
-                        <canvas id="adminDocChart" height="100"></canvas>
+                        <div style="padding:12px 16px 12px;">
+                            <div style="position:relative; height:355px; width:100%;">
+                                <canvas id="anlDocTrendChart"></canvas>
+                            </div>
+                        </div>
                     </div>
-                    <div class="admin-chart-card">
-                        <div class="chart-header">
-                            <h4>Request Types</h4>
+                    <div class="glass-card legacy-chart-card-sm">
+                        <div class="gc-header">
+                            <h4><i class="fas fa-chart-pie"></i> Request Types</h4>
                         </div>
-                        <canvas id="adminTypeChart" height="180"></canvas>
+                        <div style="padding:16px 16px 29px;">
+                            <div style="position:relative; height:220px; width:100%;">
+                                <canvas id="anlDocTypeChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-legend-custom" id="anlDocTypeLegend"></div>
                     </div>
                 </div>
 
-                <!-- Recent Activity -->
-                <div class="admin-table-card">
-                    <div class="table-card-header">
-                        <h4>Recent Document Requests</h4>
-                        <button class="btn-table-action" onclick="showPanel('documents')">View All</button>
+                <!-- Barangay Coverage Table -->
+                <div class="glass-card" style="margin-top:18px">
+                    <div class="gc-header">
+                        <div>
+                            <h4><i class="fas fa-map-marker-alt"></i> Barangay Coverage</h4>
+                            <span class="gc-sub" id="anlCoverageSub">All 24 barangays of Bi&ntilde;an City</span>
+                        </div>
+                        <span class="scope-chip" id="anlScopeChip">Primary Service Area: Poblacion</span>
                     </div>
                     <div class="table-responsive">
-                        <table class="admin-table">
+                        <table class="portal-table" id="anlBarangayTable">
                             <thead>
                                 <tr>
-                                    <th>Ref No.</th>
-                                    <th>Resident</th>
-                                    <th>Document</th>
                                     <th>Barangay</th>
-                                    <th>Date</th>
+                                    <th>Residents</th>
+                                    <th>Docs Processed</th>
+                                    <th>Workers</th>
                                     <th>Status</th>
-                                    <th>Action</th>
                                 </tr>
                             </thead>
-                            <tbody id="overviewRequestsBody">
-                                <!-- Populated by JS -->
-                            </tbody>
+                            <tbody id="anlBarangayTableBody"></tbody>
                         </table>
                     </div>
                 </div>
+
+                <!-- Skills Chart -->
+                <div class="glass-card" style="margin-top:18px;">
+                    <div class="gc-header">
+                        <h4><i class="fas fa-hammer"></i> Most Searched Skills This Month</h4>
+                    </div>
+                    <div style="padding:16px;">
+                        <div style="position:relative; height:140px; width:100%;">
+                            <canvas id="anlSkillsChart" height="140"></canvas>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- ===== BARANGAYS PANEL ===== -->
@@ -346,7 +480,8 @@
                 <div class="admin-table-card">
                     <div class="table-card-header">
                         <h4 id="usersPanelHeading">All System Users</h4>
-                        <small id="residentVerifyHint" class="text-muted">Verification controls are available in Barangay Admin scope.</small>
+                        <small id="residentVerifyHint" class="text-muted">Verification controls are available in
+                            Barangay Admin scope.</small>
                         <span class="table-count-badge" id="userCount">0 users</span>
                     </div>
                     <div class="table-responsive">
@@ -438,11 +573,12 @@
             </div>
 
             <!-- ===== ISSUE REPORTS PANEL ===== -->
-                        <div class="admin-panel" id="panel-reports">
+            <div class="admin-panel" id="panel-reports">
                 <div class="panel-toolbar">
                     <div class="toolbar-search">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="issueSearch" placeholder="Search reports..." oninput="filterIssueReports()">
+                        <input type="text" id="issueSearch" placeholder="Search reports..."
+                            oninput="filterIssueReports()">
                     </div>
                     <select class="admin-select" id="issueCategoryFilter" onchange="filterIssueReports()">
                         <option value="">All Categories</option>
@@ -473,6 +609,7 @@
                                     <th>Barangay</th>
                                     <th>Reported By</th>
                                     <th>Date</th>
+                                    <th>Resolution Time</th>
                                     <th>Status</th>
                                     <th>Action</th>
                                 </tr>
@@ -496,69 +633,76 @@
                         <i class="fas fa-plus"></i> Add Worker
                     </button>
                 </div>
-            <!-- Pending Service Verifications sub-section -->
-            <div class="admin-table-card" id="pendingVerificationsCard" style="margin-bottom:20px;">
-                <div class="table-card-header" style="display:flex;align-items:center;justify-content:space-between;">
-                    <h4 style="display:flex;align-items:center;gap:10px;">
-                        <i class="fas fa-bell" style="color:#f39c12;"></i>
-                        Pending Service Verifications
-                        <span class="nav-badge pending" id="pendingVerifBadge" style="display:none;">0</span>
-                    </h4>
-                    <span style="font-size:12px;color:var(--text-muted);">Residents are requesting confirmation that a job was completed.</span>
+                <!-- Pending Service Verifications sub-section -->
+                <div class="admin-table-card" id="pendingVerificationsCard" style="margin-bottom:20px;">
+                    <div class="table-card-header"
+                        style="display:flex;align-items:center;justify-content:space-between;">
+                        <h4 style="display:flex;align-items:center;gap:10px;">
+                            <i class="fas fa-bell" style="color:#f39c12;"></i>
+                            Pending Service Verifications
+                            <span class="nav-badge pending" id="pendingVerifBadge" style="display:none;">0</span>
+                        </h4>
+                        <span style="font-size:12px;color:var(--text-muted);">Residents are requesting confirmation that
+                            a job was completed.</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Resident</th>
+                                    <th>Worker</th>
+                                    <th>Note</th>
+                                    <th>Requested</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pendingVerifBody">
+                                <tr>
+                                    <td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;"><i
+                                            class="fas fa-check-circle" style="color:#4cde80;"></i> No pending
+                                        verifications</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="table-responsive">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th>Resident</th>
-                                <th>Worker</th>
-                                <th>Note</th>
-                                <th>Requested</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pendingVerifBody">
-                            <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;"><i class="fas fa-check-circle" style="color:#4cde80;"></i> No pending verifications</td></tr>
-                        </tbody>
-                    </table>
+
+                <!-- Workers Registry table -->
+                <div class="admin-table-card">
+                    <div class="table-card-header">
+                        <h4>Workers Registry</h4>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Name</th>
+                                    <th>Specialty</th>
+                                    <th>Barangay</th>
+                                    <th>Phone</th>
+                                    <th>Rating</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                    <th>Service Log</th>
+                                </tr>
+                            </thead>
+                            <tbody id="workersAdminBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            <!-- Workers Registry table -->
-            <div class="admin-table-card">
-                <div class="table-card-header">
-                    <h4>Workers Registry</h4>
-                </div>
-                <div class="table-responsive">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Name</th>
-                                <th>Specialty</th>
-                                <th>Barangay</th>
-                                <th>Phone</th>
-                                <th>Rating</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                                <th>Service Log</th>
-                            </tr>
-                        </thead>
-                        <tbody id="workersAdminBody">
-                            <!-- Populated by JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-                <!-- ===== DOCUMENT TEMPLATES PANEL ===== -->
+            <!-- ===== DOCUMENT TEMPLATES PANEL ===== -->
             <div class="admin-panel" id="panel-doctemplates">
                 <div class="panel-toolbar">
                     <h4 class="mb-0 me-3" id="doctplPanelHeading">Document Templates</h4>
                     <div class="toolbar-filters" style="display:flex;gap:8px;align-items:center;">
                         <!-- Super admin: pick which barangay's templates to view -->
-                        <select id="doctplBarangayFilter" class="admin-select" onchange="renderDocTemplatesPanel()" style="display:none">
+                        <select id="doctplBarangayFilter" class="admin-select" onchange="renderDocTemplatesPanel()"
+                            style="display:none">
                             <option value="">— Select Barangay —</option>
                         </select>
                         <select id="doctplTypeFilter" class="admin-select" onchange="renderDocTemplatesPanel()">
@@ -578,10 +722,13 @@
                 <!-- Placeholder Reference Card -->
                 <div class="admin-table-card mb-3" id="placeholderRefCard">
                     <div class="table-card-header">
-                        <h4><i class="fas fa-info-circle" style="color:var(--accent-gold)"></i> How to use templates</h4>
+                        <h4><i class="fas fa-info-circle" style="color:var(--accent-gold)"></i> How to use templates
+                        </h4>
                     </div>
                     <div class="px-4 pb-3">
-                        <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Create a <strong>.docx (Word)</strong> file and insert these placeholders where you want the resident's data to appear:</p>
+                        <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Create a <strong>.docx
+                                (Word)</strong> file and insert these placeholders where you want the resident's data to
+                            appear:</p>
                         <div class="placeholder-tags-row">
                             <span class="placeholder-tag">{{resident_name}}</span>
                             <span class="placeholder-tag">{{age}}</span>
@@ -598,7 +745,10 @@
                             <span class="placeholder-tag">{{phone}}</span>
                             <span class="placeholder-tag">{{document_type}}</span>
                         </div>
-                        <p style="font-size:12px;color:var(--text-muted);margin-top:10px"><i class="fas fa-lightbulb" style="color:var(--accent-gold)"></i> Example: <em>"This is to certify that <strong>{{resident_name}}</strong> is a bonafide resident of {{barangay_name}}..."</em></p>
+                        <p style="font-size:12px;color:var(--text-muted);margin-top:10px"><i class="fas fa-lightbulb"
+                                style="color:var(--accent-gold)"></i> Example: <em>"This is to certify that
+                                <strong>{{resident_name}}</strong> is a bonafide resident of {{barangay_name}}..."</em>
+                        </p>
                     </div>
                 </div>
 
@@ -608,7 +758,81 @@
                 </div>
             </div>
 
-                    <!-- ===== SETTINGS PANEL ===== -->
+            <!-- ===== HEALTH SCHEDULES PANEL ===== -->
+            <div class="admin-panel" id="panel-health-schedules">
+                <div class="panel-toolbar">
+                    <h4 class="mb-0 me-3"><i class="fas fa-notes-medical"></i> Health Center Schedules</h4>
+                </div>
+
+                <!-- Add Schedule Form -->
+                <div class="admin-card" style="margin-bottom: 22px;">
+                    <div class="admin-card-header">
+                        <span><i class="fas fa-plus-circle"></i> Add Schedule Entry</span>
+                    </div>
+                    <div class="admin-card-body">
+                        <form id="healthScheduleForm" style="display:grid; grid-template-columns: 1fr 1fr 2fr auto; gap: 15px; align-items: end;">
+                            <div class="modal-field" style="margin-bottom: 0;">
+                                <label>Barangay</label>
+                                <select id="hsBarangay" class="admin-select admin-input" required>
+                                    <option value="">Select Barangay...</option>
+                                </select>
+                            </div>
+                            <div class="modal-field" style="margin-bottom: 0;">
+                                <label>Day of Week</label>
+                                <select id="hsDayOfWeek" class="admin-select admin-input" required>
+                                    <option value="">Select Day...</option>
+                                    <option>Monday</option>
+                                    <option>Tuesday</option>
+                                    <option>Wednesday</option>
+                                    <option>Thursday</option>
+                                    <option>Friday</option>
+                                    <option>Saturday</option>
+                                    <option>Sunday</option>
+                                </select>
+                            </div>
+                            <div class="modal-field" style="margin-bottom: 0;">
+                                <label>Activity / Schedule</label>
+                                <input type="text" id="hsActivity" class="admin-input" placeholder="e.g. Baby Immunization & Vaccines" required>
+                            </div>
+                            <div class="modal-field" style="margin-bottom: 0;">
+                                <button type="submit" class="btn-admin-primary" style="height: 42px; padding: 0 24px;">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Schedules Table -->
+                <div class="admin-card">
+                    <div class="admin-card-header">
+                        <span><i class="fas fa-calendar-week"></i> All Schedules</span>
+                        <div class="toolbar-search" style="width: 220px;">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="hsSearchInput" placeholder="Filter by barangay..." oninput="filterHealthSchedules()">
+                        </div>
+                    </div>
+                    <div class="admin-card-body" style="padding: 0;">
+                        <div class="table-responsive">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align: left;">Barangay</th>
+                                        <th style="text-align: left;">Day</th>
+                                        <th style="text-align: left;">Activity</th>
+                                        <th style="text-align: center;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="healthSchedulesTableBody">
+                                    <tr><td colspan="4" style="text-align:center; padding: 30px; color: var(--text-dim);">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== SETTINGS PANEL ===== -->
             <div class="admin-panel" id="panel-settings">
                 <div class="settings-grid">
                     <div class="settings-card" id="settingsCityCard">
@@ -616,7 +840,8 @@
                         <form id="citySettingsForm">
                             <div class="settings-field">
                                 <label>City Name</label>
-                                <input type="text" class="admin-input" id="settingsCityName" value="Biñan City" required>
+                                <input type="text" class="admin-input" id="settingsCityName" value="Biñan City"
+                                    required>
                             </div>
                             <div class="settings-field">
                                 <label>Province</label>
@@ -624,7 +849,8 @@
                             </div>
                             <div class="settings-field">
                                 <label>Contact Email</label>
-                                <input type="email" class="admin-input" id="settingsContactEmail" value="hub@binan.gov.ph" required>
+                                <input type="email" class="admin-input" id="settingsContactEmail"
+                                    value="hub@binan.gov.ph" required>
                             </div>
                             <div class="settings-field">
                                 <label>Contact Phone</label>
@@ -639,7 +865,8 @@
                         <form id="portalSettingsForm">
                             <div class="settings-field">
                                 <label>Primary Barangay</label>
-                                <input type="text" class="admin-input" id="settingsPrimaryBarangay" value="Barangay Poblacion" required>
+                                <input type="text" class="admin-input" id="settingsPrimaryBarangay"
+                                    value="Barangay Poblacion" required>
                             </div>
                             <div class="settings-field">
                                 <label>Portal Launch Date</label>
@@ -662,15 +889,18 @@
                         <form id="adminAccountForm">
                             <div class="settings-field">
                                 <label>Admin Name</label>
-                                <input type="text" class="admin-input" id="settingsAdminName" value="System Administrator" required>
+                                <input type="text" class="admin-input" id="settingsAdminName"
+                                    value="System Administrator" required>
                             </div>
                             <div class="settings-field">
                                 <label>Admin Email</label>
-                                <input type="email" class="admin-input" id="settingsAdminEmail" value="admin@binan.gov.ph" readonly>
+                                <input type="email" class="admin-input" id="settingsAdminEmail"
+                                    value="admin@binan.gov.ph" readonly>
                             </div>
                             <div class="settings-field">
                                 <label>New Password</label>
-                                <input type="password" class="admin-input" id="settingsAdminPassword" placeholder="Leave blank to keep current">
+                                <input type="password" class="admin-input" id="settingsAdminPassword"
+                                    placeholder="Leave blank to keep current">
                             </div>
                             <button type="submit" class="btn-admin-primary mt-3">Update Account</button>
                         </form>
@@ -721,7 +951,8 @@
                         <ol style="margin:0;padding-left:18px">
                             <li>Click <strong>Create Invite</strong>, enter the person's email and their barangay.</li>
                             <li>Send them the normal signup link — they sign up as a regular user.</li>
-                            <li>The database trigger <strong>automatically</strong> promotes them to Barangay Admin with the correct barangay.</li>
+                            <li>The database trigger <strong>automatically</strong> promotes them to Barangay Admin with
+                                the correct barangay.</li>
                             <li>The invite is marked <em>Used</em> and cannot be reused.</li>
                         </ol>
                     </div>
@@ -737,7 +968,8 @@
                                 <option value="pending">Pending</option>
                                 <option value="used">Used</option>
                             </select>
-                            <button class="btn-table-action" onclick="loadAdminInvites()"><i class="fas fa-rotate"></i> Refresh</button>
+                            <button class="btn-table-action" onclick="loadAdminInvites()"><i class="fas fa-rotate"></i>
+                                Refresh</button>
                         </div>
                     </div>
                     <div class="table-responsive">
@@ -755,7 +987,10 @@
                                 </tr>
                             </thead>
                             <tbody id="invitesTableBody">
-                                <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px">Loading...</td></tr>
+                                <tr>
+                                    <td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px">
+                                        Loading...</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -770,14 +1005,18 @@
         <div class="admin-modal" style="max-width:480px">
             <div class="admin-modal-header">
                 <h4><i class="fas fa-user-shield"></i> Create Barangay Admin Invite</h4>
-                <button class="admin-modal-close" onclick="closeModal('createInviteModalOverlay')"><i class="fas fa-times"></i></button>
+                <button class="admin-modal-close" onclick="closeModal('createInviteModalOverlay')"><i
+                        class="fas fa-times"></i></button>
             </div>
             <div class="admin-modal-body">
-                <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">The person will sign up normally. Their account will <strong>automatically</strong> be set as a Barangay Admin for the selected barangay.</p>
+                <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">The person will sign up normally.
+                    Their account will <strong>automatically</strong> be set as a Barangay Admin for the selected
+                    barangay.</p>
                 <form id="createInviteForm">
                     <div class="modal-field">
                         <label>Email Address *</label>
-                        <input type="email" class="admin-input" id="inviteEmail" placeholder="admin@example.com" required>
+                        <input type="email" class="admin-input" id="inviteEmail" placeholder="admin@example.com"
+                            required>
                         <span class="modal-field-error" id="inviteEmailError"></span>
                     </div>
                     <div class="modal-field">
@@ -788,11 +1027,14 @@
                         <span class="modal-field-error" id="inviteBarangayError"></span>
                     </div>
                     <div class="modal-field">
-                        <label>Internal Note <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
-                        <input type="text" class="admin-input" id="inviteNote" placeholder="e.g. Coordinated via Capt. Reyes — 09XXXXXXXXX">
+                        <label>Internal Note <span
+                                style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
+                        <input type="text" class="admin-input" id="inviteNote"
+                            placeholder="e.g. Coordinated via Capt. Reyes — 09XXXXXXXXX">
                     </div>
                     <div class="admin-modal-footer">
-                        <button type="button" class="btn-admin-secondary" onclick="closeModal('createInviteModalOverlay')">Cancel</button>
+                        <button type="button" class="btn-admin-secondary"
+                            onclick="closeModal('createInviteModalOverlay')">Cancel</button>
                         <button type="submit" class="btn-admin-primary" id="btnSubmitInvite">
                             <i class="fas fa-envelope"></i> Send Invite
                         </button>
@@ -816,7 +1058,8 @@
                 <!-- Recent Issues Section -->
                 <div class="notif-section">
                     <h5 style="color: var(--primary-navy); margin-bottom: 12px; font-weight: 600;">
-                        <i class="fas fa-triangle-exclamation" style="color: var(--accent-gold); margin-right: 8px;"></i>
+                        <i class="fas fa-triangle-exclamation"
+                            style="color: var(--accent-gold); margin-right: 8px;"></i>
                         Recent Issue Reports
                     </h5>
                     <div id="notifRecentIssues" style="margin-bottom: 20px;">
@@ -840,7 +1083,8 @@
                 </div>
             </div>
             <div class="admin-modal-footer">
-                <button type="button" class="btn-admin-secondary" onclick="closeModal('notificationsModalOverlay')">Close</button>
+                <button type="button" class="btn-admin-secondary"
+                    onclick="closeModal('notificationsModalOverlay')">Close</button>
             </div>
         </div>
     </div>
@@ -969,8 +1213,10 @@
                     </div>
                     <div class="modal-field">
                         <label>Media Attachment (Optional)</label>
-                        <input type="file" class="admin-input" id="annMedia" accept="image/*,video/*" style="padding:8px">
-                        <p style="font-size:12px;color:var(--text-muted);margin-top:4px"><i class="fas fa-info-circle"></i> Attach an image or video to this announcement.</p>
+                        <input type="file" class="admin-input" id="annMedia" accept="image/*,video/*"
+                            style="padding:8px">
+                        <p style="font-size:12px;color:var(--text-muted);margin-top:4px"><i
+                                class="fas fa-info-circle"></i> Attach an image or video to this announcement.</p>
                     </div>
                     <div class="admin-modal-footer">
                         <button type="button" class="btn-admin-secondary"
@@ -997,11 +1243,13 @@
                 <form id="addWorkerForm">
                     <div class="modal-field">
                         <label>Full Name *</label>
-                        <input type="text" class="admin-input" id="workerFullName" placeholder="e.g. Juan Dela Cruz" required>
+                        <input type="text" class="admin-input" id="workerFullName" placeholder="e.g. Juan Dela Cruz"
+                            required>
                     </div>
                     <div class="modal-field">
                         <label>Service Specialty *</label>
-                        <input type="text" class="admin-input" id="workerSpecialty" placeholder="e.g. Plumbing" required>
+                        <input type="text" class="admin-input" id="workerSpecialty" placeholder="e.g. Plumbing"
+                            required>
                     </div>
                     <div class="modal-field">
                         <label>Barangay *</label>
@@ -1044,40 +1292,53 @@
                 <button class="admin-modal-close" onclick="closeModal('viewIssueModalOverlay')"><i
                         class="fas fa-times"></i></button>
             </div>
-            <div class="admin-modal-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-height: 75vh; overflow-y: auto; padding: 20px;">
+            <div class="admin-modal-body"
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-height: 75vh; overflow-y: auto; padding: 20px;">
                 <div class="modal-field" style="margin-bottom: 0;">
                     <label>Category</label>
-                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500" id="issueCategory">-</div>
+                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500"
+                        id="issueCategory">-</div>
                 </div>
                 <div class="modal-field" style="margin-bottom: 0;">
                     <label>Location</label>
-                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500" id="issueLocation">-</div>
+                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500"
+                        id="issueLocation">-</div>
                 </div>
                 <div class="modal-field" style="margin-bottom: 0;">
                     <label>Barangay</label>
-                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500" id="issueBarangay">-</div>
+                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500"
+                        id="issueBarangay">-</div>
                 </div>
                 <div class="modal-field" style="margin-bottom: 0;">
                     <label>Status</label>
-                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500" id="issueStatus">-</div>
+                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500"
+                        id="issueStatus">-</div>
                 </div>
                 <div class="modal-field" style="margin-bottom: 0;">
                     <label>Reported By</label>
-                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500" id="issueReporter">-</div>
+                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500"
+                        id="issueReporter">-</div>
                 </div>
                 <div class="modal-field" style="margin-bottom: 0;">
                     <label>Date Reported</label>
-                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500" id="issueDate">-</div>
+                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500"
+                        id="issueDate">-</div>
                 </div>
                 <div class="modal-field" style="grid-column: 1 / -1; margin-bottom: 0;">
                     <label>Description</label>
-                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500;white-space:pre-wrap;word-break:break-word;max-height:150px;overflow-y:auto" id="issueDescription">-</div>
+                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500;white-space:pre-wrap;word-break:break-word;max-height:150px;overflow-y:auto"
+                        id="issueDescription">-</div>
                 </div>
                 <div class="modal-field" style="grid-column: 1 / -1; margin-bottom: 0;">
                     <label>Verification Photo</label>
-                    <div style="text-align:center;background:#f1f3f4;border-radius:8px;padding:8px;border:1px dashed #ccc; margin-top: 4px;">
-                        <img id="issuePhoto" src="" style="max-width:100%;max-height:220px;border-radius:4px;display:none;object-fit:contain;cursor:zoom-in" onclick="window.open(this.src, '_blank')">
-                        <div id="issueNoPhoto" style="color:#7f8c8d;font-size:13px;padding:30px;display:block;"><i class="fas fa-image-slash" style="font-size:24px;margin-bottom:8px;display:block"></i> No photo provided</div>
+                    <div
+                        style="text-align:center;background:#f1f3f4;border-radius:8px;padding:8px;border:1px dashed #ccc; margin-top: 4px;">
+                        <img id="issuePhoto" src=""
+                            style="max-width:100%;max-height:220px;border-radius:4px;display:none;object-fit:contain;cursor:zoom-in"
+                            onclick="window.open(this.src, '_blank')">
+                        <div id="issueNoPhoto" style="color:#7f8c8d;font-size:13px;padding:30px;display:block;"><i
+                                class="fas fa-image-slash" style="font-size:24px;margin-bottom:8px;display:block"></i>
+                            No photo provided</div>
                     </div>
                 </div>
             </div>
@@ -1093,11 +1354,14 @@
     <div class="admin-modal-overlay" id="messageResidentModalOverlay">
         <div class="admin-modal" id="messageResidentModal" style="max-width:520px">
             <div class="admin-modal-header" style="background:linear-gradient(135deg,#1a2f4e,#0f2236)">
-                <h4 style="color:#fff"><i class="fas fa-envelope" style="color:#5dade2;margin-right:8px"></i>Message Resident</h4>
-                <button class="admin-modal-close" onclick="closeMessageResidentModal()"><i class="fas fa-times"></i></button>
+                <h4 style="color:#fff"><i class="fas fa-envelope" style="color:#5dade2;margin-right:8px"></i>Message
+                    Resident</h4>
+                <button class="admin-modal-close" onclick="closeMessageResidentModal()"><i
+                        class="fas fa-times"></i></button>
             </div>
             <div class="admin-modal-body">
-                <div style="background:#f0f6ff;border:1px solid #c3d9f5;border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:13px">
+                <div
+                    style="background:#f0f6ff;border:1px solid #c3d9f5;border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:13px">
                     <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
                         <i class="fas fa-user" style="color:#1a2f4e;width:16px"></i>
                         <strong id="msgResidentName" style="color:#1a2f4e">Resident</strong>
@@ -1109,14 +1373,17 @@
                 </div>
                 <div class="modal-field">
                     <label>Subject</label>
-                    <input type="text" class="admin-input" id="msgResidentSubject" placeholder="e.g. Your Document Request Update – Barangay Hub">
+                    <input type="text" class="admin-input" id="msgResidentSubject"
+                        placeholder="e.g. Your Document Request Update – Barangay Hub">
                 </div>
                 <div class="modal-field">
                     <label>Message</label>
-                    <textarea class="admin-input" id="msgResidentBody" rows="9" style="resize:vertical;min-height:180px;font-family:inherit;line-height:1.6"></textarea>
+                    <textarea class="admin-input" id="msgResidentBody" rows="9"
+                        style="resize:vertical;min-height:180px;font-family:inherit;line-height:1.6"></textarea>
                 </div>
                 <p style="font-size:12px;color:var(--text-muted);margin-top:4px">
-                    <i class="fas fa-info-circle"></i> Clicking <strong>Send Email</strong> will open your default mail client with this message pre-filled, addressed to the resident's registered email.
+                    <i class="fas fa-info-circle"></i> Clicking <strong>Send Email</strong> will open your default mail
+                    client with this message pre-filled, addressed to the resident's registered email.
                 </p>
             </div>
             <div class="admin-modal-footer">
@@ -1132,8 +1399,10 @@
     <div class="admin-modal-overlay" id="uploadTemplateModalOverlay">
         <div class="admin-modal" id="uploadTemplateModal" style="max-width:580px">
             <div class="admin-modal-header" style="background:linear-gradient(135deg,#1a3a5c,#0f2236)">
-                <h4 style="color:#fff"><i class="fas fa-file-word" style="color:#5b9bd5;margin-right:8px"></i> Upload Document Template</h4>
-                <button class="admin-modal-close" onclick="closeModal('uploadTemplateModalOverlay')"><i class="fas fa-times"></i></button>
+                <h4 style="color:#fff"><i class="fas fa-file-word" style="color:#5b9bd5;margin-right:8px"></i> Upload
+                    Document Template</h4>
+                <button class="admin-modal-close" onclick="closeModal('uploadTemplateModalOverlay')"><i
+                        class="fas fa-times"></i></button>
             </div>
             <div class="admin-modal-body">
                 <div class="modal-field">
@@ -1157,21 +1426,32 @@
                 </div>
                 <div class="modal-field">
                     <label>Word Template File (.docx) <span style="color:red">*</span></label>
-                    <div class="template-file-drop" id="templateFileDrop" onclick="document.getElementById('tplFileInput').click()">
-                        <i class="fas fa-cloud-upload-alt" style="font-size:28px;color:var(--accent-gold);margin-bottom:8px"></i>
+                    <div class="template-file-drop" id="templateFileDrop"
+                        onclick="document.getElementById('tplFileInput').click()">
+                        <i class="fas fa-cloud-upload-alt"
+                            style="font-size:28px;color:var(--accent-gold);margin-bottom:8px"></i>
                         <div style="font-weight:600;color:var(--primary-navy)">Click to select .docx file</div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Only Word documents (.docx) are supported</div>
-                        <div id="tplFileName" style="margin-top:10px;font-size:13px;color:var(--accent-gold);font-weight:600"></div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Only Word documents (.docx)
+                            are supported</div>
+                        <div id="tplFileName"
+                            style="margin-top:10px;font-size:13px;color:var(--accent-gold);font-weight:600"></div>
                     </div>
-                    <input type="file" id="tplFileInput" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display:none" onchange="onTemplateFileSelected(this)">
+                    <input type="file" id="tplFileInput"
+                        accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        style="display:none" onchange="onTemplateFileSelected(this)">
                     <span class="modal-field-error" id="tplFileError"></span>
                 </div>
-                <div style="background:#f0f6ff;border:1px solid #c3d9f5;border-radius:8px;padding:12px 16px;font-size:12px;color:var(--text-muted)">
-                    <strong style="color:var(--primary-navy)"><i class="fas fa-lightbulb" style="color:var(--accent-gold)"></i> Reminder:</strong> Your .docx file should contain placeholder tags like <code>{{resident_name}}</code>, <code>{{purpose}}</code>, etc. The system will replace them automatically when processing a request.
+                <div
+                    style="background:#f0f6ff;border:1px solid #c3d9f5;border-radius:8px;padding:12px 16px;font-size:12px;color:var(--text-muted)">
+                    <strong style="color:var(--primary-navy)"><i class="fas fa-lightbulb"
+                            style="color:var(--accent-gold)"></i> Reminder:</strong> Your .docx file should contain
+                    placeholder tags like <code>{{resident_name}}</code>, <code>{{purpose}}</code>, etc. The system will
+                    replace them automatically when processing a request.
                 </div>
             </div>
             <div class="admin-modal-footer">
-                <button type="button" class="btn-admin-secondary" onclick="closeModal('uploadTemplateModalOverlay')">Cancel</button>
+                <button type="button" class="btn-admin-secondary"
+                    onclick="closeModal('uploadTemplateModalOverlay')">Cancel</button>
                 <button type="button" class="btn-admin-primary" id="tplUploadBtn" onclick="handleTemplateUpload()">
                     <i class="fas fa-upload"></i> Upload & Save
                 </button>
@@ -1184,10 +1464,13 @@
         <div class="admin-modal" id="fillDocModal" style="max-width:620px">
             <div class="admin-modal-header" style="background:linear-gradient(135deg,#1a3a5c,#0f2236)">
                 <div>
-                    <h4 style="color:#fff;margin:0"><i class="fas fa-file-signature" style="color:#5b9bd5;margin-right:8px"></i> Edit Document</h4>
-                    <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px" id="fillDocSubtitle">Filling placeholders from request data</div>
+                    <h4 style="color:#fff;margin:0"><i class="fas fa-file-signature"
+                            style="color:#5b9bd5;margin-right:8px"></i> Edit Document</h4>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px" id="fillDocSubtitle">Filling
+                        placeholders from request data</div>
                 </div>
-                <button class="admin-modal-close" onclick="closeModal('fillDocModalOverlay')" aria-label="Close edit document form"><i class="fas fa-times"></i></button>
+                <button class="admin-modal-close" onclick="closeModal('fillDocModalOverlay')"
+                    aria-label="Close edit document form"><i class="fas fa-times"></i></button>
             </div>
             <div class="admin-modal-body">
                 <!-- Request info banner -->
@@ -1207,32 +1490,41 @@
                 </div>
 
                 <!-- No template warning -->
-                <div id="fillDocNoTemplate" style="display:none;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:13px">
+                <div id="fillDocNoTemplate"
+                    style="display:none;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:13px">
                     <i class="fas fa-exclamation-triangle" style="color:#f39c12;margin-right:8px"></i>
-                    <strong>No template uploaded</strong> for this document type in <span id="fillDocNoTplBarangay">this barangay</span>. You can still approve the request, but no document will be generated.
-                    <br><a href="#" style="color:var(--accent-gold);font-weight:600;margin-top:6px;display:inline-block" onclick="closeModal('fillDocModalOverlay');showPanel('doctemplates')">Upload a template &rarr;</a>
+                    <strong>No template uploaded</strong> for this document type in <span id="fillDocNoTplBarangay">this
+                        barangay</span>. You can still approve the request, but no document will be generated.
+                    <br><a href="#" style="color:var(--accent-gold);font-weight:600;margin-top:6px;display:inline-block"
+                        onclick="closeModal('fillDocModalOverlay');showPanel('doctemplates')">Upload a template
+                        &rarr;</a>
                 </div>
 
                 <!-- Already Approved banner (shown in redownload mode) -->
-                <div id="fillDocAlreadyApproved" style="display:none;align-items:center;gap:10px;background:#f0fff4;border:1px solid #9ae6b4;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px">
+                <div id="fillDocAlreadyApproved"
+                    style="display:none;align-items:center;gap:10px;background:#f0fff4;border:1px solid #9ae6b4;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px">
                     <i class="fas fa-check-circle" style="color:#1e9157;font-size:18px;flex-shrink:0"></i>
                     <div>
                         <strong style="color:#1e9157">This request has already been approved.</strong>
-                        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">You can update the field values below and re-download the filled document at any time.</div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">You can update the field
+                            values below and re-download the filled document at any time.</div>
                     </div>
                 </div>
 
                 <!-- Fields form (shown when template exists) -->
                 <div id="fillDocFieldsSection">
-                    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Review and edit the values below. These will replace the <code>{{placeholders}}</code> in the Word template.</p>
+                    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Review and edit the values
+                        below. These will replace the <code>{{placeholders}}</code> in the Word template.</p>
                     <div id="fillDocFieldsGrid" class="fill-doc-fields-grid">
                         <!-- Populated by JS -->
                     </div>
                 </div>
             </div>
             <div class="admin-modal-footer" style="flex-wrap:wrap;gap:8px">
-                <button type="button" class="btn-admin-secondary" onclick="closeModal('fillDocModalOverlay')">Cancel</button>
-                <button type="button" class="btn-admin-primary" id="fillDocDownloadBtn" onclick="generateFilledDocx()" style="background:var(--accent-gold);border-color:var(--accent-gold);color:#fff">
+                <button type="button" class="btn-admin-secondary"
+                    onclick="closeModal('fillDocModalOverlay')">Cancel</button>
+                <button type="button" class="btn-admin-primary" id="fillDocDownloadBtn" onclick="generateFilledDocx()"
+                    style="background:var(--accent-gold);border-color:var(--accent-gold);color:#fff">
                     <i class="fas fa-download"></i> Download .docx
                 </button>
                 <button type="button" class="btn-admin-primary" id="fillDocApproveBtn" onclick="approveFromFillModal()">
@@ -1249,8 +1541,10 @@
     <div class="admin-modal-overlay" id="logServiceModalOverlay">
         <div class="admin-modal" style="max-width:520px">
             <div class="admin-modal-header" style="background:linear-gradient(135deg,#1a3a5c,#0f2236)">
-                <h4 style="color:#fff"><i class="fas fa-clipboard-check" style="color:#4cde80;margin-right:8px"></i> Log Completed Service</h4>
-                <button class="admin-modal-close" onclick="closeModal('logServiceModalOverlay')"><i class="fas fa-times"></i></button>
+                <h4 style="color:#fff"><i class="fas fa-clipboard-check" style="color:#4cde80;margin-right:8px"></i> Log
+                    Completed Service</h4>
+                <button class="admin-modal-close" onclick="closeModal('logServiceModalOverlay')"><i
+                        class="fas fa-times"></i></button>
             </div>
             <div class="admin-modal-body">
                 <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
@@ -1275,13 +1569,16 @@
                     <input type="date" class="admin-input" id="logServiceDate" required>
                 </div>
                 <div class="modal-field">
-                    <label>Service Description <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
+                    <label>Service Description <span
+                            style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
                     <textarea class="admin-input" id="logServiceDescription" rows="3"
                         placeholder="e.g. Fixed leaking pipe at resident's kitchen..."></textarea>
                 </div>
                 <div class="admin-modal-footer">
-                    <button type="button" class="btn-admin-secondary" onclick="closeModal('logServiceModalOverlay')">Cancel</button>
-                    <button type="button" class="btn-admin-primary" id="logServiceSubmitBtn" onclick="submitServiceRecord()">
+                    <button type="button" class="btn-admin-secondary"
+                        onclick="closeModal('logServiceModalOverlay')">Cancel</button>
+                    <button type="button" class="btn-admin-primary" id="logServiceSubmitBtn"
+                        onclick="submitServiceRecord()">
                         <i class="fas fa-clipboard-check"></i> Log Service
                     </button>
                 </div>
@@ -1293,39 +1590,50 @@
     <div class="admin-modal-overlay" id="viewResidentModalOverlay">
         <div class="admin-modal" style="max-width:500px">
             <div class="admin-modal-header" style="background:linear-gradient(135deg,#1a3a5c,#0f2236)">
-                <h4 style="color:#fff"><i class="fas fa-user" style="color:var(--accent-gold);margin-right:8px"></i> Resident Details</h4>
-                <button class="admin-modal-close" onclick="closeModal('viewResidentModalOverlay')"><i class="fas fa-times"></i></button>
+                <h4 style="color:#fff"><i class="fas fa-user" style="color:var(--accent-gold);margin-right:8px"></i>
+                    Resident Details</h4>
+                <button class="admin-modal-close" onclick="closeModal('viewResidentModalOverlay')"><i
+                        class="fas fa-times"></i></button>
             </div>
             <div class="admin-modal-body">
-                <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid #e1e8ed">
-                    <div style="width:60px;height:60px;border-radius:50%;background:#f1f3f4;display:flex;align-items:center;justify-content:center;font-size:24px;color:#7f8c8d">
+                <div
+                    style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid #e1e8ed">
+                    <div
+                        style="width:60px;height:60px;border-radius:50%;background:#f1f3f4;display:flex;align-items:center;justify-content:center;font-size:24px;color:#7f8c8d">
                         <i class="fas fa-user-circle"></i>
                     </div>
                     <div>
                         <h4 id="vrName" style="margin:0;font-size:18px;color:var(--text-main)">-</h4>
-                        <span id="vrRoleBadge" style="font-size:11px;padding:3px 8px;border-radius:12px;background:#e1e8ed;color:#5a6c7d;font-weight:600;display:inline-block;margin-top:4px">Resident</span>
+                        <span id="vrRoleBadge"
+                            style="font-size:11px;padding:3px 8px;border-radius:12px;background:#e1e8ed;color:#5a6c7d;font-weight:600;display:inline-block;margin-top:4px">Resident</span>
                     </div>
                 </div>
-                
+
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
                     <div>
-                        <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block;margin-bottom:4px">Email</label>
+                        <label
+                            style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block;margin-bottom:4px">Email</label>
                         <div id="vrEmail" style="font-size:14px;color:var(--text-main);word-break:break-all">-</div>
                     </div>
                     <div>
-                        <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block;margin-bottom:4px">Phone</label>
+                        <label
+                            style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block;margin-bottom:4px">Phone</label>
                         <div id="vrPhone" style="font-size:14px;color:var(--text-main)">-</div>
                     </div>
                     <div>
-                        <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block;margin-bottom:4px">Barangay</label>
+                        <label
+                            style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block;margin-bottom:4px">Barangay</label>
                         <div id="vrBarangay" style="font-size:14px;color:var(--text-main)">-</div>
                     </div>
                     <div>
-                        <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block;margin-bottom:4px">Registered On</label>
+                        <label
+                            style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block;margin-bottom:4px">Registered
+                            On</label>
                         <div id="vrRegistered" style="font-size:14px;color:var(--text-main)">-</div>
                     </div>
                     <div>
-                        <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block;margin-bottom:4px">Status</label>
+                        <label
+                            style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block;margin-bottom:4px">Status</label>
                         <div id="vrStatus">-</div>
                     </div>
                 </div>
@@ -1334,18 +1642,25 @@
                 <div style="border-top:1px solid #e1e8ed;padding-top:16px;margin-bottom:4px">
                     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
                         <i class="fas fa-shield-halved" style="color:var(--accent-gold)"></i>
-                        <span style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px">Proof of Residency</span>
+                        <span
+                            style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px">Proof
+                            of Residency</span>
                     </div>
                     <div>
-                        <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block;margin-bottom:8px">Verification Document</label>
+                        <label
+                            style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block;margin-bottom:8px">Verification
+                            Document</label>
                         <div id="vrVerifyDoc">
-                            <span style="color:rgba(0,0,0,0.35);font-size:13px"><i class="fas fa-spinner fa-spin"></i> Loading...</span>
+                            <span style="color:rgba(0,0,0,0.35);font-size:13px"><i class="fas fa-spinner fa-spin"></i>
+                                Loading...</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="admin-modal-footer" style="padding-top:16px;border-top:1px solid #e1e8ed;display:flex;justify-content:flex-end;gap:10px">
-                    <button type="button" class="btn-admin-secondary" onclick="closeModal('viewResidentModalOverlay')">Close</button>
+                <div class="admin-modal-footer"
+                    style="padding-top:16px;border-top:1px solid #e1e8ed;display:flex;justify-content:flex-end;gap:10px">
+                    <button type="button" class="btn-admin-secondary"
+                        onclick="closeModal('viewResidentModalOverlay')">Close</button>
                     <span id="vrActionContainer"></span>
                 </div>
             </div>
@@ -1363,27 +1678,44 @@
     <div class="admin-modal-overlay" id="viewReportModalOverlay" onclick="closeModal('viewReportModalOverlay')">
         <div class="admin-modal" style="max-width:450px" onclick="event.stopPropagation()">
             <div class="admin-modal-header" style="background:linear-gradient(135deg,#1a3a5c,#0f2236)">
-                <h4 style="color:#fff;margin:0"><i class="fas fa-eye" style="color:#5b9bd5;margin-right:8px"></i> View Issue Report</h4>
-                <button class="admin-modal-close" onclick="closeModal('viewReportModalOverlay')" aria-label="Close issue report"><i class="fas fa-times"></i></button>
+                <h4 style="color:#fff;margin:0"><i class="fas fa-eye" style="color:#5b9bd5;margin-right:8px"></i> View
+                    Issue Report</h4>
+                <button class="admin-modal-close" onclick="closeModal('viewReportModalOverlay')"
+                    aria-label="Close issue report"><i class="fas fa-times"></i></button>
             </div>
             <div class="admin-modal-body">
-                <div style="font-size:12px;color:rgba(0,0,0,0.5);text-transform:uppercase;margin-bottom:4px;font-weight:700">Category</div>
+                <div
+                    style="font-size:12px;color:rgba(0,0,0,0.5);text-transform:uppercase;margin-bottom:4px;font-weight:700">
+                    Category</div>
                 <div id="vrCategory" style="margin-bottom:14px;font-size:15px;font-weight:600"></div>
 
-                <div style="font-size:12px;color:rgba(0,0,0,0.5);text-transform:uppercase;margin-bottom:4px;font-weight:700">Location</div>
+                <div
+                    style="font-size:12px;color:rgba(0,0,0,0.5);text-transform:uppercase;margin-bottom:4px;font-weight:700">
+                    Location</div>
                 <div id="vrLocation" style="margin-bottom:14px;font-size:14px"></div>
 
-                <div style="font-size:12px;color:rgba(0,0,0,0.5);text-transform:uppercase;margin-bottom:4px;font-weight:700">Description</div>
-                <div id="vrDescription" style="margin-bottom:14px;font-size:14px;line-height:1.5;white-space:pre-wrap;background:#f8f9fa;padding:12px;border-radius:6px;border:1px solid #e0e0e0"></div>
+                <div
+                    style="font-size:12px;color:rgba(0,0,0,0.5);text-transform:uppercase;margin-bottom:4px;font-weight:700">
+                    Description</div>
+                <div id="vrDescription"
+                    style="margin-bottom:14px;font-size:14px;line-height:1.5;white-space:pre-wrap;background:#f8f9fa;padding:12px;border-radius:6px;border:1px solid #e0e0e0">
+                </div>
 
-                <div style="font-size:12px;color:rgba(0,0,0,0.5);text-transform:uppercase;margin-bottom:6px;font-weight:700">Verification Photo</div>
+                <div
+                    style="font-size:12px;color:rgba(0,0,0,0.5);text-transform:uppercase;margin-bottom:6px;font-weight:700">
+                    Verification Photo</div>
                 <div style="text-align:center;background:#f1f3f4;border-radius:6px;padding:8px;border:1px dashed #ccc">
-                    <img id="vrPhoto" src="" style="max-width:100%;max-height:300px;border-radius:4px;display:none;object-fit:contain;cursor:zoom-in" onclick="window.open(this.src, '_blank')">
-                    <div id="vrNoPhoto" style="color:#7f8c8d;font-size:13px;padding:30px;display:none"><i class="fas fa-image-slash" style="font-size:24px;margin-bottom:8px;display:block"></i> No photo provided</div>
+                    <img id="vrPhoto" src=""
+                        style="max-width:100%;max-height:300px;border-radius:4px;display:none;object-fit:contain;cursor:zoom-in"
+                        onclick="window.open(this.src, '_blank')">
+                    <div id="vrNoPhoto" style="color:#7f8c8d;font-size:13px;padding:30px;display:none"><i
+                            class="fas fa-image-slash" style="font-size:24px;margin-bottom:8px;display:block"></i> No
+                        photo provided</div>
                 </div>
             </div>
             <div class="admin-modal-footer">
-                <button type="button" class="btn-admin-secondary" style="width:100%" onclick="closeModal('viewReportModalOverlay')">Close Window</button>
+                <button type="button" class="btn-admin-secondary" style="width:100%"
+                    onclick="closeModal('viewReportModalOverlay')">Close Window</button>
             </div>
         </div>
     </div>
@@ -1397,33 +1729,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="env.js"></script>
     <script src="supabase-config.js"></script>
-    <script src="admin.js"></script>
+    <script src="admin.js?v=3"></script>
 </body>
 
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

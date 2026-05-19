@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barangay Hub - Smart City Portal</title>
+    <title>Barangay Hub - Smart City Portal | Biñan City</title>
     <meta name="description"
         content="Barangay Hub - live barangay analytics, skilled labor directory, official announcements, and document services for all residents.">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
@@ -32,7 +32,7 @@
         <div class="topbar-inner">
 
             <!-- Brand -->
-            <a class="topbar-brand" href="#" onclick="switchTab('analytics'); closeMobile(); return false;">
+            <a class="topbar-brand" href="#" onclick="switchTab('home'); closeMobile(); return false;">
                 <div class="brand-icon-box"><i class="fas fa-city"></i></div>
                 <div class="brand-text">
                     <span class="brand-name">Barangay Hub</span>
@@ -42,14 +42,17 @@
 
             <!-- Desktop Nav -->
             <ul class="topbar-nav" id="mainNav">
-                <li><a href="#" class="tnav-link active" data-tab="analytics">
-                        <i class="fas fa-chart-line"></i><span>Analytics</span>
+                <li><a href="#" class="tnav-link active" data-tab="home">
+                        <i class="fas fa-home"></i><span>Home</span>
                     </a></li>
                 <li><a href="#" class="tnav-link" data-tab="documents">
-                        <i class="fas fa-file-alt"></i><span>Documents</span>
+                        <i class="fas fa-file-alt"></i><span>Document Request</span>
                     </a></li>
-                <li><a href="#" class="tnav-link" data-tab="community">
-                        <i class="fas fa-newspaper"></i><span>Community</span>
+                <li><a href="#" class="tnav-link" data-tab="announcements">
+                        <i class="fas fa-newspaper"></i><span>Announcements</span>
+                    </a></li>
+                <li><a href="#" class="tnav-link" data-tab="issues">
+                        <i class="fas fa-triangle-exclamation"></i><span>Issue Reporting</span>
                     </a></li>
                 <li><a href="#" class="tnav-link" data-tab="workers">
                         <i class="fas fa-briefcase"></i><span>Workers</span>
@@ -96,12 +99,16 @@
 
         <!-- Mobile Nav -->
         <div class="topbar-mobile" id="mobileNav">
-            <a href="#" class="tnav-link" data-tab="analytics" onclick="closeMobile()"><i class="fas fa-chart-line"></i>
-                Analytics</a>
+            <a href="#" class="tnav-link" data-tab="home" onclick="closeMobile()"><i class="fas fa-home"></i>
+                Home</a>
             <a href="#" class="tnav-link" data-tab="documents" onclick="closeMobile()"><i class="fas fa-file-alt"></i>
-                Documents</a>
-            <a href="#" class="tnav-link" data-tab="community" onclick="closeMobile()"><i class="fas fa-newspaper"></i>
-                Community</a>
+                Document Request</a>
+            <a href="#" class="tnav-link" data-tab="announcements" onclick="closeMobile()"><i
+                    class="fas fa-newspaper"></i>
+                Announcements</a>
+            <a href="#" class="tnav-link" data-tab="issues" onclick="closeMobile()"><i
+                    class="fas fa-triangle-exclamation"></i>
+                Issue Reporting</a>
             <a href="#" class="tnav-link" data-tab="workers" onclick="closeMobile()"><i class="fas fa-briefcase"></i>
                 Workers</a>
             <div class="mob-divider"></div>
@@ -121,141 +128,72 @@
     <!-- ===== PAGE WRAPPER ===== -->
     <div class="page-wrapper">
 
-        <!-- CONSOLIDATED SCROLL VIEW (Analytics, Workers, Documents, Community) -->
+        <!-- CONSOLIDATED SCROLL VIEW (Home/Landing, Workers, Documents, Community) -->
         <div class="tab-panel active" id="home-continuous-view">
             <!-- ====================================
-             SECTION: ANALYTICS (Default/Home)
+             SECTION: LANDING / HOME (Default)
              ==================================== -->
-            <section id="analytics" class="continuous-section">
-                <div class="portal-layout">
+            <section id="home" class="continuous-section landing-section">
 
-                    <!-- MAIN -->
-                    <div class="portal-main">
-
-                        <!-- Stat Cards -->
-                        <div class="stat-cards-row">
-                            <div class="stat-card">
-                                <div class="sc-icon blue"><i class="fas fa-users"></i></div>
-                                <div class="sc-body">
-                                    <span class="sc-label">Total Residents</span>
-                                    <span class="sc-value counter" data-target="3892">0</span>
-                                    <span class="sc-trend neutral" id="trendResidents"><i class="fas fa-minus"></i>
-                                        Loading
-                                        trend...</span>
-                                </div>
+                <!-- Hero Banner -->
+                <div class="hero-banner">
+                    <div class="hero-bg-grid"></div>
+                    <div class="hero-orb hero-orb-1"></div>
+                    <div class="hero-orb hero-orb-2"></div>
+                    <div class="hero-content">
+                        <h1 class="hero-title">Your Barangay,<br><span class="hero-title-gold">Digitally
+                                Empowered</span></h1>
+                        <p class="hero-desc">Access official documents, report community issues, find skilled workers,
+                            and stay updated with real-time announcements — all in one smart portal.</p>
+                        <div class="hero-cta-row">
+                            <a href="login.html#signup" class="btn-hero-primary guest-only"><i
+                                    class="fas fa-user-plus"></i> Get Started Free</a>
+                            <button class="btn-hero-primary user-only" onclick="switchTab('documents')"><i
+                                    class="fas fa-file-alt"></i> Request Documents</button>
+                            <button class="btn-hero-secondary" onclick="switchTab('announcements')"><i
+                                    class="fas fa-newspaper"></i> View Announcements</button>
+                        </div>
+                        <div class="hero-stats-strip">
+                            <div class="hss-item">
+                                <span class="hss-val" id="heroStatResidents">—</span>
+                                <span class="hss-label">Residents</span>
                             </div>
-                            <div class="stat-card">
-                                <div class="sc-icon gold"><i class="fas fa-file-circle-check"></i></div>
-                                <div class="sc-body">
-                                    <span class="sc-label">Documents Processed</span>
-                                    <span class="sc-value counter" data-target="1247">0</span>
-                                    <span class="sc-trend neutral" id="trendDocs"><i class="fas fa-minus"></i> Loading
-                                        trend...</span>
-                                </div>
+                            <div class="hss-divider"></div>
+                            <div class="hss-item">
+                                <span class="hss-val" id="heroStatDocs">—</span>
+                                <span class="hss-label">Docs Processed</span>
                             </div>
-                            <div class="stat-card">
-                                <div class="sc-icon green"><i class="fas fa-briefcase"></i></div>
-                                <div class="sc-body">
-                                    <span class="sc-label">Registered Workers</span>
-                                    <span class="sc-value counter" data-target="456">0</span>
-                                    <span class="sc-trend neutral" id="trendWorkers"><i class="fas fa-minus"></i>
-                                        Loading
-                                        trend...</span>
-                                </div>
+                            <div class="hss-divider"></div>
+                            <div class="hss-item">
+                                <span class="hss-val" id="heroStatWorkers">—</span>
+                                <span class="hss-label">Active Workers</span>
                             </div>
-                            <div class="stat-card">
-                                <div class="sc-icon red"><i class="fas fa-triangle-exclamation"></i></div>
-                                <div class="sc-body">
-                                    <span class="sc-label">Open Issue Reports</span>
-                                    <span class="sc-value counter" data-target="78">0</span>
-                                    <span class="sc-trend neutral" id="trendIssues"><i class="fas fa-minus"></i> Loading
-                                        trend...</span>
-                                </div>
+                            <div class="hss-divider"></div>
+                            <div class="hss-item">
+                                <span class="hss-val">24</span>
+                                <span class="hss-label">Barangays</span>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        <!-- Charts -->
-                        <div class="charts-row">
-                            <div class="glass-card chart-card-lg">
-                                <div class="gc-header">
-                                    <div>
-                                        <h4><i class="fas fa-chart-line"></i> Document Request Trends</h4>
-                                        <span class="gc-sub">Monthly volume - Barangay Poblacion</span>
-                                    </div>
-                                    <span class="live-chip"><span class="live-dot sm"></span> Live</span>
-                                </div>
-                                <div style="padding:12px 16px 12px;">
-                                    <div style="position:relative; height:355px; width:100%;">
-                                        <canvas id="docTrendChart"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="glass-card chart-card-sm">
-                                <div class="gc-header">
-                                    <h4><i class="fas fa-chart-pie"></i> Request Types</h4>
-                                </div>
-                                <div style="padding:16px 16px 29px;">
-                                    <div style="position:relative; height:220px; width:100%;">
-                                        <canvas id="docTypeChart"></canvas>
-                                    </div>
-                                </div>
-                                <div class="chart-legend-custom" id="docTypeLegend"></div>
-                            </div>
+
+
+                <!-- Quick Content: Announcements + Top Workers -->
+                <div class="landing-two-col">
+                    <!-- Latest Announcements -->
+                    <div class="glass-card">
+                        <div class="gc-header">
+                            <h4><i class="fas fa-bullhorn"></i> Latest Announcements</h4>
+                            <button class="gc-link-btn" onclick="switchTab('announcements')">View All</button>
                         </div>
+                        <div id="announcementsFeed" style="padding:4px 18px 14px"></div>
+                    </div>
 
-                        <!-- Barangay Table -->
-                        <div class="glass-card" style="margin-top:18px">
-                            <div class="gc-header">
-                                <div>
-                                    <h4><i class="fas fa-map-marker-alt"></i> Barangay Coverage</h4>
-                                    <span class="gc-sub">All 24 barangays of Biñan City</span>
-                                </div>
-                                <span class="scope-chip">Primary Service Area: Poblacion</span>
-                            </div>
-                            <div class="table-responsive">
-                                <table class="portal-table" id="barangayCoverageTable">
-                                    <thead>
-                                        <tr>
-                                            <th>Barangay</th>
-                                            <th>Residents</th>
-                                            <th>Docs Processed</th>
-                                            <th>Workers</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="barangayTableBody"></tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Skills Chart -->
-                        <div class="glass-card" style="margin-top:18px;">
-                            <div class="gc-header">
-                                <h4><i class="fas fa-hammer"></i> Most Searched Skills This Month</h4>
-                            </div>
-                            <div style="padding:16px;">
-                                <div style="position:relative; height:140px; width:100%;">
-                                    <canvas id="skillsChart" height="140"></canvas>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div><!-- /portal-main -->
-
-                    <!-- ASIDE -->
-                    <aside class="portal-aside">
-
-                        <!-- Announcements -->
-                        <div class="glass-card aside-card">
-                            <div class="gc-header">
-                                <h4><i class="fas fa-bullhorn"></i> Announcements</h4>
-                                <button class="gc-link-btn" onclick="switchTab('community')">View All</button>
-                            </div>
-                            <div id="announcementsFeed" style="padding:4px 18px 14px"></div>
-                        </div>
-
+                    <!-- Top Workers + Quick Doc Access -->
+                    <div style="display:flex;flex-direction:column;gap:14px;">
                         <!-- Quick Document Access -->
-                        <div class="glass-card aside-card" style="margin-top:14px">
+                        <div class="glass-card">
                             <div class="gc-header">
                                 <h4><i class="fas fa-file-alt"></i> Request Documents</h4>
                             </div>
@@ -288,18 +226,36 @@
                         </div>
 
                         <!-- Top Workers -->
-                        <div class="glass-card aside-card"
-                            style="margin-top:14px;display:flex;flex-direction:column;min-height:260px;">
+                        <div class="glass-card" style="display:flex;flex-direction:column;min-height:220px;">
                             <div class="gc-header">
-                                <h4><i class="fas fa-star"></i> Top Rated Workers</h4>
+                                <h4><i class="fas fa-star"></i> Registered Workers</h4>
                                 <button class="gc-link-btn" onclick="switchTab('workers')">Browse All</button>
                             </div>
                             <div id="topWorkersList"
                                 style="padding:8px 14px 14px;flex:1;overflow-y:auto;max-height:320px;"></div>
                         </div>
-
-                    </aside>
+                    </div>
                 </div>
+
+                <!-- Guest CTA Banner -->
+                <div class="landing-cta-banner guest-only">
+                    <div class="lcta-content">
+                        <div class="lcta-icon"><i class="fas fa-city"></i></div>
+                        <div>
+                            <h3>Join Barangay Hub Today</h3>
+                            <p>Create a free account to apply for documents, submit reports, and access your personal
+                                portal.</p>
+                        </div>
+                    </div>
+                    <div class="lcta-actions">
+                        <a href="login.html#signup" class="btn-gold"><i class="fas fa-user-plus"></i> Create Free
+                            Account</a>
+                        <a href="login.html" class="btn-glass-modal"
+                            style="text-decoration:none;display:flex;align-items:center;gap:6px;padding:10px 20px;border-radius:8px;"><i
+                                class="fas fa-sign-in-alt"></i> Login</a>
+                    </div>
+                </div>
+
             </section>
 
             <!-- ====================================
@@ -514,25 +470,127 @@
             </section>
 
             <!-- ====================================
-         SECTION: COMMUNITY
+         SECTION: ANNOUNCEMENTS
          ==================================== -->
-            <section id="community" class="continuous-section">
+            <section id="announcements" class="continuous-section">
                 <div class="tab-content-wrap">
                     <div class="tab-page-header">
                         <div>
-                            <h2><i class="fas fa-newspaper"></i> Community Reports &amp; News</h2>
-                            <p>Read official announcements. <span class="guest-only">Login to submit issue
-                                    reports.</span>
+                            <h2><i class="fas fa-newspaper"></i> Official Announcements</h2>
+                            <p>Stay informed with official news, local advisories, and community updates from your
+                                barangay.</p>
+                        </div>
+                    </div>
+                    <div class="announcements-layout" style="margin-top: 20px;">
+                        <!-- Left Column: Announcements Feed -->
+                        <div class="glass-card" style="overflow:visible;">
+                            <div class="gc-header"
+                                style="padding:18px 22px;border-bottom:1px solid var(--glass-border)">
+                                <h4><i class="fas fa-bullhorn"></i> Latest Updates</h4>
+                                <span class="live-chip"><span class="live-dot sm"></span> Live</span>
+                            </div>
+                            <div style="padding:16px 22px" id="communityAnnouncementsFeed"></div>
+                        </div>
+
+                        <!-- Right Column: Sidebar -->
+                        <div>
+                            <!-- Health Center Widget -->
+                            <div class="glass-card" style="margin-bottom: 20px;">
+                                <div class="gc-header"
+                                    style="padding:16px 22px;border-bottom:1px solid var(--glass-border)">
+                                    <h4><i class="fas fa-notes-medical"></i> Health Center Schedule</h4>
+                                </div>
+                                <div style="padding: 16px 22px;">
+                                    <div class="glass-field" style="margin-bottom: 12px;">
+                                        <select id="healthCenterBarangaySelect" class="glass-input"
+                                            style="font-size: 13px;">
+                                            <option value="">Select Barangay...</option>
+                                            <option value="Barangay Poblacion">Barangay Poblacion</option>
+                                            <option value="Barangay San Isidro">Barangay San Isidro</option>
+                                            <option value="Barangay San Jose">Barangay San Jose</option>
+                                        </select>
+                                    </div>
+                                    <div id="healthScheduleContent"
+                                        style="min-height: 120px; display: flex; flex-direction: column; justify-content: center;">
+                                        <div
+                                            style="text-align:center; padding: 20px 0; color: rgba(255,255,255,0.4); font-size: 13px;">
+                                            Please select your barangay to view local health center schedules.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Emergency Hotlines Widget -->
+                            <div class="glass-card">
+                                <div class="gc-header"
+                                    style="padding:16px 22px;border-bottom:1px solid var(--glass-border)">
+                                    <h4><i class="fas fa-phone-volume"></i> Emergency Hotlines</h4>
+                                </div>
+                                <div style="padding: 16px 22px; display: flex; flex-direction: column; gap: 12px;">
+                                    <div
+                                        style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <div
+                                                style="width: 32px; height: 32px; border-radius: 50%; background: rgba(59, 130, 246, 0.1); color: #3b82f6; display: flex; align-items: center; justify-content: center;">
+                                                <i class="fas fa-shield-halved"></i>
+                                            </div>
+                                            <span style="font-weight: 500; font-size: 14px;">Police Station</span>
+                                        </div>
+                                        <span
+                                            style="font-family: monospace; font-size: 14px; font-weight: 600; color: var(--gold);">911</span>
+                                    </div>
+                                    <div
+                                        style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <div
+                                                style="width: 32px; height: 32px; border-radius: 50%; background: rgba(239, 68, 68, 0.1); color: #ef4444; display: flex; align-items: center; justify-content: center;">
+                                                <i class="fas fa-fire-extinguisher"></i>
+                                            </div>
+                                            <span style="font-weight: 500; font-size: 14px;">Fire Department</span>
+                                        </div>
+                                        <span
+                                            style="font-family: monospace; font-size: 14px; font-weight: 600; color: var(--gold);">911</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <div
+                                                style="width: 32px; height: 32px; border-radius: 50%; background: rgba(34, 197, 94, 0.1); color: #22c55e; display: flex; align-items: center; justify-content: center;">
+                                                <i class="fas fa-truck-medical"></i>
+                                            </div>
+                                            <span style="font-weight: 500; font-size: 14px;">Ambulance / ER</span>
+                                        </div>
+                                        <span
+                                            style="font-family: monospace; font-size: 14px; font-weight: 600; color: var(--gold);">911</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ====================================
+         SECTION: ISSUE REPORTING
+         ==================================== -->
+            <section id="issues" class="continuous-section">
+                <div class="tab-content-wrap">
+                    <div class="tab-page-header">
+                        <div>
+                            <h2><i class="fas fa-triangle-exclamation"></i> Issue Reporting</h2>
+                            <p>Report infrastructure damage or community issues. <span class="guest-only">Login to
+                                    submit reports.</span>
                                 <span class="user-only" style="color:var(--t-green)"><i class="fas fa-circle-check"></i>
                                     Logged in - submit reports directly.</span>
                             </p>
                         </div>
                     </div>
+
                     <div class="community-layout">
+                        <!-- Left Col: Form -->
                         <div>
                             <div class="glass-card" style="overflow:visible">
                                 <div class="gc-header">
-                                    <h4><i class="fas fa-triangle-exclamation"></i> Report an Issue</h4>
+                                    <h4><i class="fas fa-pen-to-square"></i> Submit a Report</h4>
                                 </div>
                                 <div style="padding:16px 22px 22px">
                                     <!-- Guest prompt -->
@@ -540,11 +598,9 @@
                                         <div style="font-size:36px;color:rgba(255,255,255,0.15);margin-bottom:12px"><i
                                                 class="fas fa-lock"></i></div>
                                         <p style="color:rgba(255,255,255,0.4);font-size:13px;margin-bottom:16px">Login
-                                            to
-                                            submit infrastructure reports</p>
+                                            to submit infrastructure reports</p>
                                         <a href="login.html" class="btn-gold"><i class="fas fa-sign-in-alt"></i> Login
-                                            to
-                                            Report</a>
+                                            to Report</a>
                                     </div>
                                     <!-- Logged-in form -->
                                     <form id="reportForm" class="user-only">
@@ -591,16 +647,10 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Right Col: Recent Reports -->
                         <div>
                             <div class="glass-card">
-                                <div class="gc-header"
-                                    style="padding:18px 22px;border-bottom:1px solid var(--glass-border)">
-                                    <h4><i class="fas fa-bullhorn"></i> Official Announcements</h4>
-                                    <span class="live-chip"><span class="live-dot sm"></span> Live</span>
-                                </div>
-                                <div style="padding:8px 18px 14px" id="communityAnnouncementsFeed"></div>
-                            </div>
-                            <div class="glass-card" style="margin-top:14px">
                                 <div class="gc-header"
                                     style="padding:16px 22px;border-bottom:1px solid var(--glass-border)">
                                     <h4><i class="fas fa-list-check"></i> Recent Reports Status</h4>
@@ -661,7 +711,21 @@
                         </select>
                         <span class="filter-count" id="workerFilterCount"></span>
                     </div>
-                    <div class="worker-grid" id="workerDirectory"></div>
+                    <div class="glass-card" style="margin-top: 20px;">
+                        <div class="table-responsive" style="padding: 8px;">
+                            <table class="portal-table">
+                                <thead>
+                                    <tr>
+                                        <th>Worker</th>
+                                        <th>Specialty</th>
+                                        <th>Barangay</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="workerDirectory"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </section>
         </div><!-- /home-continuous-view -->
@@ -742,7 +806,7 @@
                     <div class="glass-card">
                         <div class="gc-header">
                             <h4><i class="fas fa-bullhorn"></i> Latest Announcements</h4>
-                            <button class="gc-link-btn" onclick="switchTab('community')">See All</button>
+                            <button class="gc-link-btn" onclick="switchTab('announcements')">See All</button>
                         </div>
                         <div style="padding:8px 18px 14px" id="portalAnnouncementsMini"></div>
                     </div>
@@ -875,84 +939,11 @@
             <a id="contactEmail" href="#" class="btn-glass-modal w-full">
                 <i class="fas fa-envelope"></i> <span id="contactEmailTxt"></span>
             </a>
-            <!-- Rate this worker -->
-            <div id="contactRateWrap" style="margin-top:14px;display:none;">
-                <button class="btn-glass-modal w-full" onclick="openRateWorkerModal()">
-                    <i class="fas fa-star" style="margin-right:6px;color:var(--gold);"></i><span
-                        id="contactRateLabel">Rate this Worker</span>
-                </button>
-            </div>
+
         </div>
     </div>
 
-    <!-- ===== RATE WORKER MODAL ===== -->
-    <div class="modal-backdrop" id="rateWorkerModal">
-        <div class="login-modal" style="max-width:340px;text-align:center;">
-            <button class="modal-x" onclick="closeRateWorkerModal()" aria-label="Close rating"><i
-                    class="fas fa-times"></i></button>
-            <div class="modal-ico" style="background:rgba(212,165,116,0.12);"><i class="fas fa-star"
-                    style="color:var(--gold);"></i></div>
-            <h3 id="rateWorkerName" style="margin-bottom:4px;">Rate Worker</h3>
-            <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px;">How was your experience?</p>
-            <!-- Star row -->
-            <div id="starRow" style="display:flex;justify-content:center;gap:10px;margin-bottom:22px;">
-                <i class="fas fa-star rate-star" data-val="1"
-                    style="font-size:32px;cursor:pointer;color:rgba(255,255,255,0.15);transition:color 0.15s;"
-                    onmouseover="hoverStars(1)" onmouseout="resetStars()" onclick="selectStar(1)"></i>
-                <i class="fas fa-star rate-star" data-val="2"
-                    style="font-size:32px;cursor:pointer;color:rgba(255,255,255,0.15);transition:color 0.15s;"
-                    onmouseover="hoverStars(2)" onmouseout="resetStars()" onclick="selectStar(2)"></i>
-                <i class="fas fa-star rate-star" data-val="3"
-                    style="font-size:32px;cursor:pointer;color:rgba(255,255,255,0.15);transition:color 0.15s;"
-                    onmouseover="hoverStars(3)" onmouseout="resetStars()" onclick="selectStar(3)"></i>
-                <i class="fas fa-star rate-star" data-val="4"
-                    style="font-size:32px;cursor:pointer;color:rgba(255,255,255,0.15);transition:color 0.15s;"
-                    onmouseover="hoverStars(4)" onmouseout="resetStars()" onclick="selectStar(4)"></i>
-                <i class="fas fa-star rate-star" data-val="5"
-                    style="font-size:32px;cursor:pointer;color:rgba(255,255,255,0.15);transition:color 0.15s;"
-                    onmouseover="hoverStars(5)" onmouseout="resetStars()" onclick="selectStar(5)"></i>
-            </div>
-            <p id="rateStarLabel" style="color:var(--text-muted);font-size:13px;min-height:18px;margin-bottom:16px;">
-            </p>
-            <button id="rateSubmitBtn" class="btn-gold w-full" onclick="submitWorkerRating()" disabled
-                style="opacity:0.5;">
-                <i class="fas fa-paper-plane"></i> Submit Rating
-            </button>
-        </div>
-    </div>
 
-    <!-- ===== MARK JOB AS DONE MODAL ===== -->
-    <div class="modal-backdrop" id="markJobDoneModal">
-        <div class="login-modal" style="max-width:380px">
-            <button class="modal-x" onclick="closeMarkJobDoneModal()" aria-label="Close"><i
-                    class="fas fa-times"></i></button>
-            <div class="modal-ico" style="background:rgba(76,222,128,0.12)">
-                <i class="fas fa-clipboard-check" style="color:#4cde80"></i>
-            </div>
-            <h3 style="margin-bottom:4px">Mark Job as Done</h3>
-            <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px">
-                Hired <strong id="markJobWorkerName" style="color:var(--gold)"></strong>? Request admin verification to
-                unlock your rating.
-            </p>
-            <div class="glass-field" style="text-align:left;margin-bottom:20px">
-                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">
-                    <i class="fas fa-pen" style="margin-right:5px"></i>Note <span
-                        style="font-weight:400;opacity:0.6">(optional)</span>
-                </label>
-                <textarea id="markJobNoteInput" class="glass-input" rows="3"
-                    placeholder="e.g. Fixed the kitchen pipe, excellent work!"
-                    style="resize:none;width:100%;font-size:13px"></textarea>
-            </div>
-            <div style="display:flex;gap:10px">
-                <button class="btn-glass-modal" style="flex:1;display:flex;justify-content:center;align-items:center;"
-                    onclick="closeMarkJobDoneModal()">Cancel</button>
-                <button class="btn-gold" style="flex:2;display:flex;justify-content:center;align-items:center;gap:6px;"
-                    id="markJobSubmitBtn" onclick="confirmMarkJobDone()">
-                    <i class="fas fa-paper-plane"></i> Submit Request
-                </button>
-            </div>
-        </div>
-    </div>
 
     <!-- ===== PROFILE MODAL (logged-in) ===== -->
     <div class="modal-backdrop" id="profileModal">
@@ -1110,7 +1101,7 @@
     <!-- ===== ANNOUNCEMENT DETAILS MODAL ===== -->
     <div class="modal-backdrop" id="announcementModalOverlay" onclick="closeAnnouncementModal()" style="z-index: 3000;">
         <div class="login-modal ig-modal-layout" id="announcementModalCard" onclick="event.stopPropagation()">
-            
+
             <div id="annModalMediaLeft" class="ig-modal-left">
                 <div id="annModalMedia"></div>
             </div>
@@ -1142,7 +1133,12 @@
                     <div id="annModalContent"
                         style="color:rgba(255,255,255,0.85);font-size:15px;line-height:1.6;white-space:pre-wrap;margin-bottom:8px;">
                     </div>
-                    <button id="annModalSeeMoreBtn" style="display:none; background:none; border:none; color:var(--text-muted); font-size:13px; font-weight:600; cursor:pointer; padding:0; margin-bottom:16px; text-align:left;">See more...</button>
+                    <button id="annModalSeeMoreBtn"
+                        style="display:none; background:none; border:none; color:var(--text-muted); font-size:13px; font-weight:600; cursor:pointer; padding:0; margin-bottom:16px; text-align:left;">See
+                        more...</button>
+
+                    <!-- Mobile inline media: shown between caption and likes (hidden on desktop) -->
+                    <div id="annModalMediaInline" style="display:none;"></div>
 
                     <div class="ann-social-bar"
                         style="display:flex;align-items:center;gap:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);margin-bottom:20px;">
@@ -1152,13 +1148,13 @@
                         </button>
                     </div>
 
-                    <div class="ann-comments-section" style="display:flex;flex-direction:column;flex: 1;">
+                    <div class="ann-comments-section" style="display:flex;flex-direction:column;">
                         <h4
                             style="font-size:14px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">
                             Comments</h4>
 
                         <div id="annCommentsList"
-                            style="display:flex;flex-direction:column;gap:16px; margin-bottom:20px; flex: 1;">
+                            style="display:flex;flex-direction:column;gap:16px; margin-bottom:20px;">
                             <!-- Comments will be injected here -->
                         </div>
 
@@ -1168,14 +1164,16 @@
                             <div id="annReplyBanner"
                                 style="display:none;align-items:center;gap:8px;background:rgba(212,165,116,0.08);border:1px solid rgba(212,165,116,0.2);border-radius:8px;padding:6px 12px;margin-bottom:8px;font-size:12px;color:rgba(255,255,255,0.65);">
                                 <i class="fas fa-reply" style="color:var(--gold);font-size:11px;"></i>
-                                <span id="annReplyBannerText">Replying to <strong style="color:var(--gold)"></strong></span>
+                                <span id="annReplyBannerText">Replying to <strong
+                                        style="color:var(--gold)"></strong></span>
                                 <button onclick="clearReplyParent()"
                                     style="margin-left:auto;background:none;border:none;color:rgba(255,255,255,0.4);font-size:13px;cursor:pointer;padding:0 2px;line-height:1;"
                                     title="Cancel reply"><i class="fas fa-times"></i></button>
                             </div>
                             <div style="display:flex;gap:10px;">
-                                <input type="text" id="annCommentInput" class="glass-input" placeholder="Write a comment..."
-                                    style="flex:1" onkeypress="if(event.key === 'Enter') postAnnouncementComment()">
+                                <input type="text" id="annCommentInput" class="glass-input"
+                                    placeholder="Write a comment..." style="flex:1"
+                                    onkeypress="if(event.key === 'Enter') postAnnouncementComment()">
                                 <button onclick="postAnnouncementComment()" class="btn-gold"
                                     style="padding:0 20px; border-radius: 8px;" aria-label="Post comment"><i
                                         class="fas fa-paper-plane"></i></button>
@@ -1216,9 +1214,13 @@
 
     <!-- ===== IMAGE LIGHTBOX MODAL ===== -->
     <div class="modal-backdrop" id="lightboxModal" onclick="closeLightbox()" style="z-index: 4000; padding: 20px;">
-        <div style="position:relative; max-width:90vw; max-height:90vh; display:flex; align-items:center; justify-content:center;" onclick="event.stopPropagation()">
-            <button class="modal-x" onclick="closeLightbox()" aria-label="Close" style="position:absolute; top:-40px; right:-20px; background:rgba(0,0,0,0.5); color:#fff; border-radius:50%;"><i class="fas fa-times"></i></button>
-            <img id="lightboxImage" src="" style="max-width:100%; max-height:90vh; object-fit:contain; border-radius:8px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+        <div style="position:relative; max-width:90vw; max-height:90vh; display:flex; align-items:center; justify-content:center;"
+            onclick="event.stopPropagation()">
+            <button class="modal-x" onclick="closeLightbox()" aria-label="Close"
+                style="position:absolute; top:-40px; right:-20px; background:rgba(0,0,0,0.5); color:#fff; border-radius:50%;"><i
+                    class="fas fa-times"></i></button>
+            <img id="lightboxImage" src=""
+                style="max-width:100%; max-height:90vh; object-fit:contain; border-radius:8px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
         </div>
     </div>
 

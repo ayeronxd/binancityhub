@@ -470,6 +470,13 @@ body {
     margin-bottom: 24px;
 }
 
+.overview-tables-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
 .stat-card {
     background: var(--white);
     border-radius: 14px;
@@ -1291,6 +1298,10 @@ textarea.admin-input {
     .charts-row {
         grid-template-columns: 1fr;
     }
+
+    .overview-tables-row {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 768px) {
@@ -1816,4 +1827,266 @@ tr.brgy-group-header td {
     .stat-cards-row {
         grid-template-columns: 1fr;
     }
+}
+
+/* ══════════════════════════════════════════════════
+   ADMIN ANALYTICS PANEL EXTRAS
+   ══════════════════════════════════════════════════ */
+
+/* Margin utility for the title card */
+.admin-table-card.mb-3 {
+    margin-bottom: 18px;
+}
+
+/* Muted text for panel descriptions */
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+/* Table responsive for analytics barangay table */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* =========================================
+   LEGACY ANALYTICS PANEL STYLES
+   ========================================= */
+
+/* Variables from main portal */
+#panel-analytics {
+    --glass: #ffffff;
+    --glass-border: #e2e8f0;
+    --text-dim: #94a3b8;
+    --text-muted: #64748b;
+    --text-main: #1e293b;
+    --c-blue: rgba(59, 130, 246, 0.1);
+    --t-blue: #2563eb;
+    --c-gold: rgba(212, 165, 116, 0.15);
+    --gold: #d4a574;
+    --c-green: rgba(34, 197, 94, 0.15);
+    --t-green: #16a34a;
+    --c-red: rgba(239, 68, 68, 0.1);
+    --t-red: #dc2626;
+    --navy: transparent;
+    
+    color: var(--text-main);
+}
+
+#panel-analytics h4 {
+    color: var(--text-main);
+}
+
+.glass-card {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+.gc-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--glass-border);
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.gc-header h4 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.gc-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    display: block;
+}
+
+.legacy-stat-cards-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-bottom: 24px;
+}
+
+.legacy-stat-card {
+    padding: 20px 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+}
+
+.sc-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.sc-icon.blue { background: var(--c-blue); color: var(--t-blue); }
+.sc-icon.gold { background: var(--c-gold); color: var(--gold); }
+.sc-icon.green { background: var(--c-green); color: var(--t-green); }
+.sc-icon.red { background: var(--c-red); color: var(--t-red); }
+
+.sc-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sc-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sc-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: -0.5px;
+}
+
+.sc-trend {
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sc-trend.positive { color: var(--t-green); }
+
+.legacy-charts-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 18px;
+}
+
+.live-chip {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 0.3px;
+}
+
+.live-dot.sm {
+    width: 6px;
+    height: 6px;
+    background: #4ade80;
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+    animation: pulseLive 2s infinite;
+}
+
+.scope-chip {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--text-muted);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.chart-legend-custom {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 20px 20px;
+}
+
+.chart-legend-item {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.chart-legend-color {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.chart-legend-label {
+    flex: 1;
+}
+
+.chart-legend-value {
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.portal-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.portal-table thead th {
+    padding: 10px 16px;
+    font-size: 10.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted) !important;
+    background: rgba(0, 0, 0, 0.02);
+    border-bottom: 1px solid var(--glass-border);
+    white-space: nowrap;
+    text-align: left;
+}
+
+.portal-table tbody td {
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--text-main) !important;
+    border-bottom: 1px solid var(--glass-border);
+    vertical-align: middle;
+}
+
+.portal-table tbody td strong {
+    color: var(--text-main) !important;
+}
+
+.portal-table tbody tr:hover td {
+    background: rgba(0, 0, 0, 0.015);
+}
+
+@media (max-width: 1024px) {
+    .legacy-stat-cards-row { grid-template-columns: repeat(2, 1fr); }
+    .legacy-charts-row { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+    .legacy-stat-cards-row { grid-template-columns: 1fr; }
+}
+
+
+/* Analytics panel container */
+#panel-analytics {
+    background: transparent;
 }

@@ -57,9 +57,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   populateWorkerFilters();
   populateReportBarangayOptions();
 
-  animateCounters();
-  renderAnalyticsCharts();
-  renderBarangayTable();
+  renderHeroStats();
   renderTopWorkersSidebar();
   renderAnnouncementsSidebar();
   renderAnnouncementsPage();
@@ -396,6 +394,16 @@ function resetAnalyticsTrendsToDefault() {
   renderAnalyticsTrends();
 }
 
+// Populates hero section live stat numbers from DB data.
+function renderHeroStats() {
+  const totals = analyticsData.totals;
+  const fmt = (n) => Number(n || 0).toLocaleString();
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set("heroStatResidents", fmt(totals.residents));
+  set("heroStatDocs",      fmt(totals.docs));
+  set("heroStatWorkers",   fmt(totals.workers));
+}
+
 async function loadUserApplications() {
   if (!currentUser || !supabaseClient) return;
 
@@ -443,7 +451,7 @@ async function doLogout() {
   currentProfile = null;
   renderPortalStatCards();
   document.body.classList.remove("logged-in");
-  switchTab("analytics");
+  switchTab("home");
   showToast("Logged out successfully.");
   setText("topbarUserName", "-");
   setText("mobUserName", "-");
@@ -451,7 +459,7 @@ async function doLogout() {
 
 function checkUrlHash() {
   const hash = window.location.hash.replace("#", "");
-  const validTabs = ["analytics", "workers", "documents", "community", "myportal"];
+  const validTabs = ["home", "analytics", "workers", "documents", "community", "myportal"];
   if (!hash || !validTabs.includes(hash)) return;
 
   // Avoid stale guest modal when session is already authenticated.
@@ -459,11 +467,12 @@ function checkUrlHash() {
     closeLoginModal();
   }
 
-  switchTab(hash);
+  // Map old 'analytics' hash to 'home'
+  switchTab(hash === "analytics" ? "home" : hash);
 }
 
 function setupTopbarScroll() {
-  const sections = ["analytics", "documents", "community", "workers"];
+  const sections = ["home", "documents", "announcements", "issues", "workers"];
   window.addEventListener("scroll", () => {
     document.getElementById("topbar")?.classList.toggle("scrolled", window.scrollY > 20);
 
@@ -551,7 +560,7 @@ function switchTab(tabId) {
     return;
   }
 
-  const isContinuous = ["analytics", "workers", "documents", "community"].includes(tabId);
+  const isContinuous = ["home", "workers", "documents", "announcements", "issues"].includes(tabId);
   const targetTab = isContinuous ? "home-continuous-view" : "tab-" + tabId;
 
   document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
@@ -571,6 +580,16 @@ function switchTab(tabId) {
     history.replaceState(null, null, "#" + tabId);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
+}
+
+// Quick-doc-btn handler: navigates to the document request section.
+// For guests, it first requires login.
+function handleDocAction(docType) {
+  if (!currentUser) {
+    requireLogin("portal");
+    return;
+  }
+  switchTab("documents");
 }
 
 function setCounterTargetByIndex(index, value) {
@@ -835,43 +854,89 @@ async function openAnnouncement(id) {
       }
   }
 
-  const mediaContainer = document.getElementById("annModalMedia");
-  const modalCard = document.getElementById("announcementModalCard");
+  const mediaContainer   = document.getElementById("annModalMedia");       // desktop left pane
+  const mediaInline      = document.getElementById("annModalMediaInline"); // mobile inline body
+  const modalCard        = document.getElementById("announcementModalCard");
 
+  const isMobile = window.innerWidth <= 800;
+
+  // Build separate HTML for each context — inline style sizes differ
+  let desktopMediaHtml = "";
+  let mobileMediaHtml  = "";
+  if (ann.media_url) {
+    if (ann.media_type === 'video') {
+      desktopMediaHtml = `<video controls src="${escapeAttr(ann.media_url)}" style="width:100%;height:100%;object-fit:contain;background:#000;display:block;"></video>`;
+      mobileMediaHtml  = `<video controls src="${escapeAttr(ann.media_url)}" style="width:100%;height:auto;max-height:300px;object-fit:cover;background:#000;display:block;"></video>`;
+    } else {
+      desktopMediaHtml = `<img src="${escapeAttr(ann.media_url)}" alt="Attachment" style="width:100%;height:100%;object-fit:contain;display:block;cursor:pointer;" onclick="openLightbox('${escapeAttr(ann.media_url)}')">`;
+      mobileMediaHtml  = `<img src="${escapeAttr(ann.media_url)}" alt="Attachment" style="width:100%;height:auto;max-height:300px;object-fit:cover;display:block;cursor:pointer;" onclick="openLightbox('${escapeAttr(ann.media_url)}')">`;
+    }
+  }
+
+  // ── Desktop left pane ────────────────────────────────────────
   if (mediaContainer) {
-    if (ann.media_url) {
-      if (ann.media_type === 'video') {
-        mediaContainer.innerHTML = `<video controls src="${escapeAttr(ann.media_url)}" style="max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;background:#000;display:block;border-radius:0;"></video>`;
-      } else {
-        mediaContainer.innerHTML = `<img src="${escapeAttr(ann.media_url)}" alt="Attachment" style="max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;display:block;border-radius:0;cursor:pointer;" onclick="openLightbox('${escapeAttr(ann.media_url)}')">`;
-      }
+    if (ann.media_url && !isMobile) {
+      mediaContainer.innerHTML = desktopMediaHtml;
       mediaContainer.style.display = "flex";
-      if (modalCard) modalCard.classList.remove("no-media");
     } else {
       mediaContainer.innerHTML = "";
       mediaContainer.style.display = "none";
-      if (modalCard) modalCard.classList.add("no-media");
+    }
+  }
+
+  // no-media class: only when the announcement truly has no media
+  if (modalCard) {
+    if (ann.media_url) {
+      modalCard.classList.remove("no-media");
+    } else {
+      modalCard.classList.add("no-media");
+    }
+  }
+
+  // ── Mobile inline body (caption → IMAGE → likes → comments) ──
+  if (mediaInline) {
+    if (ann.media_url && isMobile) {
+      mediaInline.innerHTML = mobileMediaHtml;
+      mediaInline.style.display = "block";
+    } else {
+      mediaInline.innerHTML = "";
+      mediaInline.style.display = "none";
     }
   }
 
   document.getElementById("announcementModalOverlay").classList.add("open");
-  document.getElementById("annLikeCount").innerText = "0"; // To be updated by load
-  document.getElementById("annCommentsList").innerHTML = ""; // Clear old comments
-  
-  // Clean up classes
-  const likeBtn = document.getElementById("annLikeBtn");
+  document.getElementById("annLikeCount").innerText = "0";
+  document.getElementById("annCommentsList").innerHTML = "";
+
+  // Clean up like state
+  const likeBtn  = document.getElementById("annLikeBtn");
   const likeIcon = document.getElementById("annLikeIcon");
   likeBtn.classList.remove("liked");
   likeIcon.classList.remove("fas");
   likeIcon.classList.add("far");
   currentAnnIsLiked = false;
 
+  // Reset scroll to top BEFORE loading so the image is visible from the start
+  const modalBody = document.querySelector("#announcementModalCard .ig-modal-body");
+  if (modalBody) modalBody.scrollTop = 0;
+
   await loadAnnouncementSocials(id);
+
+  // Safety net: reset scroll again after comments paint so any flex-layout shift
+  // doesn't push the image out of view
+  requestAnimationFrame(() => {
+    if (modalBody) modalBody.scrollTop = 0;
+  });
 }
 
 function closeAnnouncementModal() {
   document.getElementById("announcementModalOverlay").classList.remove("open");
   currentOpenAnnId = null;
+  // Clear both media containers on close
+  const mediaContainer = document.getElementById("annModalMedia");
+  const mediaInline    = document.getElementById("annModalMediaInline");
+  if (mediaContainer) { mediaContainer.innerHTML = ""; mediaContainer.style.display = "none"; }
+  if (mediaInline)    { mediaInline.innerHTML = "";    mediaInline.style.display = "none"; }
 }
 
 function openLightbox(src) {
@@ -1435,7 +1500,39 @@ function toggleAnnSidebar(btn) {
 
 function renderAnnouncementsPage() {
   const el = document.getElementById("communityAnnouncementsFeed");
-  if (el) el.innerHTML = announcementsData.map(buildAnnCard).join("");
+  if (!el) return;
+  
+  const LIMIT = 2;
+  const all = announcementsData;
+  const visible = all.slice(0, LIMIT);
+  const hidden  = all.slice(LIMIT);
+
+  let html = visible.map(buildAnnCard).join("");
+
+  if (hidden.length > 0) {
+    const hiddenHtml = hidden.map(buildAnnCard).join("");
+    html += `
+      <div id="annPageExtra" style="display:none">${hiddenHtml}</div>
+      <button onclick="toggleAnnPage(this)" style="
+        width:100%;margin:12px 0 2px;padding:9px 0;background:rgba(255,255,255,0.04);
+        border:1px solid var(--glass-border);border-radius:8px;color:var(--text-muted);
+        font-size:12.5px;font-weight:600;cursor:pointer;letter-spacing:0.3px;
+        transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+        <i class="fas fa-chevron-down" style="margin-right:5px"></i>Show ${hidden.length} more announcement${hidden.length > 1 ? 's' : ''}
+      </button>`;
+  }
+
+  el.innerHTML = html;
+}
+
+window.toggleAnnPage = function(btn) {
+  const extra = document.getElementById("annPageExtra");
+  if (!extra) return;
+  const isHidden = extra.style.display === "none";
+  extra.style.display = isHidden ? "block" : "none";
+  btn.innerHTML = isHidden
+    ? `<i class="fas fa-chevron-up" style="margin-right:5px"></i>Show less`
+    : `<i class="fas fa-chevron-down" style="margin-right:5px"></i>Show ${announcementsData.length - 2} more announcement${announcementsData.length - 2 > 1 ? 's' : ''}`;
 }
 
 function renderPortalAnnouncementsMini() {
@@ -1472,24 +1569,28 @@ function renderWorkers(workers) {
   if (!grid) return;
 
   if (!workers.length) {
-    grid.innerHTML = "<div style=\"grid-column:1/-1;text-align:center;padding:60px 0;color:rgba(255,255,255,0.22)\">No workers match your filters.</div>";
+    grid.innerHTML = "<tr><td colspan=\"4\" style=\"text-align:center;padding:40px;color:var(--text-dim)\">No workers match your filters.</td></tr>";
     return;
   }
 
   grid.innerHTML = workers.map((w) => `
-    <div class="worker-card">
-      <div class="worker-info">
-        <div class="worker-avatar"><i class="fas fa-user"></i></div>
-        <p class="worker-name">${escapeHtml(w.name)}</p>
-        <p class="worker-specialty">${escapeHtml(w.specialty)}</p>
-        <span class="worker-category">${escapeHtml(w.barangay || "Unassigned Barangay")}</span>
-        <div class="worker-rating">${Number(w.reviews || 0) > 0 ? `${Number(w.rating || 0).toFixed(1)} · <span style="color:rgba(255,255,255,0.3)">${Number(w.reviews || 0)} reviews</span>` : "<span style='color:rgba(255,255,255,0.45)'>No ratings yet</span>"}</div>
-      </div>
-      <div class="worker-contact">
-        <button class="btn-contact" onclick="handleWorkerContact('${escapeAttr(w.name)}','${escapeAttr(w.specialty)}','${escapeAttr(w.phone)}','${escapeAttr(w.email)}','${escapeAttr(w.id || '')}')"><i class="fas fa-phone"></i> Call</button>
-        <button class="btn-contact" onclick="handleWorkerContact('${escapeAttr(w.name)}','${escapeAttr(w.specialty)}','${escapeAttr(w.phone)}','${escapeAttr(w.email)}','${escapeAttr(w.id || '')}')"><i class="fas fa-envelope"></i> Email</button>
-      </div>
-    </div>
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;color:var(--gold);">
+            <i class="fas fa-user"></i>
+          </div>
+          <span style="font-weight:500;color:var(--text-main);">${escapeHtml(w.name)}</span>
+        </div>
+      </td>
+      <td style="color:var(--text-dim);">${escapeHtml(w.specialty)}</td>
+      <td style="color:var(--text-main);"><i class="fas fa-location-dot" style="color:var(--text-dim); margin-right:6px;"></i>${escapeHtml(w.barangay || "Unassigned")}</td>
+      <td>
+        <button class="btn-gold" style="padding:6px 14px;font-size:12px;" onclick="handleWorkerContact('${escapeAttr(w.name)}','${escapeAttr(w.specialty)}','${escapeAttr(w.phone)}','${escapeAttr(w.email)}','${escapeAttr(w.id || '')}')">
+          <i class="fas fa-address-book"></i> Contact
+        </button>
+      </td>
+    </tr>
   `).join("");
 }
 
@@ -1554,17 +1655,11 @@ function applyWorkerFilters() {
   updateWorkerCount(filtered.length);
 }
 
-let ratingContext = { workerId: null, workerName: "", selectedStar: 0 };
-
 async function handleWorkerContact(name, specialty, phone, email, workerId) {
   if (!currentUser) {
     requireLogin("contact");
     return;
   }
-
-  ratingContext.workerId   = workerId || null;
-  ratingContext.workerName = name;
-  ratingContext.selectedStar = 0;
 
   setText("contactName", name);
   setText("contactSpec", specialty);
@@ -1578,247 +1673,11 @@ async function handleWorkerContact(name, specialty, phone, email, workerId) {
   if (phoneEl) phoneEl.href = "tel:" + phone;
   if (emailEl) emailEl.href = "mailto:" + email;
 
-  // Check if resident has a verified service record for this worker
-  // before showing the rate button
-  const rateWrap = document.getElementById("contactRateWrap");
-  const rateLabel = document.getElementById("contactRateLabel");
-
-  if (rateWrap) rateWrap.style.display = "none"; // hide by default
-
-  if (currentUser && workerId && supabaseClient) {
-    // Run both checks in parallel: existing rating + service record
-    const [ratingRes, serviceRes] = await Promise.all([
-      supabaseClient
-        .from("worker_ratings")
-        .select("rating")
-        .eq("worker_id", workerId)
-        .eq("resident_id", currentUser.id)
-        .maybeSingle(),
-      supabaseClient
-        .from("service_records")
-        .select("id")
-        .eq("worker_id", workerId)
-        .eq("resident_id", currentUser.id)
-        .maybeSingle()
-    ]);
-
-    const hasServiceRecord = Boolean(serviceRes.data);
-    const existingRating   = ratingRes.data?.rating || 0;
-
-    if (hasServiceRecord) {
-      // Resident hired this worker — show the rate button
-      if (rateWrap) rateWrap.style.display = "block";
-      if (rateLabel) {
-        rateLabel.textContent = existingRating
-          ? `Your rating: ${"★".repeat(existingRating)} — Update`
-          : "Rate this Worker";
-      }
-    } else {
-      // --- Verified Rating Gate Logic ---
-      // The goal: Only allow residents to rate if an Admin has verified their completed job.
-  
-      // No verified service — show "Mark Job as Done" button so resident can request verification
-      if (rateWrap) {
-        rateWrap.style.display = "block";
-
-        // Check if a pending request already exists for this pair
-        const { data: existingReq } = await supabaseClient
-          .from("service_requests")
-          .select("id,status")
-          .eq("worker_id", workerId)
-          .eq("resident_id", currentUser.id)
-          .maybeSingle();
-
-        if (existingReq?.status === "pending") {
-          rateWrap.innerHTML = `
-            <div style="font-size:12px;color:rgba(255,255,255,0.45);text-align:center;padding:10px 0;border-top:1px solid rgba(255,255,255,0.08);margin-top:4px">
-              <i class="fas fa-clock" style="margin-right:6px;color:#f39c12;"></i>
-              Waiting for admin to verify your service request...
-            </div>`;
-        } else if (existingReq?.status === "rejected") {
-          rateWrap.innerHTML = `
-            <div style="font-size:12px;color:rgba(255,80,80,0.7);text-align:center;padding:10px 0;border-top:1px solid rgba(255,255,255,0.08);margin-top:4px">
-              <i class="fas fa-times-circle" style="margin-right:6px;"></i>
-              Your service request was not verified by the admin.
-            </div>`;
-        } else {
-          rateWrap.innerHTML = `
-            <button class="btn-glass-modal w-full" style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.08);padding-top:12px;"
-              onclick="submitServiceRequest('${workerId}', '${escapeHtml(ratingContext.workerName)}')">
-              <i class="fas fa-clipboard-check" style="margin-right:6px;color:#4cde80;"></i>
-              Mark Job as Done
-            </button>
-            <div style="font-size:11px;color:rgba(255,255,255,0.3);text-align:center;margin-top:6px;">
-              Hired this worker? Request admin verification to unlock rating.
-            </div>`;
-        }
-      }
-    }
-  }
-
   document.getElementById("contactModal")?.classList.add("open");
 }
 
 function closeContactModal() {
   document.getElementById("contactModal")?.classList.remove("open");
-}
-
-/**
- * Opens the styled "Mark Job as Done" modal (replaces native prompt).
- * The actual DB insert happens in confirmMarkJobDone().
- */
-async function submitServiceRequest(workerId, workerName) {
-  if (!currentUser || !supabaseClient) { requireLogin("contact"); return; }
-
-  // Store context for confirmMarkJobDone to use
-  submitServiceRequest._workerId   = workerId;
-  submitServiceRequest._workerName = workerName;
-
-  setText("markJobWorkerName", workerName);
-  const noteInput = document.getElementById("markJobNoteInput");
-  if (noteInput) noteInput.value = "";
-
-  closeContactModal();
-  document.getElementById("markJobDoneModal")?.classList.add("open");
-}
-
-function closeMarkJobDoneModal() {
-  document.getElementById("markJobDoneModal")?.classList.remove("open");
-}
-
-async function confirmMarkJobDone() {
-  const workerId    = submitServiceRequest._workerId;
-  const workerName  = submitServiceRequest._workerName;
-  const note        = document.getElementById("markJobNoteInput")?.value?.trim() || null;
-
-  if (!workerId || !currentUser) return;
-
-  const btn = document.getElementById("markJobSubmitBtn");
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Submitting...'; }
-
-  const residentName = currentProfile?.full_name || currentUser?.user_metadata?.full_name || "Resident";
-
-  const { error } = await supabaseClient.from("service_requests").upsert(
-    {
-      worker_id:     workerId,
-      resident_id:   currentUser.id,
-      worker_name:   workerName,
-      resident_name: residentName,
-      note,
-      status:        "pending"
-    },
-    { onConflict: "worker_id,resident_id" }
-  );
-
-  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Request'; }
-
-  if (error) {
-    showToast("Failed to submit request: " + error.message, "error");
-    return;
-  }
-
-  closeMarkJobDoneModal();
-  showToast("Request submitted! The admin will verify and unlock your rating.", "success");
-}
-
-// ── Rating modal ─────────────────────────────────────────────
-
-function openRateWorkerModal() {
-  if (!currentUser) { requireLogin("contact"); return; }
-  closeContactModal();
-  ratingContext.selectedStar = 0;
-  setText("rateWorkerName", ratingContext.workerName);
-  resetStars();
-  const btn = document.getElementById("rateSubmitBtn");
-  if (btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
-  document.getElementById("rateStarLabel").textContent = "";
-
-  // Pre-fill if existing rating
-  if (ratingContext.workerId && supabaseClient) {
-    supabaseClient
-      .from("worker_ratings")
-      .select("rating")
-      .eq("worker_id", ratingContext.workerId)
-      .eq("resident_id", currentUser.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.rating) selectStar(data.rating);
-      });
-  }
-
-  document.getElementById("rateWorkerModal")?.classList.add("open");
-}
-
-function closeRateWorkerModal() {
-  document.getElementById("rateWorkerModal")?.classList.remove("open");
-}
-
-const starLabels = ["", "Poor", "Fair", "Good", "Very Good", "Excellent"];
-
-function hoverStars(val) {
-  document.querySelectorAll(".rate-star").forEach((s) => {
-    s.style.color = Number(s.dataset.val) <= val ? "#f1c40f" : "rgba(255,255,255,0.15)";
-  });
-  document.getElementById("rateStarLabel").textContent = starLabels[val] || "";
-}
-
-function resetStars() {
-  const sel = ratingContext.selectedStar;
-  document.querySelectorAll(".rate-star").forEach((s) => {
-    s.style.color = Number(s.dataset.val) <= sel ? "#f1c40f" : "rgba(255,255,255,0.15)";
-  });
-  document.getElementById("rateStarLabel").textContent = sel ? starLabels[sel] : "";
-}
-
-function selectStar(val) {
-  ratingContext.selectedStar = val;
-  resetStars();
-  const btn = document.getElementById("rateSubmitBtn");
-  if (btn) { btn.disabled = false; btn.style.opacity = "1"; }
-}
-
-// -----------------------------------------------------------------------------
-// FEATURE: Worker Ratings
-// -----------------------------------------------------------------------------
-
-/**
- * Commits a star rating from an authenticated resident for a specific worker.
- * - Validates authentication state and selected rating.
- * - Provides immediate UI feedback using animated FontAwesome spinners.
- * - Calls `upsert` so it intelligently handles both new ratings and updates
- *   to existing ratings based on the composite unique key (worker_id, resident_id)
- */
-async function submitWorkerRating() {
-  const { workerId, selectedStar } = ratingContext;
-  if (!workerId || !selectedStar || !currentUser) return;
-
-  // Block further clicks and display loading UI
-  const btn = document.getElementById("rateSubmitBtn");
-  if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Submitting...`; }
-
-  // Execute database upsert: inserts new or overrides existing rating strictly constrained by user session
-  const { error } = await supabaseClient
-    .from("worker_ratings")
-    .upsert(
-      { worker_id: workerId, resident_id: currentUser.id, rating: selectedStar },
-      { onConflict: "worker_id,resident_id" }
-    );
-
-  // Restore button default state
-  if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fas fa-paper-plane"></i> Submit Rating`; btn.style.opacity = "1"; }
-
-  if (error) {
-    showToast("Failed to submit rating. Please try again.", "error");
-    return;
-  }
-
-  showToast(`Thanks! You rated ${ratingContext.workerName} ${"★".repeat(selectedStar)}`, "success");
-  closeRateWorkerModal();
-
-  // Trigger grid and UI reload so the newly calculated average rating propagates across the interface
-  await loadWorkers();
-  renderTopWorkersSidebar();
-  applyWorkerFilters(); 
 }
 
 function handleDocAction(docName) {
@@ -2814,3 +2673,98 @@ function escapeAttrJs(str) {
 
 
 
+// ==========================================
+// HEALTH CENTER WIDGET LOGIC
+// ==========================================
+
+async function initHealthWidget() {
+  const select = document.getElementById("healthCenterBarangaySelect");
+  const content = document.getElementById("healthScheduleContent");
+  if (!select || !content) return;
+
+  // Function to load the options from Supabase barangays table (or a distinct list)
+  async function loadBarangayOptions() {
+    if (!supabaseClient) return;
+    try {
+      const { data, error } = await supabaseClient.from("health_schedules").select("barangay").order("barangay");
+      if (!error && data) {
+         // Get unique barangays that actually have schedules
+         const unique = [...new Set(data.map(d => d.barangay))];
+         if (unique.length > 0) {
+            select.innerHTML = '<option value="">Select Barangay...</option>';
+            unique.forEach(b => {
+               const opt = document.createElement("option");
+               opt.value = b;
+               opt.textContent = b;
+               select.appendChild(opt);
+            });
+         }
+      }
+    } catch (err) {}
+  }
+
+  async function renderSchedule() {
+    const brgy = select.value;
+    if (!brgy) {
+      content.innerHTML = '<div style="text-align:center; padding: 20px 0; color: rgba(255,255,255,0.4); font-size: 13px;">Please select your barangay to view local health center schedules.</div>';
+      return;
+    }
+
+    if (!supabaseClient) {
+      content.innerHTML = '<div style="text-align:center; padding: 20px 0; color: rgba(255,255,255,0.4); font-size: 13px;">Database connection not established.</div>';
+      return;
+    }
+
+    content.innerHTML = '<div style="text-align:center; padding: 20px 0; color: rgba(255,255,255,0.4); font-size: 13px;"><i class="fas fa-circle-notch fa-spin"></i> Loading schedule...</div>';
+
+    try {
+      const { data, error } = await supabaseClient.from("health_schedules")
+        .select("*")
+        .eq("barangay", brgy)
+        .order("sort_order", { ascending: true });
+        
+      if (error) throw error;
+      
+      if (!data || data.length === 0) {
+        content.innerHTML = '<div style="text-align:center; padding: 20px 0; color: rgba(255,255,255,0.4); font-size: 13px;">No schedule posted for this barangay yet.</div>';
+        return;
+      }
+      
+      let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
+      data.forEach(function(item) {
+        html += '<div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 10px 12px; display: flex; align-items:flex-start; gap: 10px;">' +
+          '<div style="min-width: 75px; font-weight: 600; color: var(--gold); font-size: 12.5px; padding-top: 2px;">' + escapeHtml(item.day_of_week) + '</div>' +
+          '<div style="font-size: 13px; color: var(--text-main); line-height: 1.4;">' + escapeHtml(item.activity) + '</div>' +
+          '</div>';
+      });
+      html += '</div>';
+      content.innerHTML = html;
+    } catch (err) {
+      console.error("Failed to fetch health schedule:", err);
+      content.innerHTML = '<div style="text-align:center; padding: 20px 0; color: #ef4444; font-size: 13px;">Failed to load schedule.</div>';
+    }
+  }
+
+  select.addEventListener("change", renderSchedule);
+  
+  await loadBarangayOptions();
+
+  // Wait a tiny bit for user session to initialize if logged in
+  setTimeout(() => {
+    const userStr = localStorage.getItem("bch_user_session");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        if (user && user.barangay) {
+          const exists = Array.from(select.options).some(opt => opt.value === user.barangay);
+          if (exists) {
+            select.value = user.barangay;
+            renderSchedule();
+          }
+        }
+      } catch (e) {}
+    }
+  }, 500);
+}
+
+document.addEventListener("DOMContentLoaded", initHealthWidget);

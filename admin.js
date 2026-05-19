@@ -387,7 +387,7 @@ async function loadIssueReports() {
   const buildReportsQuery = (barangayColumn) => {
     let query = supabaseClient
       .from("issue_reports")
-      .select("id,category,location,description,status,created_at,resident_id,barangay,photo_url")
+      .select("id,category,location,description,status,created_at,resident_id,barangay,photo_url,updated_at")
       .order("created_at", { ascending: false });
 
     if (isBarangayAdmin() && barangayColumn) {
@@ -423,8 +423,37 @@ async function loadIssueReports() {
     barangay: r.barangay,
     date: formatDate(new Date(r.created_at)),
     status: mapReportStatus(r.status),
-    photoUrl: r.photo_url || null
+    photoUrl: r.photo_url || null,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at
   }));
+}
+
+function formatDuration(startISO, endISO) {
+  try {
+    if (!startISO || !endISO) return "—";
+    const start = new Date(startISO);
+    const end = new Date(endISO);
+    
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return "—";
+    
+    const diffMs = end.getTime() - start.getTime();
+    if (diffMs < 0) return "—"; 
+    
+    const diffMins = Math.floor(diffMs / 1000 / 60);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffDays > 0) {
+      return `${diffDays}d ${diffHours % 24}h`;
+    } else if (diffHours > 0) {
+      return `${diffHours}h ${diffMins % 60}m`;
+    } else {
+      return `${diffMins}m`;
+    }
+  } catch (e) {
+    return "—";
+  }
 }
 
 async function loadWorkers() {
@@ -511,6 +540,7 @@ function renderAllPanels() {
   renderBarangaySummary();
   renderNotifIndicator();
   renderOverviewTable();
+  renderOverviewReports();
   renderBarangayTable();
   renderUsersTable();
   renderDocRequestsTable();
@@ -519,6 +549,7 @@ function renderAllPanels() {
   renderAnnouncementsGrid();
   renderDocTemplatesPanel();
   renderInvitesTable();
+  renderAnalyticsPanel();
 }
 
 // =============================================================================
@@ -893,6 +924,7 @@ function showPanel(panelId) {
 
   const titles = {
     overview: ["Overview", "Barangay Hub Administrative Dashboard"],
+    analytics: ["Analytics", "Live portal statistics — documents, residents, workers"],
     barangays: ["Barangays", "Manage and monitor all 24 barangays of the City"],
     users: ["Users / Residents", "View and manage registered users"],
     documents: ["Document Requests", "Review and process document applications"],
@@ -901,12 +933,24 @@ function showPanel(panelId) {
     workers: ["Workers Registry", "Manage the skilled worker directory"],
     doctemplates: ["Document Templates", "Upload and manage per-barangay document templates"],
     settings: ["Settings", "System configuration and admin account"],
-    "admin-invites": ["Admin Invites", "Pre-approve barangay admin accounts"]
+    "admin-invites": ["Admin Invites", "Pre-approve barangay admin accounts"],
+    "health-schedules": ["Health Schedules", "Manage weekly health center activities"]
   };
 
   const title = titles[panelId] || ["Admin", ""];
   document.getElementById("adminPanelTitle").textContent = title[0];
   document.getElementById("adminPanelSub").textContent = title[1];
+
+  // Lazy-load analytics on first visit to the panel
+  if (panelId === "analytics") {
+    renderAnalyticsPanel();
+  }
+
+  // Lazy-load health schedules on visit
+  if (panelId === "health-schedules") {
+    populateHealthScheduleBarangays();
+    loadHealthSchedules();
+  }
 
   closeMobileSidebar();
 }
@@ -947,6 +991,11 @@ function renderOverviewTable() {
   const tbody = document.getElementById("overviewRequestsBody");
   if (!tbody) return;
 
+  if (!docRequests || !docRequests.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">No recent document requests.</td></tr>`;
+    return;
+  }
+
   tbody.innerHTML = docRequests.slice(0, 5).map((r) => {
     const safeId = escapeAttr(r.id);
     let actionBtn = "";
@@ -963,10 +1012,31 @@ function renderOverviewTable() {
       <td><code style="font-size:11px;color:var(--accent-gold)">${r.ref}</code></td>
       <td><strong>${escapeHtml(r.name)}</strong></td>
       <td>${escapeHtml(r.type)}</td>
-      <td>${escapeHtml(r.barangay)}</td>
-      <td>${escapeHtml(r.date)}</td>
       <td>${statusPill(r.status)}</td>
       <td>${actionBtn || '<span style="font-size:11px;color:var(--text-muted)">—</span>'}</td>
+    </tr>`;
+  }).join("");
+}
+
+function renderOverviewReports() {
+  const tbody = document.getElementById("overviewReportsBody");
+  if (!tbody) return;
+
+  if (!issueReports || !issueReports.length) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">No recent issue reports.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = issueReports.slice(0, 5).map((r) => {
+    const safeId = escapeAttr(r.id);
+    let actionBtn = `<button class="tbl-btn tbl-btn-view" onclick="openViewReportModal('${safeId}')"><i class="fas fa-eye"></i> View</button>`;
+    
+    return `
+    <tr>
+      <td><strong>${escapeHtml(r.category)}</strong></td>
+      <td><span style="font-size:12px;color:var(--text-muted)">${escapeHtml(r.location)}</span></td>
+      <td>${statusPill(r.status)}</td>
+      <td>${actionBtn}</td>
     </tr>`;
   }).join("");
 }
@@ -1552,6 +1622,11 @@ function renderIssueReportsTable() {
       <td>${escapeHtml(r.barangay || "-")}</td>
       <td>${escapeHtml(r.reporter)}</td>
       <td>${escapeHtml(r.date)}</td>
+      <td>
+        ${r.status === "Completed" 
+          ? `<span style="font-size:12px;font-weight:600;color:var(--text-main)"><i class="fas fa-stopwatch" style="color:var(--text-dim)"></i> ${formatDuration(r.createdAt, r.updatedAt)}</span>` 
+          : `<span style="font-size:12px;color:var(--text-muted)">In Progress</span>`}
+      </td>
       <td>${statusPill(r.status)}</td>
       <td style="display:flex;gap:6px;flex-wrap:wrap;">${actionButtons}</td>
     </tr>
@@ -2278,6 +2353,283 @@ function initCharts() {
         datasets: [{ data: values, backgroundColor: chartColors, borderWidth: 3, borderColor: "#fff" }]
       },
       options: { responsive: true, cutout: "65%", plugins: { legend: { position: "bottom" } } }
+    });
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ANALYTICS PANEL — Dedicated analytics view for admin dashboard
+// ══════════════════════════════════════════════════════════════════════
+
+let _anlChartsInited = false;
+let _anlAnalyticsData = {
+  docTrend: { labels: [], id: [], clearance: [], seeker: [], indigency: [], residency: [] },
+  docType:  { labels: [], values: [] },
+  skills:   { labels: [], values: [] },
+  totals:   { residents: 0, docs: 0, workers: 0, issues: 0 }
+};
+
+async function loadAnalyticsPanelData() {
+  if (!supabaseClient) return;
+
+  const since = new Date();
+  since.setMonth(since.getMonth() - 6);
+
+  const scope = getScopedBarangay();
+  const applyScope = (q) => (!isSuperAdmin() && scope) ? q.eq("barangay", scope) : q;
+  const applyScopeName = (q) => (!isSuperAdmin() && scope) ? q.eq("name", scope) : q;
+
+  const [docsRes, workersRes, profilesCount, docsCount, workersCount, issuesCount, barangaysRes] = await Promise.all([
+    applyScope(supabaseClient.from("document_requests").select("request_type,created_at").gte("created_at", since.toISOString())),
+    applyScope(supabaseClient.from("workers").select("service_category").eq("is_active", true)),
+    applyScope(supabaseClient.from("profiles").select("id", { count: "exact", head: true }).eq("role", "resident")),
+    applyScope(supabaseClient.from("document_requests").select("id", { count: "exact", head: true }).in("status", ["approved","completed","archived"])),
+    applyScope(supabaseClient.from("workers").select("id", { count: "exact", head: true }).eq("is_active", true)),
+    applyScope(supabaseClient.from("issue_reports").select("id", { count: "exact", head: true }).neq("status", "resolved")),
+    applyScopeName(supabaseClient.from("v_barangay_analytics").select("name,residents,docs,workers,status").order("name", { ascending: true }))
+  ]);
+
+  const docs   = docsRes.data   || [];
+  const skills = workersRes.data || [];
+
+  // Totals
+  _anlAnalyticsData.totals = {
+    residents: profilesCount.count || 0,
+    docs:      docsCount.count     || 0,
+    workers:   workersCount.count  || 0,
+    issues:    issuesCount.count   || 0
+  };
+
+  // Monthly buckets
+  const monthBuckets = anlMakeLastMonthBuckets(6);
+  docs.forEach((row) => {
+    const key = anlMonthKey(new Date(row.created_at));
+    if (!monthBuckets[key]) return;
+    const t = anlNormalizeDocType(row.request_type);
+    if (t === "id")        monthBuckets[key].id        += 1;
+    if (t === "clearance") monthBuckets[key].clearance += 1;
+    if (t === "seeker")    monthBuckets[key].seeker    += 1;
+    if (t === "indigency") monthBuckets[key].indigency += 1;
+    if (t === "residency") monthBuckets[key].residency += 1;
+  });
+
+  _anlAnalyticsData.docTrend.labels    = Object.values(monthBuckets).map(m => m.label);
+  _anlAnalyticsData.docTrend.id        = Object.values(monthBuckets).map(m => m.id);
+  _anlAnalyticsData.docTrend.clearance = Object.values(monthBuckets).map(m => m.clearance);
+  _anlAnalyticsData.docTrend.seeker    = Object.values(monthBuckets).map(m => m.seeker);
+  _anlAnalyticsData.docTrend.indigency = Object.values(monthBuckets).map(m => m.indigency);
+  _anlAnalyticsData.docTrend.residency = Object.values(monthBuckets).map(m => m.residency);
+
+  // Type aggregation
+  const typeAgg = { "Barangay ID": 0, "Barangay Clearance": 0, "Job Seeker Cert.": 0, "Indigency Certificate": 0, "Residency Certificate": 0 };
+  docs.forEach((row) => {
+    const t = anlNormalizeDocType(row.request_type);
+    if (t === "id")        typeAgg["Barangay ID"]             += 1;
+    if (t === "clearance") typeAgg["Barangay Clearance"]      += 1;
+    if (t === "seeker")    typeAgg["Job Seeker Cert."]        += 1;
+    if (t === "indigency") typeAgg["Indigency Certificate"]   += 1;
+    if (t === "residency") typeAgg["Residency Certificate"]   += 1;
+  });
+  _anlAnalyticsData.docType.labels = Object.keys(typeAgg);
+  _anlAnalyticsData.docType.values = Object.values(typeAgg);
+
+  // Skills
+  const skillMap = {};
+  skills.forEach((row) => {
+    const key = row.service_category || "Other";
+    skillMap[key] = (skillMap[key] || 0) + 1;
+  });
+  const topSkills = Object.entries(skillMap).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  _anlAnalyticsData.skills.labels = topSkills.map(i => i[0]);
+  _anlAnalyticsData.skills.values = topSkills.map(i => i[1]);
+
+  // Barangay list
+  _anlAnalyticsData.barangays = (barangaysRes.data || []).map(b => ({
+    name:     b.name,
+    residents: Number(b.residents || 0),
+    docs:      Number(b.docs      || 0),
+    workers:   Number(b.workers   || 0),
+    status:    b.status || "pending"
+  }));
+}
+
+function anlNormalizeDocType(v) {
+  const s = String(v || "").toLowerCase();
+  if (s.includes("clearance"))  return "clearance";
+  if (s.includes("seeker") || s.includes("job")) return "seeker";
+  if (s.includes("indigency"))  return "indigency";
+  if (s.includes("residency"))  return "residency";
+  return "id";
+}
+
+function anlMonthKey(date) {
+  return `${date.getFullYear()}-${date.getMonth()}`;
+}
+
+function anlMakeLastMonthBuckets(count) {
+  const now = new Date();
+  const buckets = {};
+  for (let i = count - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = anlMonthKey(d);
+    const label = d.toLocaleDateString("en-US", { month: "short" });
+    buckets[key] = { label, id: 0, clearance: 0, seeker: 0, indigency: 0, residency: 0 };
+  }
+  return buckets;
+}
+
+async function renderAnalyticsPanel() {
+  // Stat cards
+  setText("anlStatResidents", String(barangays.reduce((s, b) => s + (b.users || 0), 0) || docRequests.length && 0 || "—"));
+  setText("anlStatDocs",      String(docRequests.length));
+  setText("anlStatWorkers",   String(workersRegistry.length));
+  setText("anlStatIssues",    String(issueReports.filter(r => r.status !== "Completed").length));
+
+  // Use real counts if available from Supabase (load on demand)
+  if (supabaseClient && !_anlChartsInited) {
+    try {
+      await loadAnalyticsPanelData();
+      // Now update stat cards with accurate counts
+      setText("anlStatResidents", String(_anlAnalyticsData.totals.residents));
+      setText("anlStatDocs",      String(_anlAnalyticsData.totals.docs));
+      setText("anlStatWorkers",   String(_anlAnalyticsData.totals.workers));
+      setText("anlStatIssues",    String(_anlAnalyticsData.totals.issues));
+
+      // Update legacy trends
+      document.getElementById("anlStatResidentsTrend").innerHTML = `<i class="fas fa-arrow-up"></i> ${_anlAnalyticsData.totals.residents} this month`;
+      document.getElementById("anlStatDocsTrend").innerHTML = `<i class="fas fa-arrow-up"></i> ${_anlAnalyticsData.totals.docs} this month`;
+      document.getElementById("anlStatWorkersTrend").innerHTML = `<i class="fas fa-arrow-up"></i> ${_anlAnalyticsData.totals.workers} this month`;
+      document.getElementById("anlStatIssuesTrend").innerHTML = `<i class="fas fa-arrow-up"></i> ${_anlAnalyticsData.totals.issues} pending`;
+
+
+      // Barangay coverage table
+      renderAnlBarangayTable();
+      // Charts
+      initAnalyticsCharts();
+      _anlChartsInited = true;
+    } catch(e) {
+      console.warn("Analytics panel data load failed:", e);
+    }
+  } else if (_anlChartsInited) {
+    // Already loaded — just refresh the table
+    renderAnlBarangayTable();
+  }
+
+  // Update role context label
+  const ctx = document.getElementById("analyticsRoleContext");
+  if (ctx) ctx.textContent = isSuperAdmin() ? "City-Wide" : (getScopedBarangay() || "Barangay");
+
+  // Update dynamic scope labels
+  const covSub = document.getElementById("anlCoverageSub");
+  const scopeChip = document.getElementById("anlScopeChip");
+  if (isSuperAdmin()) {
+    if (covSub) covSub.innerHTML = "All 24 barangays of Bi&ntilde;an City";
+    if (scopeChip) scopeChip.textContent = "City-Wide Service Area";
+  } else {
+    const bName = getScopedBarangay() || "Your Barangay";
+    if (covSub) covSub.textContent = `Filtered view for ${bName}`;
+    if (scopeChip) scopeChip.textContent = `Primary Service Area: ${bName}`;
+  }
+}
+
+function renderAnlBarangayTable() {
+  const tbody = document.getElementById("anlBarangayTableBody");
+  if (!tbody) return;
+
+  const rows = _anlAnalyticsData.barangays || barangays;
+  if (!rows || !rows.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px">No barangay data available.</td></tr>`;
+    return;
+  }
+
+  const statusColors = { active: "#27ae60", pending: "#f39c12", soon: "#3498db" };
+  const statusLabel  = { active: "Live", pending: "Pending", soon: "Coming Soon" };
+
+  tbody.innerHTML = rows.map(b => {
+    const sc = b.status || "pending";
+    const color = statusColors[sc] || statusColors.pending;
+    const label = statusLabel[sc]  || "Pending";
+    return `<tr>
+      <td><strong>${escapeHtml(b.name)}</strong></td>
+      <td>${Number(b.residents || b.users || 0).toLocaleString()}</td>
+      <td>${Number(b.docs || 0).toLocaleString()}</td>
+      <td>${Number(b.workers || 0).toLocaleString()}</td>
+      <td><span class="status-pill" style="background:${color}22;color:${color}">${label}</span></td>
+    </tr>`;
+  }).join("");
+}
+
+let _anlChartInstances = {};
+
+function initAnalyticsCharts() {
+  // Destroy previous instances to avoid canvas reuse errors
+  Object.values(_anlChartInstances).forEach(c => { try { c.destroy(); } catch(e){} });
+  _anlChartInstances = {};
+
+  const d = _anlAnalyticsData;
+  const trendLabels = d.docTrend.labels.length ? d.docTrend.labels : ["-","-","-","-","-","-"];
+
+  // Line chart — document request trends
+  const tCtx = document.getElementById("anlDocTrendChart");
+  if (tCtx) {
+    _anlChartInstances.trend = new Chart(tCtx, {
+      type: "line",
+      data: {
+        labels: trendLabels,
+        datasets: [
+          { label: "Barangay ID",      data: d.docTrend.id,        borderColor: "#d4a574", backgroundColor: "rgba(212,165,116,0.08)", fill: true, tension: 0.42, borderWidth: 2.5 },
+          { label: "Barangay Clearance",data: d.docTrend.clearance, borderColor: "#5dade2", backgroundColor: "rgba(93,173,226,0.07)",  fill: true, tension: 0.42, borderWidth: 2.5 },
+          { label: "Job Seeker Cert.", data: d.docTrend.seeker,    borderColor: "#4cde80", backgroundColor: "rgba(76,222,128,0.07)",  fill: true, tension: 0.42, borderWidth: 2.5 },
+          { label: "Indigency Cert.",  data: d.docTrend.indigency, borderColor: "#9b59b6", backgroundColor: "rgba(155,89,182,0.07)",  fill: true, tension: 0.42, borderWidth: 2.5 },
+          { label: "Residency Cert.",  data: d.docTrend.residency, borderColor: "#e67e22", backgroundColor: "rgba(230,126,34,0.07)",  fill: true, tension: 0.42, borderWidth: 2.5 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: "rgba(30,45,61,0.8)", boxWidth: 12, font: { size: 11 } } } },
+        scales: { y: { beginAtZero: true, grid: { color: "rgba(0,0,0,0.05)" }, ticks: { color: "rgba(30,45,61,0.6)" } }, x: { grid: { color: "rgba(0,0,0,0.05)" }, ticks: { color: "rgba(30,45,61,0.6)" } } }
+      }
+    });
+  }
+
+  // Doughnut chart — request types
+  const dCtx = document.getElementById("anlDocTypeChart");
+  if (dCtx) {
+    const chartColors = ["#d4a574","#5dade2","#4cde80","#9b59b6","#e67e22"];
+    const labels = d.docType.labels.length ? d.docType.labels : ["Barangay ID","Barangay Clearance","Job Seeker Cert.","Indigency Certificate","Residency Certificate"];
+    const values = d.docType.values.length ? d.docType.values : [0,0,0,0,0];
+
+    _anlChartInstances.donut = new Chart(dCtx, {
+      type: "doughnut",
+      data: { labels, datasets: [{ data: values, backgroundColor: chartColors, borderWidth: 2, borderColor: "#ffffff" }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: "68%", plugins: { legend: { display: false } } }
+    });
+
+    const total = values.reduce((acc, n) => acc + n, 0) || 1;
+    const legend = document.getElementById("anlDocTypeLegend");
+    if (legend) {
+      legend.innerHTML = labels.map((label, idx) => {
+        const pct = Math.round((values[idx] / total) * 100);
+        const color = chartColors[idx % chartColors.length];
+        return `<div style="display:flex;align-items:center;gap:8px;font-size:12px"><span style="width:9px;height:9px;border-radius:50%;background:${color};flex-shrink:0"></span><span style="color:rgba(30,45,61,0.7);flex:1">${label}</span><span style="color:#1e293b;font-weight:700">${pct}%</span></div>`;
+      }).join("");
+    }
+  }
+
+  // Bar chart — skills
+  const sCtx = document.getElementById("anlSkillsChart");
+  if (sCtx) {
+    _anlChartInstances.skills = new Chart(sCtx, {
+      type: "bar",
+      data: {
+        labels: d.skills.labels.length ? d.skills.labels : ["No Data"],
+        datasets: [{ label: "Workers", data: d.skills.values.length ? d.skills.values : [0], backgroundColor: "rgba(212,165,116,0.75)", borderRadius: 7, borderSkipped: false }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { grid: { display: false }, ticks: { color: "rgba(30,45,61,0.6)" } }, y: { grid: { color: "rgba(0,0,0,0.05)" }, beginAtZero: true, ticks: { color: "rgba(30,45,61,0.6)" } } }
+      }
     });
   }
 }
@@ -3171,3 +3523,147 @@ async function rejectServiceRequest(reqId) {
 
 
 
+// ==========================================
+// HEALTH CENTER SCHEDULES LOGIC
+// ==========================================
+let allHealthSchedules = [];
+
+function populateHealthScheduleBarangays() {
+  const sel = document.getElementById("hsBarangay");
+  if (!sel) return;
+  
+  if (sel.options.length <= 1) {
+    if (isBarangayAdmin()) {
+      const brgy = getScopedBarangay();
+      sel.innerHTML = `<option value="${brgy}" selected>${brgy}</option>`;
+      sel.disabled = true;
+    } else {
+      const list = barangays.map(b => b.name);
+      list.sort().forEach(b => {
+        const opt = document.createElement("option");
+        opt.value = b;
+        opt.textContent = b;
+        sel.appendChild(opt);
+      });
+    }
+  }
+}
+
+async function loadHealthSchedules() {
+  const tbody = document.getElementById("healthSchedulesTableBody");
+  if (!tbody) return;
+
+  if (!supabaseClient) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color: var(--text-dim);">Supabase not connected.</td></tr>';
+    return;
+  }
+
+  try {
+    let query = supabaseClient.from("health_schedules").select("*").order("sort_order", { ascending: true }).order("barangay", { ascending: true });
+    
+    // If regular barangay admin, only fetch their own
+    if (isBarangayAdmin()) {
+      query = query.eq("barangay", getScopedBarangay());
+    }
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    
+    allHealthSchedules = data || [];
+    renderHealthSchedules(allHealthSchedules);
+  } catch (error) {
+    console.error("Error loading health schedules:", error);
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color: #ef4444;">Failed to load schedules.</td></tr>';
+  }
+}
+
+function renderHealthSchedules(list) {
+  const tbody = document.getElementById("healthSchedulesTableBody");
+  if (!tbody) return;
+
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 30px; color: var(--text-dim);">No schedules found.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(item => {
+    return `
+      <tr>
+        <td style="font-weight: 500;">${escapeHtml(item.barangay)}</td>
+        <td style="color: var(--gold); font-weight: 500;">${escapeHtml(item.day_of_week)}</td>
+        <td>${escapeHtml(item.activity)}</td>
+        <td style="text-align: center;">
+          <button class="btn-admin-danger" onclick="deleteHealthSchedule('${item.id}')" title="Delete">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function filterHealthSchedules() {
+  const query = (document.getElementById("hsSearchInput")?.value || "").toLowerCase();
+  if (!query) {
+    renderHealthSchedules(allHealthSchedules);
+    return;
+  }
+  const filtered = allHealthSchedules.filter(s => 
+    s.barangay.toLowerCase().includes(query) || 
+    s.day_of_week.toLowerCase().includes(query) || 
+    s.activity.toLowerCase().includes(query)
+  );
+  renderHealthSchedules(filtered);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("healthScheduleForm");
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      
+      const barangay = document.getElementById("hsBarangay").value;
+      const day_of_week = document.getElementById("hsDayOfWeek").value;
+      const activity = document.getElementById("hsActivity").value.trim();
+      
+      if (!barangay || !day_of_week || !activity) {
+        showAdminToast("Please fill all fields.", "error");
+        return;
+      }
+      
+      // Simple sort_order logic (Monday=1, Sunday=7)
+      const days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+      const sort_order = days.indexOf(day_of_week) + 1;
+
+      try {
+        const { error } = await supabaseClient.from("health_schedules").insert({
+          barangay, day_of_week, activity, sort_order
+        });
+        
+        if (error) throw error;
+        
+        showAdminToast("Schedule added successfully!", "success");
+        form.reset();
+        loadHealthSchedules(); // Reload table
+      } catch (err) {
+        console.error("Add schedule error:", err);
+        showAdminToast("Failed to add schedule: " + err.message, "error");
+      }
+    });
+  }
+});
+
+window.deleteHealthSchedule = async function(id) {
+  if (!confirm("Are you sure you want to delete this schedule entry?")) return;
+  
+  try {
+    const { error } = await supabaseClient.from("health_schedules").delete().eq("id", id);
+    if (error) throw error;
+    
+    showAdminToast("Schedule deleted.", "success");
+    loadHealthSchedules(); // Reload table
+  } catch (err) {
+    console.error("Delete schedule error:", err);
+    showAdminToast("Failed to delete schedule.", "error");
+  }
+};
