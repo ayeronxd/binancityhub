@@ -1,4 +1,4 @@
-﻿/* ===================================================================== */
+/* ===================================================================== */
 /* BARANGAY HUB - MASTER INITIALIZATION SCRIPT                         */
 /* ===================================================================== */
 /* This script contains the entire database schema, storage buckets,     */
@@ -88,6 +88,7 @@ create table if not exists public.document_requests (
   purpose text not null,
   status text not null default 'submitted' check (status in ('submitted','reviewing','approved','rejected','completed')),
   processed_by uuid references public.profiles(id),
+  photo_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -100,6 +101,7 @@ create table if not exists public.issue_reports (
   location text not null,
   description text not null,
   status text not null default 'pending' check (status in ('pending','processing','resolved')),
+  priority text not null default 'medium' check (priority in ('low','medium','high')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -1742,3 +1744,6 @@ DROP TRIGGER IF EXISTS trg_sync_worker_rating ON worker_ratings;
 CREATE TRIGGER trg_sync_worker_rating
   AFTER INSERT OR UPDATE ON worker_ratings
   FOR EACH ROW EXECUTE FUNCTION sync_worker_rating_stats();
+
+/* FILE: supabase-document-requests-photo.sql */
+ALTER TABLE public.document_requests ADD COLUMN IF NOT EXISTS photo_url text;

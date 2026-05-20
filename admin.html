@@ -267,6 +267,7 @@
                                 <thead>
                                     <tr>
                                         <th>Category</th>
+                                        <th>Priority</th>
                                         <th>Location</th>
                                         <th>Status</th>
                                         <th>Action</th>
@@ -522,6 +523,9 @@
                             <option value="Barangay Clearance">Barangay Clearance</option>
                             <option value="Job Seeker Cert.">Job Seeker Cert.</option>
                         </select>
+                        <select id="docBarangayFilter" class="admin-select" onchange="filterDocuments()" style="display: none;">
+                            <option value="">All Barangays</option>
+                        </select>
                         <select id="docStatusFilter" class="admin-select" onchange="filterDocuments()">
                             <option value="">All Statuses</option>
                             <option value="Pending">Pending</option>
@@ -604,6 +608,7 @@
                                 <tr>
                                     <th>#</th>
                                     <th>Category</th>
+                                    <th>Priority</th>
                                     <th>Location</th>
                                     <th>Description</th>
                                     <th>Barangay</th>
@@ -1300,6 +1305,11 @@
                         id="issueCategory">-</div>
                 </div>
                 <div class="modal-field" style="margin-bottom: 0;">
+                    <label>Priority</label>
+                    <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500;display:flex;align-items:center"
+                        id="issuePriority">-</div>
+                </div>
+                <div class="modal-field" style="margin-bottom: 0;">
                     <label>Location</label>
                     <div style="padding:10px;background:rgba(0,0,0,0.05);border-radius:8px;color:var(--text-dark);font-weight:500"
                         id="issueLocation">-</div>
@@ -1486,6 +1496,15 @@
                     <div class="fill-doc-info-item">
                         <span class="fill-doc-info-label">Ref No.</span>
                         <span class="fill-doc-info-value" id="fillDocRef">-</span>
+                    </div>
+                </div>
+
+                <!-- Resident Photo display wrapper -->
+                <div id="fillDocPhotoWrap" style="display:none; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: #fafafa; display: flex; align-items: center; gap: 12px;">
+                    <img id="fillDocPhotoImg" src="" alt="Resident Photo" style="width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd;">
+                    <div>
+                        <strong style="color: var(--primary-navy); font-size: 13px; display: block; margin-bottom: 2px;">Resident Profile Photo</strong>
+                        <span style="font-size:12px; color:var(--text-muted)">Provided for Barangay ID template placement.</span>
                     </div>
                 </div>
 

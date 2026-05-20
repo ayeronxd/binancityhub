@@ -141,6 +141,9 @@ function applyRoleScopedUI() {
   const settingsCityCard = document.getElementById("settingsCityCard");
   const settingsPortalCard = document.getElementById("settingsPortalCard");
 
+  const docBrgyFilter = document.getElementById("docBarangayFilter");
+  const issueBrgyFilter = document.getElementById("issueBarangayFilter");
+
   if (isSuperAdmin()) {
     setText("adminPanelSub", "City-Wide Controller · All 24 barangays");
     setText("roleModeTitle", "City-Wide Controller");
@@ -160,6 +163,9 @@ function applyRoleScopedUI() {
     // Show Admin Invites nav (super admin only)
     const adminInvitesNavItem = document.getElementById("navAdminInvitesItem");
     if (adminInvitesNavItem) adminInvitesNavItem.style.display = "";
+
+    if (docBrgyFilter) docBrgyFilter.style.display = "";
+    if (issueBrgyFilter) issueBrgyFilter.style.display = "";
     return;
   }
 
@@ -182,6 +188,9 @@ function applyRoleScopedUI() {
   // Keep account details editable while hiding city-only settings cards.
   if (settingsCityCard) settingsCityCard.style.display = "none";
   if (settingsPortalCard) settingsPortalCard.style.display = "none";
+
+  if (docBrgyFilter) docBrgyFilter.style.display = "none";
+  if (issueBrgyFilter) issueBrgyFilter.style.display = "none";
 }
 // Loads all admin datasets concurrently for responsive dashboard startup.
 async function loadAdminData() {
@@ -306,7 +315,7 @@ async function loadDocRequests() {
   const buildDocQuery = (barangayColumn) => {
     let query = supabaseClient
       .from("document_requests")
-      .select("id,resident_id,request_type,barangay,purpose,address,created_at,status,processed_at,notified_at")
+      .select("id,resident_id,request_type,barangay,purpose,address,photo_url,created_at,status,processed_at,notified_at")
       .order("created_at", { ascending: false });
 
     if (isBarangayAdmin() && barangayColumn) {
@@ -344,11 +353,14 @@ async function loadDocRequests() {
     barangay: r.barangay || "-",
     address: r.address || "",
     purpose: r.purpose || "",
+    photo_url: r.photo_url || null,
     date: formatDate(new Date(r.created_at)),
     status: mapDocStatus(r.status),
     processedAt: r.processed_at || null,
     notifiedAt:  r.notified_at  || null
   }));
+  populateDocBarangayFilter();
+  populateDocTypeFilter();
 }
 
 // Super admin sees all; barangay admin sees city-wide + scoped local announcements.
@@ -387,7 +399,7 @@ async function loadIssueReports() {
   const buildReportsQuery = (barangayColumn) => {
     let query = supabaseClient
       .from("issue_reports")
-      .select("id,category,location,description,status,created_at,resident_id,barangay,photo_url,updated_at")
+      .select("id,category,location,description,status,created_at,resident_id,barangay,photo_url,updated_at,priority")
       .order("created_at", { ascending: false });
 
     if (isBarangayAdmin() && barangayColumn) {
@@ -425,11 +437,28 @@ async function loadIssueReports() {
     status: mapReportStatus(r.status),
     photoUrl: r.photo_url || null,
     createdAt: r.created_at,
-    updatedAt: r.updated_at
+    updatedAt: r.updated_at,
+    priority: r.priority || "medium"
   }));
+
+  const priorityWeight = { high: 3, medium: 2, low: 1 };
+  issueReports.sort((a, b) => {
+    const isCompletedA = a.status === "Completed" ? 1 : 0;
+    const isCompletedB = b.status === "Completed" ? 1 : 0;
+    if (isCompletedA !== isCompletedB) {
+      return isCompletedA - isCompletedB;
+    }
+    const pA = priorityWeight[String(a.priority).toLowerCase()] || 2;
+    const pB = priorityWeight[String(b.priority).toLowerCase()] || 2;
+    if (pB !== pA) {
+      return pB - pA;
+    }
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+  populateIssueBarangayFilter();
 }
 
-function formatDuration(startISO, endISO) {
+function deprecatedFormatDuration(startISO, endISO) {
   try {
     if (!startISO || !endISO) return "—";
     const start = new Date(startISO);
@@ -987,6 +1016,49 @@ function statusPill(status) {
   return `<span class="status-pill ${cls}">${status}</span>`;
 }
 
+function priorityBadge(priority) {
+  const p = String(priority || "medium").toLowerCase();
+  if (p === "high") {
+    return `<span class="priority-badge high"><i class="fas fa-circle-exclamation"></i> High</span>`;
+  }
+  if (p === "low") {
+    return `<span class="priority-badge low"><i class="fas fa-circle-info"></i> Low</span>`;
+  }
+  return `<span class="priority-badge medium"><i class="fas fa-circle-minus"></i> Medium</span>`;
+}
+
+function buildIssueTimingBadge(createdAt, updatedAt, status) {
+  if (status !== "Completed") {
+    return `<span style="font-size:12px;color:var(--text-muted)">In Progress</span>`;
+  }
+
+  if (!createdAt || !updatedAt) {
+    return `<span style="font-size:12px;color:var(--text-muted)">—</span>`;
+  }
+
+  const start = new Date(createdAt);
+  const end = new Date(updatedAt);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return `<span style="font-size:12px;color:var(--text-muted)">—</span>`;
+  }
+
+  const pStr = fmtTime(start);
+  const nStr = fmtTime(end);
+
+  const diffMs = end.getTime() - start.getTime();
+  const duration = formatDuration(diffMs);
+
+  return `<div class="timing-badge timing-complete">
+            <div class="timing-range">
+              <span class="timing-time">${pStr}</span>
+              <i class="fas fa-arrow-right timing-arrow"></i>
+              <span class="timing-time">${nStr}</span>
+            </div>
+            <span class="timing-duration">${duration}</span>
+          </div>`;
+}
+
 function renderOverviewTable() {
   const tbody = document.getElementById("overviewRequestsBody");
   if (!tbody) return;
@@ -1023,17 +1095,18 @@ function renderOverviewReports() {
   if (!tbody) return;
 
   if (!issueReports || !issueReports.length) {
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">No recent issue reports.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">No recent issue reports.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = issueReports.slice(0, 5).map((r) => {
     const safeId = escapeAttr(r.id);
-    let actionBtn = `<button class="tbl-btn tbl-btn-view" onclick="openViewReportModal('${safeId}')"><i class="fas fa-eye"></i> View</button>`;
+    let actionBtn = `<button class="tbl-btn tbl-btn-view" onclick="showIssueDetails('${safeId}')"><i class="fas fa-eye"></i> View</button>`;
     
     return `
     <tr>
       <td><strong>${escapeHtml(r.category)}</strong></td>
+      <td>${priorityBadge(r.priority)}</td>
       <td><span style="font-size:12px;color:var(--text-muted)">${escapeHtml(r.location)}</span></td>
       <td>${statusPill(r.status)}</td>
       <td>${actionBtn}</td>
@@ -1291,13 +1364,25 @@ async function fetchResidentDocUrls(userId, verifyDocEl) {
   renderDocSlot(verifyDocEl, verifyPath, "Verification Document", isPdf);
 }
 
-function renderDocRequestsTable(typeFilter = "", statusFilter = "") {
+function renderDocRequestsTable() {
   const tbody = document.getElementById("docRequestsBody");
   if (!tbody) return;
+
+  const typeFilter = document.getElementById("docTypeFilter")?.value || "";
+  const statusFilter = document.getElementById("docStatusFilter")?.value || "";
+  const barangayFilter = document.getElementById("docBarangayFilter")?.value || "";
+  const term = (document.getElementById("docSearch")?.value || "").trim().toLowerCase();
 
   let filtered = [...docRequests];
   if (typeFilter) filtered = filtered.filter((r) => r.type === typeFilter);
   if (statusFilter) filtered = filtered.filter((r) => r.status === statusFilter);
+  if (barangayFilter) filtered = filtered.filter((r) => String(r.barangay) === barangayFilter);
+  if (term) {
+    filtered = filtered.filter((r) => {
+      const blob = `${r.ref} ${r.name} ${r.type} ${r.barangay}`.toLowerCase();
+      return blob.includes(term);
+    });
+  }
 
   // ── SUPER ADMIN: read-only view grouped by barangay ──────────────────────
   if (isSuperAdmin()) {
@@ -1396,10 +1481,7 @@ function renderDocRequestsTable(typeFilter = "", statusFilter = "") {
 }
 
 function filterDocuments() {
-  renderDocRequestsTable(
-    document.getElementById("docTypeFilter").value,
-    document.getElementById("docStatusFilter").value
-  );
+  renderDocRequestsTable();
 }
 
 // Moves request status through approve/reject/archive queue; policy-controlled in DB via RLS.
@@ -1576,6 +1658,46 @@ function populateIssueBarangayFilter() {
   }
 }
 
+function populateDocBarangayFilter() {
+  const filter = document.getElementById("docBarangayFilter");
+  if (!filter) return;
+
+  if (isBarangayAdmin()) {
+    filter.innerHTML = `<option value="${escapeHtml(getScopedBarangay())}">${escapeHtml(getScopedBarangay())}</option>`;
+    filter.value = getScopedBarangay();
+    return;
+  }
+
+  const previous = filter.value;
+  const uniqueBarangays = [...new Set(docRequests.map((r) => String(r.barangay || "-").trim()).filter((b) => b && b !== "-"))]
+    .sort((a, b) => a.localeCompare(b));
+
+  filter.innerHTML = `<option value="">All Barangays</option>${uniqueBarangays
+    .map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
+    .join("")}`;
+
+  if (previous && uniqueBarangays.includes(previous)) {
+    filter.value = previous;
+  }
+}
+
+function populateDocTypeFilter() {
+  const filter = document.getElementById("docTypeFilter");
+  if (!filter) return;
+
+  const previous = filter.value;
+  const uniqueTypes = [...new Set(docRequests.map((r) => String(r.type || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+
+  filter.innerHTML = `<option value="">All Document Types</option>${uniqueTypes
+    .map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`)
+    .join("")}`;
+
+  if (previous && uniqueTypes.includes(previous)) {
+    filter.value = previous;
+  }
+}
+
 function filterIssueReports() {
   renderIssueReportsTable();
 }
@@ -1600,6 +1722,73 @@ function renderIssueReportsTable() {
   if (category) filtered = filtered.filter((r) => r.category === category);
   if (barangayFilter) filtered = filtered.filter((r) => String(r.barangay) === barangayFilter);
 
+  // ── SUPER ADMIN: read-only view grouped by barangay ──────────────────────
+  if (isSuperAdmin()) {
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--text-muted)"><i class="fas fa-inbox" style="font-size:22px;margin-bottom:8px;display:block"></i>No issue reports found.</td></tr>`;
+      return;
+    }
+
+    // Group by barangay
+    const groups = {};
+    filtered.forEach(r => {
+      const key = r.barangay || "Unknown Barangay";
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(r);
+    });
+
+    const sortedBarangays = Object.keys(groups).sort();
+
+    tbody.innerHTML = sortedBarangays.map(brgyName => {
+      const rows = groups[brgyName];
+      const pendingCount = rows.filter(r => r.status === "Pending").length;
+      const processingCount = rows.filter(r => r.status === "Processing").length;
+      const completedCount = rows.filter(r => r.status === "Completed").length;
+
+      const groupHeader = `
+        <tr class="brgy-group-header">
+          <td colspan="11">
+            <div class="brgy-group-header-inner">
+              <div>
+                <i class="fas fa-map-marker-alt" style="color:var(--accent-gold);margin-right:8px"></i>
+                <strong>${escapeHtml(brgyName)}</strong>
+              </div>
+              <div class="brgy-group-badges">
+                <span class="status-pill pending" style="font-size:11px">${pendingCount} Pending</span>
+                <span class="status-pill processing" style="font-size:11px">${processingCount} Processing</span>
+                <span class="status-pill completed" style="font-size:11px">${completedCount} Resolved</span>
+                <span style="font-size:11px;color:var(--text-muted);font-weight:600">${rows.length} total</span>
+              </div>
+            </div>
+          </td>
+        </tr>`;
+
+      const dataRows = rows.map((r, i) => {
+        const actionButtons = `<button class="tbl-btn tbl-btn-view" onclick="showIssueDetails('${r.id}')"><i class="fas fa-eye"></i> View</button>`;
+
+        return `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${escapeHtml(r.category)}</td>
+          <td>${priorityBadge(r.priority)}</td>
+          <td>${escapeHtml(r.location)}</td>
+          <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(r.description)}</td>
+          <td>${escapeHtml(r.barangay || "-")}</td>
+          <td>${escapeHtml(r.reporter)}</td>
+          <td>${escapeHtml(r.date)}</td>
+          <td>${buildIssueTimingBadge(r.createdAt, r.updatedAt, r.status)}</td>
+          <td>${statusPill(r.status)}</td>
+          <td style="display:flex;gap:6px;flex-wrap:wrap;">${actionButtons}</td>
+        </tr>`;
+      }).join("");
+
+      return groupHeader + dataRows;
+    }).join("");
+
+    return;
+  }
+
+  // ── BARANGAY ADMIN: flat list with action buttons ──────────────────────
   tbody.innerHTML = filtered.map((r, i) => {
     const canDelete = r.status === "Completed";
     const deleteBtn = canDelete
@@ -1611,22 +1800,19 @@ function renderIssueReportsTable() {
          ${r.status !== "Processing" && r.status !== "Completed" ? `<button class="tbl-btn tbl-btn-approve" onclick="setIssueStatus('${r.id}','processing')"><i class="fas fa-play"></i> Process</button>` : ""}
          ${r.status !== "Completed" ? `<button class="tbl-btn tbl-btn-view" onclick="setIssueStatus('${r.id}','resolved')"><i class="fas fa-circle-check"></i> Resolve</button>` : ""}
          ${deleteBtn}`
-      : `${canDelete ? deleteBtn : `<button class="tbl-btn tbl-btn-view" onclick="showIssueDetails('${r.id}')"><i class="fas fa-eye"></i> View</button>`}`;
+      : `<button class="tbl-btn tbl-btn-view" onclick="showIssueDetails('${r.id}')"><i class="fas fa-eye"></i> View</button>`;
 
     return `
     <tr>
       <td>${i + 1}</td>
       <td>${escapeHtml(r.category)}</td>
+      <td>${priorityBadge(r.priority)}</td>
       <td>${escapeHtml(r.location)}</td>
       <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(r.description)}</td>
       <td>${escapeHtml(r.barangay || "-")}</td>
       <td>${escapeHtml(r.reporter)}</td>
       <td>${escapeHtml(r.date)}</td>
-      <td>
-        ${r.status === "Completed" 
-          ? `<span style="font-size:12px;font-weight:600;color:var(--text-main)"><i class="fas fa-stopwatch" style="color:var(--text-dim)"></i> ${formatDuration(r.createdAt, r.updatedAt)}</span>` 
-          : `<span style="font-size:12px;color:var(--text-muted)">In Progress</span>`}
-      </td>
+      <td>${buildIssueTimingBadge(r.createdAt, r.updatedAt, r.status)}</td>
       <td>${statusPill(r.status)}</td>
       <td style="display:flex;gap:6px;flex-wrap:wrap;">${actionButtons}</td>
     </tr>
@@ -1656,6 +1842,10 @@ async function setIssueStatus(id, status) {
 }
 
 async function deleteIssueReport(id) {
+  if (!isBarangayAdmin()) {
+    showAdminToast("Only Barangay Admins can delete issues.");
+    return;
+  }
   const record = issueReports.find((r) => String(r.id) === String(id));
   if (!record) return;
 
@@ -1688,6 +1878,10 @@ function showIssueDetails(id) {
 
   // Populate modal fields with issue data
   document.getElementById("issueCategory").textContent = escapeHtml(issue.category || "-");
+  const priorityEl = document.getElementById("issuePriority");
+  if (priorityEl) {
+    priorityEl.innerHTML = priorityBadge(issue.priority);
+  }
   document.getElementById("issueLocation").textContent = escapeHtml(issue.location || "-");
   document.getElementById("issueDescription").textContent = issue.description || "-";
   document.getElementById("issueBarangay").textContent = escapeHtml(issue.barangay || "-");
@@ -3111,13 +3305,27 @@ async function openFillDocModal(reqId, redownload = false) {
     purpose: "",  // not stored in request — editable
     phone: profile?.phone || "",
     templateUrl: tpl?.template_file_url || null,
-    templateFileName: tpl?.template_file_name || ""
+    templateFileName: tpl?.template_file_name || "",
+    photoUrl: req.photo_url || null
   };
 
   // Populate header
   document.getElementById("fillDocResidentName").textContent = req.name;
   document.getElementById("fillDocType").textContent = req.type;
   document.getElementById("fillDocRef").textContent = req.ref;
+
+  // Toggle resident photo display
+  const photoWrap = document.getElementById("fillDocPhotoWrap");
+  const photoImg = document.getElementById("fillDocPhotoImg");
+  if (photoWrap && photoImg) {
+    if (req.photo_url) {
+      photoImg.src = req.photo_url;
+      photoWrap.style.display = "flex";
+    } else {
+      photoWrap.style.display = "none";
+      photoImg.src = "";
+    }
+  }
   document.getElementById("fillDocSubtitle").textContent =
     tpl ? `Template: ${tpl.template_file_name}` : "No template found — approve without document";
 
@@ -3150,7 +3358,8 @@ async function openFillDocModal(reqId, redownload = false) {
       { key: "ref_no",         label: "Reference No.",     value: req.ref, readonly: true },
       { key: "address",        label: "Address",           value: req.address || profile?.barangay || req.barangay, readonly: true },
       { key: "phone",          label: "Phone",             value: profile?.phone || "" },
-      { key: "document_type",  label: "Document Type",     value: req.type, readonly: true }
+      { key: "document_type",  label: "Document Type",     value: req.type, readonly: true },
+      { key: "photo_url",      label: "Photo URL",         value: req.photo_url || "", readonly: true }
     ];
 
     const grid = document.getElementById("fillDocFieldsGrid");

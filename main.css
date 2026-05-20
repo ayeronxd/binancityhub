@@ -1186,6 +1186,10 @@ canvas {
     background: rgba(255, 255, 255, 0.1);
 }
 
+.fb-action-btn.liked {
+    color: var(--t-blue) !important;
+}
+
 /* ── Announcement Comments - Full Social Threaded System ── */
 
 .ann-comment-thread {

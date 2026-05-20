@@ -173,8 +173,50 @@ async function loadAnnouncements() {
     content: a.content,
     media_url: a.media_url,
     media_type: a.media_type,
-    barangay: a.barangay_scope
+    barangay: a.barangay_scope,
+    likes: [],
+    commentsCount: 0
   }));
+
+  const annIds = announcementsData.map(a => a.id);
+  if (annIds.length > 0 && supabaseClient) {
+    try {
+      const { data: allLikes } = await supabaseClient
+        .from("announcement_likes")
+        .select("announcement_id, resident_id")
+        .in("announcement_id", annIds);
+
+      const likesMap = {};
+      annIds.forEach(id => { likesMap[id] = []; });
+      if (allLikes) {
+        allLikes.forEach(l => {
+          if (likesMap[l.announcement_id]) {
+            likesMap[l.announcement_id].push(l.resident_id);
+          }
+        });
+      }
+
+      const { data: allComments } = await supabaseClient
+        .from("announcement_comments")
+        .select("announcement_id")
+        .in("announcement_id", annIds);
+
+      const commentsMap = {};
+      annIds.forEach(id => { commentsMap[id] = 0; });
+      if (allComments) {
+        allComments.forEach(c => {
+          commentsMap[c.announcement_id] = (commentsMap[c.announcement_id] || 0) + 1;
+        });
+      }
+
+      announcementsData.forEach(a => {
+        a.likes = likesMap[a.id] || [];
+        a.commentsCount = commentsMap[a.id] || 0;
+      });
+    } catch (e) {
+      console.error("Error loading likes or comments for announcements:", e);
+    }
+  }
 }
 
 // Aggregates top cards + barangay table from SQL view/table counts.
@@ -765,15 +807,19 @@ function toggleBarangayRows(btn) {
 }
 
 function buildAnnCard(a) {
+  const isLiked = currentUser && a.likes && a.likes.includes(currentUser.id);
+  const likesCount = a.likes ? a.likes.length : 0;
+  const commentsCount = a.commentsCount || 0;
+
   const mediaHtml = a.media_url 
     ? (a.media_type === 'video' 
         ? `<div class="fb-media-wrapper"><video controls src="${escapeAttr(a.media_url)}" style="width:100%;max-height:500px;background:#000;display:block;"></video></div>`
-        : `<div class="fb-media-wrapper" onclick="openAnnouncement('${escapeHtml(a.id)}')"><img src="${escapeAttr(a.media_url)}" alt="Attachment" style="width:100%;object-fit:cover;max-height:500px;display:block;cursor:pointer;"></div>`)
+        : `<div class="fb-media-wrapper" onclick="openAnnouncement('${escapeHtml(a.id)}', event)"><img src="${escapeAttr(a.media_url)}" alt="Attachment" style="width:100%;object-fit:cover;max-height:500px;display:block;cursor:pointer;"></div>`)
     : '';
 
   return `
   <div class="ann-card fb-layout">
-    <div class="fb-card-header" onclick="openAnnouncement('${escapeHtml(a.id)}')">
+    <div class="fb-card-header" onclick="openAnnouncement('${escapeHtml(a.id)}', event)">
       <div class="fb-avatar">
         <i class="fas fa-bullhorn"></i>
       </div>
@@ -784,7 +830,7 @@ function buildAnnCard(a) {
       <div class="fb-category-badge">${escapeHtml(a.category)}</div>
     </div>
     
-    <div class="fb-card-body" onclick="openAnnouncement('${escapeHtml(a.id)}')">
+    <div class="fb-card-body" onclick="openAnnouncement('${escapeHtml(a.id)}', event)">
       <div class="fb-title">${escapeHtml(a.title)}</div>
       <p class="fb-content">${escapeHtml(a.content)}</p>
     </div>
@@ -792,15 +838,15 @@ function buildAnnCard(a) {
     ${mediaHtml}
 
     <div class="fb-card-footer">
-      <div class="fb-stats-row" onclick="openAnnouncement('${escapeHtml(a.id)}')">
-        <span><i class="fas fa-thumbs-up" style="color:var(--t-blue);margin-right:4px"></i> Interact</span>
-        <span>Join discussion</span>
+      <div class="fb-stats-row" onclick="openAnnouncement('${escapeHtml(a.id)}', event)">
+        <span><i class="fas fa-thumbs-up" style="color:var(--t-blue);margin-right:4px"></i> ${likesCount} ${likesCount === 1 ? 'Like' : 'Likes'}</span>
+        <span>${commentsCount} ${commentsCount === 1 ? 'comment' : 'comments'}</span>
       </div>
       <div class="fb-actions-row">
-        <button class="fb-action-btn" onclick="openAnnouncement('${escapeHtml(a.id)}')">
-          <i class="far fa-thumbs-up"></i> Like
+        <button class="fb-action-btn ${isLiked ? 'liked' : ''}" onclick="toggleLikeFromFeed('${escapeHtml(a.id)}', event)">
+          <i class="${isLiked ? 'fas' : 'far'} fa-thumbs-up"></i> Like
         </button>
-        <button class="fb-action-btn" onclick="openAnnouncement('${escapeHtml(a.id)}')">
+        <button class="fb-action-btn" onclick="openAnnouncement('${escapeHtml(a.id)}', event)">
           <i class="far fa-comment-alt"></i> Comment
         </button>
       </div>
@@ -812,7 +858,8 @@ function buildAnnCard(a) {
 let currentOpenAnnId = null;
 let currentAnnIsLiked = false;
 
-async function openAnnouncement(id) {
+async function openAnnouncement(id, event) {
+  if (event) event.stopPropagation();
   const ann = announcementsData.find(a => a.id === id);
   if (!ann) return;
   
@@ -1324,6 +1371,8 @@ async function toggleAnnouncementLike() {
   const countEl = document.getElementById("annLikeCount");
   let count = parseInt(countEl.innerText) || 0;
 
+  const ann = announcementsData.find(a => a.id === currentOpenAnnId);
+
   if (currentAnnIsLiked) {
     // Unliking: Revert UI state immediately (optimistic UI)
     btn.classList.remove("liked");
@@ -1332,6 +1381,14 @@ async function toggleAnnouncementLike() {
     countEl.innerText = Math.max(0, count - 1);
     currentAnnIsLiked = false;
     
+    if (ann) {
+      if (!ann.likes) ann.likes = [];
+      ann.likes = ann.likes.filter(id => id !== currentUser.id);
+    }
+    renderAnnouncementsPage();
+    renderPortalAnnouncementsMini();
+    renderAnnouncementsSidebar();
+
     // Perform secure delete constrained by RLS (user can only delete their own like)
     await supabaseClient.from("announcement_likes")
       .delete()
@@ -1345,9 +1402,90 @@ async function toggleAnnouncementLike() {
     countEl.innerText = count + 1;
     currentAnnIsLiked = true;
     
+    if (ann) {
+      if (!ann.likes) ann.likes = [];
+      if (!ann.likes.includes(currentUser.id)) {
+        ann.likes.push(currentUser.id);
+      }
+    }
+    renderAnnouncementsPage();
+    renderPortalAnnouncementsMini();
+    renderAnnouncementsSidebar();
+
     // Perform secure insert
     await supabaseClient.from("announcement_likes")
       .insert({ announcement_id: currentOpenAnnId, resident_id: currentUser.id });
+  }
+}
+
+async function toggleLikeFromFeed(annId, event) {
+  if (event) event.stopPropagation();
+  if (!currentUser) return requireLogin("like announcements");
+
+  const ann = announcementsData.find(a => a.id === annId);
+  if (!ann) return;
+
+  if (!ann.likes) ann.likes = [];
+  const isAlreadyLiked = ann.likes.includes(currentUser.id);
+
+  // Optimistic UI updates
+  if (isAlreadyLiked) {
+    ann.likes = ann.likes.filter(id => id !== currentUser.id);
+  } else {
+    ann.likes.push(currentUser.id);
+  }
+
+  // Re-render feed elements immediately for responsiveness
+  renderAnnouncementsPage();
+  renderPortalAnnouncementsMini();
+  renderAnnouncementsSidebar();
+
+  // If the same announcement details modal is currently open, update its elements
+  if (currentOpenAnnId === annId) {
+    currentAnnIsLiked = !isAlreadyLiked;
+    const countEl = document.getElementById("annLikeCount");
+    const modalBtn = document.getElementById("annLikeBtn");
+    const modalIcon = document.getElementById("annLikeIcon");
+    if (countEl) countEl.innerText = ann.likes.length;
+    if (modalBtn && modalIcon) {
+      if (currentAnnIsLiked) {
+        modalBtn.classList.add("liked");
+        modalIcon.classList.remove("far");
+        modalIcon.classList.add("fas");
+      } else {
+        modalBtn.classList.remove("liked");
+        modalIcon.classList.remove("fas");
+        modalIcon.classList.add("far");
+      }
+    }
+  }
+
+  try {
+    if (isAlreadyLiked) {
+      await supabaseClient
+        .from("announcement_likes")
+        .delete()
+        .eq("announcement_id", annId)
+        .eq("resident_id", currentUser.id);
+    } else {
+      await supabaseClient
+        .from("announcement_likes")
+        .insert({
+          announcement_id: annId,
+          resident_id: currentUser.id
+        });
+    }
+  } catch (err) {
+    // Revert state on error
+    if (isAlreadyLiked) {
+      ann.likes.push(currentUser.id);
+    } else {
+      ann.likes = ann.likes.filter(id => id !== currentUser.id);
+    }
+    renderAnnouncementsPage();
+    renderPortalAnnouncementsMini();
+    renderAnnouncementsSidebar();
+    showToast("Error updating like status", "error");
   }
 }
 
@@ -1698,6 +1836,15 @@ function openApplyModal(docName) {
   const purposeWrap = document.getElementById("applyPurposeWrap");
   if (purposeWrap) purposeWrap.style.display = "block";
 
+  const photoWrap = document.getElementById("applyPhotoWrap");
+  if (photoWrap) {
+    photoWrap.style.display = (docName === "Barangay ID") ? "block" : "none";
+    const photoInput = document.getElementById("applyPhoto");
+    if (photoInput) {
+      photoInput.required = (docName === "Barangay ID");
+    }
+  }
+
   if (currentProfile) {
     const nameInput = document.getElementById("applyFullName");
     const emailInput = document.getElementById("applyEmail");
@@ -1913,19 +2060,74 @@ function setupApplyForm() {
       return;
     }
 
-    const purpose = document.getElementById("applyPurpose")?.value || "General request";
-    const address = document.getElementById("applyAddress")?.value || "Not specified";
+    const fullName = (document.getElementById("applyFullName")?.value || "").trim();
+    const address = (document.getElementById("applyAddress")?.value || "").trim();
+    const purpose = (document.getElementById("applyPurpose")?.value || "").trim();
+
+    if (!fullName) {
+      showToast("Full Name is required.", "error");
+      return;
+    }
+    if (!address) {
+      showToast("Address is required.", "error");
+      return;
+    }
+    if (!purpose) {
+      showToast("Purpose is required.", "error");
+      return;
+    }
+
+    let photoUrl = null;
+    const photoInput = document.getElementById("applyPhoto");
+    const file = photoInput?.files ? photoInput.files[0] : null;
+
+    if (applyModalDocName === "Barangay ID" && !file) {
+      showToast("Photo is required for Barangay ID request.", "error");
+      return;
+    }
+
     const btn = e.target.querySelector('button[type="submit"]');
     const originalText = btn ? btn.innerHTML : "";
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Processing...'; }
 
     try {
+      if (file) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `doc_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const { data: uploadData, error: uploadError } = await supabaseClient.storage
+          .from("issue-reports")
+          .upload(fileName, file, { upsert: false });
+
+        if (uploadError) {
+          showToast("Photo upload failed: " + uploadError.message, "error");
+          return;
+        }
+
+        const { data: urlData } = supabaseClient.storage
+          .from("issue-reports")
+          .getPublicUrl(fileName);
+
+        if (urlData && urlData.publicUrl) {
+          photoUrl = urlData.publicUrl;
+        }
+      }
+
+      // Update local profile full_name if it is different or empty, to keep data consistent.
+      if (currentProfile && currentProfile.full_name !== fullName) {
+        await supabaseClient
+          .from("profiles")
+          .update({ full_name: fullName })
+          .eq("id", currentUser.id);
+        currentProfile.full_name = fullName;
+      }
+
       const { error } = await supabaseClient.from("document_requests").insert({
         resident_id: currentUser.id,
         barangay: currentProfile?.barangay || currentUser?.user_metadata?.barangay || "Barangay Poblacion",
         address: address,
         request_type: applyModalDocName,
         purpose,
+        photo_url: photoUrl,
         status: "submitted"
       });
 

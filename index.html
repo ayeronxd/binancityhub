@@ -899,15 +899,15 @@
             <form id="applyForm" style="text-align:left">
                 <div class="glass-field">
                     <label>Full Name</label>
-                    <input type="text" id="applyFullName" class="glass-input" placeholder="Your full name...">
+                    <input type="text" id="applyFullName" class="glass-input" placeholder="Your full name..." required>
                 </div>
                 <div class="glass-field">
                     <label>Address</label>
-                    <input type="text" id="applyAddress" class="glass-input" placeholder="Street...">
+                    <input type="text" id="applyAddress" class="glass-input" placeholder="Street..." required>
                 </div>
                 <div class="glass-field" id="applyPurposeWrap" style="display:none">
                     <label>Purpose</label>
-                    <select id="applyPurpose" class="glass-input">
+                    <select id="applyPurpose" class="glass-input" required>
                         <option value="">Select purpose...</option>
                         <option>Employment</option>
                         <option>Business</option>
@@ -915,9 +915,13 @@
                         <option>Other</option>
                     </select>
                 </div>
+                <div class="glass-field" id="applyPhotoWrap" style="display:none">
+                    <label>ID Photo (2x2 Background-free recommended)</label>
+                    <input type="file" id="applyPhoto" class="glass-input" accept="image/*">
+                </div>
                 <div class="glass-field">
                     <label>Email</label>
-                    <input type="email" id="applyEmail" class="glass-input" placeholder="your@email.com">
+                    <input type="email" id="applyEmail" class="glass-input" placeholder="your@email.com" required>
                 </div>
                 <button type="submit" class="btn-gold w-full"><i class="fas fa-paper-plane"></i> Submit
                     Application</button>
