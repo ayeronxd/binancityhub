@@ -1854,6 +1854,8 @@ async function deleteIssueReport(id) {
     return;
   }
 
+  if (!window.confirm(`Delete this resolved issue report?\n\n${record.category || "Issue"} at ${record.location || "the reported location"} will be permanently removed.`)) return;
+
   const { error } = await supabaseClient
     .from("issue_reports")
     .delete()
@@ -2046,6 +2048,11 @@ function openEditBarangayModal(id) {
 }
 
 async function deleteBarangay(id) {
+  const barangay = barangays.find((b) => String(b.id) === String(id));
+  const name = barangay?.name || "this barangay";
+
+  if (!window.confirm(`Delete "${name}"?\n\nThis action cannot be undone.`)) return;
+
   const { error } = await supabaseClient.from("barangays").delete().eq("id", id);
   if (error) {
     showAdminToast(error.message);
@@ -2070,6 +2077,11 @@ async function activateBarangay(id) {
 }
 
 async function deleteAnnouncement(id) {
+  const announcement = announcements.find((a) => String(a.id) === String(id));
+  const title = announcement?.title || "this announcement";
+
+  if (!window.confirm(`Delete "${title}"?\n\nThis announcement will be permanently removed.`)) return;
+
   const { error } = await supabaseClient.from("announcements").delete().eq("id", id);
   if (error) {
     showAdminToast(error.message);

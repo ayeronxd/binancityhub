@@ -25,7 +25,7 @@ let reportsData = [];
 let userApplications = [];
 
 let analyticsData = {
-  totals: { residents: 0, docs: 0, workers: 0, unresolvedReports: 0 },
+  totals: { residents: 0, docs: 0, workers: 0, unresolvedReports: 0, barangays: 0 },
   docTrend: { labels: [], id: [], clearance: [], seeker: [], indigency: [], residency: [] },
   docType: { labels: [], values: [] },
   skills: { labels: [], values: [] },
@@ -265,7 +265,8 @@ async function loadBarangaysAndMetrics() {
     residents: profilesCount.count || 0,
     docs: docsCount.count || 0,
     workers: workersCount.count || 0,
-    unresolvedReports: reportsCount.count || 0
+    unresolvedReports: reportsCount.count || 0,
+    barangays: (barangaysRes.data || []).length
   };
 
   analyticsData.kpiTrends = {
@@ -436,7 +437,6 @@ function resetAnalyticsTrendsToDefault() {
   renderAnalyticsTrends();
 }
 
-// Populates hero section live stat numbers from DB data.
 function renderHeroStats() {
   const totals = analyticsData.totals;
   const fmt = (n) => Number(n || 0).toLocaleString();
@@ -444,6 +444,7 @@ function renderHeroStats() {
   set("heroStatResidents", fmt(totals.residents));
   set("heroStatDocs",      fmt(totals.docs));
   set("heroStatWorkers",   fmt(totals.workers));
+  set("heroStatBarangays",  fmt(totals.barangays));
 }
 
 async function loadUserApplications() {
@@ -501,7 +502,7 @@ async function doLogout() {
 
 function checkUrlHash() {
   const hash = window.location.hash.replace("#", "");
-  const validTabs = ["home", "analytics", "workers", "documents", "community", "myportal"];
+  const validTabs = ["home", "analytics", "workers", "documents", "announcements", "issues", "myportal"];
   if (!hash || !validTabs.includes(hash)) return;
 
   // Avoid stale guest modal when session is already authenticated.
@@ -514,37 +515,8 @@ function checkUrlHash() {
 }
 
 function setupTopbarScroll() {
-  const sections = ["home", "documents", "announcements", "issues", "workers"];
   window.addEventListener("scroll", () => {
     document.getElementById("topbar")?.classList.toggle("scrolled", window.scrollY > 20);
-
-    const continuousView = document.getElementById("home-continuous-view");
-    if (continuousView && continuousView.classList.contains("active")) {
-      let currentSection = "";
-      for (const id of sections) {
-        const el = document.getElementById(id);
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          if (rect.top <= window.innerHeight / 3) {
-            currentSection = id;
-          }
-        }
-      }
-
-      // Force highlight last section if at the absolute bottom of the page
-      if (Math.ceil(window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 50) {
-        currentSection = sections[sections.length - 1];
-      }
-
-      if (currentSection) {
-        document.querySelectorAll(".tnav-link[data-tab]").forEach((l) => {
-          if (sections.includes(l.getAttribute("data-tab"))) {
-            l.classList.toggle("active", l.getAttribute("data-tab") === currentSection);
-          }
-        });
-        history.replaceState(null, null, "#" + currentSection);
-      }
-    }
   }, { passive: true });
 }
 
@@ -602,26 +574,20 @@ function switchTab(tabId) {
     return;
   }
 
-  const isContinuous = ["home", "workers", "documents", "announcements", "issues"].includes(tabId);
-  const targetTab = isContinuous ? "home-continuous-view" : "tab-" + tabId;
+  const targetTab = "tab-" + tabId;
 
   document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
-  document.getElementById(targetTab)?.classList.add("active");
+  const panel = document.getElementById(targetTab);
+  if (panel) {
+    panel.classList.add("active");
+  }
 
   document.querySelectorAll(".tnav-link[data-tab]").forEach((l) => {
     l.classList.toggle("active", l.getAttribute("data-tab") === tabId);
   });
 
-  if (isContinuous) {
-    const el = document.getElementById(tabId);
-    if (el) {
-      const y = el.getBoundingClientRect().top + window.scrollY - 80;
-      window.scrollTo({ top: y, behavior: "smooth" });
-    }
-  } else {
-    history.replaceState(null, null, "#" + tabId);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
+  history.replaceState(null, null, "#" + tabId);
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 // Quick-doc-btn handler: navigates to the document request section.

@@ -1066,6 +1066,7 @@ canvas {
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
 
 .fb-publisher {
@@ -1074,6 +1075,7 @@ canvas {
     color: var(--white);
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 4px;
 }
 
@@ -1095,6 +1097,8 @@ canvas {
     background: rgba(255, 255, 255, 0.8);
     padding: 3px 8px;
     border-radius: 12px;
+    margin-left: 8px;
+    flex-shrink: 0;
 }
 
 .fb-card-body {
@@ -4027,12 +4031,22 @@ body.logged-in #reportForm.user-only {
     }
 
     .hero-stats-strip {
-        gap: 0;
-        padding: 14px 16px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px 0;
+        padding: 18px 8px;
+    }
+
+    .hss-divider {
+        display: none;
     }
 
     .hss-item {
-        padding: 0 14px;
+        padding: 0 8px;
+    }
+
+    .hss-item:nth-child(4n+1) {
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .hss-val {
