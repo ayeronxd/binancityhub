@@ -15,7 +15,7 @@
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <!-- Chart.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <!-- Admin CSS -->
     <link href="admin.css" rel="stylesheet">
 </head>
@@ -565,13 +565,27 @@
             <!-- ===== ANNOUNCEMENTS PANEL ===== -->
             <div class="admin-panel" id="panel-announcements">
                 <div class="panel-toolbar">
-                    <h4 id="annPanelHeading" class="mb-0 me-3">City-Wide News Hub</h4>
+                    <div>
+                        <h4 id="annPanelHeading" class="mb-0">City-Wide News Hub</h4>
+                        <span class="panel-toolbar-sub" id="announcementsCount">0 announcements</span>
+                    </div>
                     <button class="btn-admin-primary" onclick="openAddAnnouncementModal()">
                         <i class="fas fa-plus"></i> New Announcement
                     </button>
                 </div>
 
-                <div class="announcements-admin-grid" id="announcementsAdminGrid">
+                <div class="announcements-control-bar">
+                    <div class="toolbar-search ann-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="announcementSearch" placeholder="Search announcements..."
+                            oninput="filterAnnouncements()">
+                    </div>
+                    <select id="announcementCategoryFilter" class="admin-select" onchange="filterAnnouncements()">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+
+                <div class="announcements-admin-list" id="announcementsAdminGrid">
                     <!-- Populated by JS -->
                 </div>
             </div>
@@ -1741,10 +1755,6 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-    <!-- PizZip for reading/writing DOCX (ZIP) files -->
-    <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.4/dist/pizzip.js"></script>
-    <!-- FileSaver for download -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="env.js"></script>
     <script src="supabase-config.js"></script>

@@ -288,7 +288,7 @@ async function handleLogin() {
   }
 
   setButtonLoading("loginSubmitBtn", true);
-  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  const { data: signInData, error } = await supabaseClient.auth.signInWithPassword({ email, password });
   setButtonLoading("loginSubmitBtn", false);
 
   if (error) {
@@ -296,8 +296,11 @@ async function handleLogin() {
     return;
   }
 
-  const { data: userData } = await supabaseClient.auth.getUser();
-  const user = userData?.user;
+  const user = signInData?.user;
+  if (!user) {
+    showToast("Login succeeded, but the user session could not be read. Please try again.", "error");
+    return;
+  }
 
   const { data: profile, error: dbErr } = await supabaseClient
     .from("profiles")
@@ -328,12 +331,12 @@ async function handleLogin() {
 
   if (role === "super_admin" || role === "barangay_admin") {
     showToast("Login successful. Redirecting to admin dashboard...", "success");
-    setTimeout(() => { window.location.href = "admin.html"; }, 900);
+    window.location.href = "admin.html";
     return;
   }
 
   showToast("Login successful. Redirecting to your portal...", "success");
-  setTimeout(() => { window.location.href = "index.html#myportal"; }, 900);
+  window.location.href = "index.html#myportal";
 }
 
 // ─────────────────────────────────────────────────────────────

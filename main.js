@@ -134,8 +134,7 @@ async function loadPortalData() {
     loadWorkers(),
     loadAnnouncements(),
     loadBarangaysAndMetrics(),
-    loadIssueReports(),
-    loadChartData()
+    loadIssueReports()
   ]);
 }
 
@@ -221,6 +220,54 @@ async function loadAnnouncements() {
 
 // Aggregates top cards + barangay table from SQL view/table counts.
 async function loadBarangaysAndMetrics() {
+  const { data, error } = await supabaseClient.rpc("get_portal_metrics");
+  if (!error && data) {
+    applyPortalMetrics(data);
+    return;
+  }
+
+  console.warn("Falling back to individual metric queries:", error?.message || error);
+  await loadBarangaysAndMetricsFallback();
+}
+
+function applyPortalMetrics(payload) {
+  const totals = payload?.totals || {};
+  const trends = payload?.trends || {};
+
+  barangaysData = (payload?.barangays || []).map((b) => ({
+    name: b.name,
+    residents: Number(b.residents || 0),
+    docs: Number(b.docs || 0),
+    workers: Number(b.workers || 0),
+    status: b.status || "pending"
+  }));
+
+  analyticsData.totals = {
+    residents: Number(totals.residents || 0),
+    docs: Number(totals.docs || 0),
+    workers: Number(totals.workers || 0),
+    unresolvedReports: Number(totals.unresolvedReports || 0),
+    barangays: Number(totals.barangays || barangaysData.length)
+  };
+
+  analyticsData.kpiTrends = {
+    residents: buildMoMTrend(Number(trends.residentsCurrentMonth || 0), Number(trends.residentsPreviousMonth || 0)),
+    docs: buildMoMTrend(Number(trends.docsCurrentMonth || 0), Number(trends.docsPreviousMonth || 0)),
+    workers: buildMoMTrend(Number(trends.workersCurrentMonth || 0), Number(trends.workersPreviousMonth || 0)),
+    issues: buildMoMTrend(Number(trends.issuesCurrentMonth || 0), Number(trends.issuesPreviousMonth || 0), {
+      lowerIsBetter: true,
+      labelSuffix: "reports vs last month"
+    })
+  };
+
+  setCounterTargetByIndex(0, analyticsData.totals.residents);
+  setCounterTargetByIndex(1, analyticsData.totals.docs);
+  setCounterTargetByIndex(2, analyticsData.totals.workers);
+  setCounterTargetByIndex(3, analyticsData.totals.unresolvedReports);
+  renderAnalyticsTrends();
+}
+
+async function loadBarangaysAndMetricsFallback() {
   const { previousStart, currentStart, nextStart } = monthBoundaries();
 
   const [

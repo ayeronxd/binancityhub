@@ -24,6 +24,12 @@ let portalSettings = null;
 let docTemplates = [];
 let adminInvites = [];
 let fillDocContext = { reqId: null, barangay: "", docType: "", residentName: "", ref: "", purpose: "", phone: "", templateUrl: null, templateFileName: "" };
+const lazyAdminData = {
+  docTemplates: false,
+  adminInvites: false,
+  serviceRequests: false
+};
+let docxLibraryPromise = null;
 
 // Admin bootstrap: secure gate -> role-aware UI -> scoped data load -> panel render.
 document.addEventListener("DOMContentLoaded", async () => {
@@ -201,11 +207,26 @@ async function loadAdminData() {
     loadAnnouncements(),
     loadIssueReports(),
     loadWorkers(),
-    loadPortalSettings(),
-    loadDocTemplates(),
-    loadAdminInvites(),
-    loadServiceRequests()
+    loadPortalSettings()
   ]);
+}
+
+async function ensureDocTemplatesLoaded() {
+  if (lazyAdminData.docTemplates) return;
+  await loadDocTemplates();
+  lazyAdminData.docTemplates = true;
+}
+
+async function ensureAdminInvitesLoaded() {
+  if (!isSuperAdmin() || lazyAdminData.adminInvites) return;
+  await loadAdminInvites();
+  lazyAdminData.adminInvites = true;
+}
+
+async function ensureServiceRequestsLoaded() {
+  if (lazyAdminData.serviceRequests) return;
+  await loadServiceRequests();
+  lazyAdminData.serviceRequests = true;
 }
 
 // Optional site configuration record; if table does not exist yet we keep form defaults.
@@ -938,7 +959,7 @@ function initMobileSidebar() {
   });
 }
 
-function showPanel(panelId) {
+async function showPanel(panelId) {
   // Defense in depth: block direct function calls to restricted panels.
   if (isBarangayAdmin() && (panelId === "barangays" || panelId === "settings" || panelId === "admin-invites")) {
     panelId = "overview";
@@ -970,15 +991,36 @@ function showPanel(panelId) {
   document.getElementById("adminPanelTitle").textContent = title[0];
   document.getElementById("adminPanelSub").textContent = title[1];
 
-  // Lazy-load analytics on first visit to the panel
-  if (panelId === "analytics") {
-    renderAnalyticsPanel();
-  }
+  try {
+    if (panelId === "documents") {
+      await ensureServiceRequestsLoaded();
+      renderSidebarBadges();
+    }
 
-  // Lazy-load health schedules on visit
-  if (panelId === "health-schedules") {
-    populateHealthScheduleBarangays();
-    loadHealthSchedules();
+    if (panelId === "doctemplates") {
+      await ensureDocTemplatesLoaded();
+      renderDocTemplatesPanel();
+    }
+
+    if (panelId === "admin-invites") {
+      await ensureAdminInvitesLoaded();
+      renderInvitesTable();
+      updateInviteSummary();
+      updateInviteNavBadge();
+    }
+
+    // Lazy-load analytics on first visit to the panel
+    if (panelId === "analytics") {
+      renderAnalyticsPanel();
+    }
+
+    // Lazy-load health schedules on visit
+    if (panelId === "health-schedules") {
+      populateHealthScheduleBarangays();
+      loadHealthSchedules();
+    }
+  } catch (error) {
+    showAdminToast(error.message || "Could not load this section.");
   }
 
   closeMobileSidebar();
@@ -2003,6 +2045,27 @@ function filterWorkers() {
   renderWorkersTable(document.getElementById("workerSearch")?.value || "");
 }
 
+function filterAnnouncements() {
+  renderAnnouncementsGrid(
+    document.getElementById("announcementSearch")?.value || "",
+    document.getElementById("announcementCategoryFilter")?.value || ""
+  );
+}
+
+function populateAnnouncementCategoryFilter() {
+  const select = document.getElementById("announcementCategoryFilter");
+  if (!select) return;
+
+  const current = select.value;
+  const categories = [...new Set(announcements.map((a) => a.category).filter(Boolean))].sort();
+  select.innerHTML = `<option value="">All Categories</option>` +
+    categories.map((category) => `<option value="${escapeAttr(category)}">${escapeHtml(category)}</option>`).join("");
+
+  if (categories.includes(current)) {
+    select.value = current;
+  }
+}
+
 function canManageWorkerRecord(workerBarangay) {
   if (isSuperAdmin()) return true;
   const scoped = String(getScopedBarangay() || "").trim().toLowerCase();
@@ -2010,19 +2073,45 @@ function canManageWorkerRecord(workerBarangay) {
   return scoped && scoped === target;
 }
 
-function renderAnnouncementsGrid() {
+function renderAnnouncementsGrid(filter = "", categoryFilter = "") {
   const grid = document.getElementById("announcementsAdminGrid");
   if (!grid) return;
 
-  grid.innerHTML = announcements.map((a) => `
+  populateAnnouncementCategoryFilter();
+
+  const query = String(filter || "").trim().toLowerCase();
+  const category = String(categoryFilter || "").trim();
+  const filtered = announcements.filter((a) => {
+    const matchesQuery = !query || `${a.title} ${a.content} ${a.category} ${a.barangay}`.toLowerCase().includes(query);
+    const matchesCategory = !category || a.category === category;
+    return matchesQuery && matchesCategory;
+  });
+
+  setText("announcementsCount", `${filtered.length} announcement${filtered.length === 1 ? "" : "s"}`);
+
+  if (!filtered.length) {
+    grid.innerHTML = `
+      <div class="ann-empty-state">
+        <i class="fas fa-bullhorn" style="font-size:22px;color:var(--accent-gold);margin-bottom:10px"></i>
+        <div>No announcements found.</div>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map((a) => `
     <div class="ann-admin-card">
-      <div class="ann-card-tag">${escapeHtml(a.category)}</div>
-      <h5>${escapeHtml(a.title)}</h5>
-      <p>${escapeHtml(a.content)}</p>
-      <div class="ann-card-footer">
+      <div class="ann-card-main">
+        <div class="ann-card-meta">
+          <span class="ann-card-tag">${escapeHtml(a.category)}</span>
+          <span class="ann-card-scope">${escapeHtml(a.barangay || "City-Wide")}</span>
+        </div>
+        <h5>${escapeHtml(a.title)}</h5>
+        <p class="ann-card-preview">${escapeHtml(a.content)}</p>
+      </div>
+      <div class="ann-card-side">
         <span class="ann-card-date"><i class="fas fa-calendar-alt" style="color:var(--accent-gold)"></i> ${escapeHtml(a.date)}</span>
         <div class="ann-card-actions">
-          <button class="tbl-btn tbl-btn-delete" onclick="deleteAnnouncement('${a.id}')"><i class="fas fa-trash"></i></button>
+          <button class="tbl-btn tbl-btn-delete" onclick="deleteAnnouncement('${a.id}')" title="Delete announcement"><i class="fas fa-trash"></i></button>
         </div>
       </div>
     </div>
@@ -2585,25 +2674,45 @@ async function loadAnalyticsPanelData() {
   const applyScope = (q) => (!isSuperAdmin() && scope) ? q.eq("barangay", scope) : q;
   const applyScopeName = (q) => (!isSuperAdmin() && scope) ? q.eq("name", scope) : q;
 
-  const [docsRes, workersRes, profilesCount, docsCount, workersCount, issuesCount, barangaysRes] = await Promise.all([
+  const [metricsRes, docsRes, workersRes] = await Promise.all([
+    supabaseClient.rpc("get_portal_metrics", { p_barangay: (!isSuperAdmin() && scope) ? scope : null }),
     applyScope(supabaseClient.from("document_requests").select("request_type,created_at").gte("created_at", since.toISOString())),
-    applyScope(supabaseClient.from("workers").select("service_category").eq("is_active", true)),
-    applyScope(supabaseClient.from("profiles").select("id", { count: "exact", head: true }).eq("role", "resident")),
-    applyScope(supabaseClient.from("document_requests").select("id", { count: "exact", head: true }).in("status", ["approved","completed","archived"])),
-    applyScope(supabaseClient.from("workers").select("id", { count: "exact", head: true }).eq("is_active", true)),
-    applyScope(supabaseClient.from("issue_reports").select("id", { count: "exact", head: true }).neq("status", "resolved")),
-    applyScopeName(supabaseClient.from("v_barangay_analytics").select("name,residents,docs,workers,status").order("name", { ascending: true }))
+    applyScope(supabaseClient.from("workers").select("service_category").eq("is_active", true))
   ]);
 
   const docs   = docsRes.data   || [];
   const skills = workersRes.data || [];
 
+  let metricsPayload = metricsRes.error ? null : metricsRes.data;
+
+  if (!metricsPayload) {
+    console.warn("Falling back to individual analytics metric queries:", metricsRes.error?.message || metricsRes.error);
+    const [profilesCount, docsCount, workersCount, issuesCount, barangaysRes] = await Promise.all([
+      applyScope(supabaseClient.from("profiles").select("id", { count: "exact", head: true }).eq("role", "resident")),
+      applyScope(supabaseClient.from("document_requests").select("id", { count: "exact", head: true }).in("status", ["approved","completed","archived"])),
+      applyScope(supabaseClient.from("workers").select("id", { count: "exact", head: true }).eq("is_active", true)),
+      applyScope(supabaseClient.from("issue_reports").select("id", { count: "exact", head: true }).neq("status", "resolved")),
+      applyScopeName(supabaseClient.from("v_barangay_analytics").select("name,residents,docs,workers,status").order("name", { ascending: true }))
+    ]);
+
+    metricsPayload = {
+      totals: {
+        residents: profilesCount.count || 0,
+        docs: docsCount.count || 0,
+        workers: workersCount.count || 0,
+        unresolvedReports: issuesCount.count || 0
+      },
+      barangays: barangaysRes.data || []
+    };
+  }
+
   // Totals
+  const totals = metricsPayload.totals || {};
   _anlAnalyticsData.totals = {
-    residents: profilesCount.count || 0,
-    docs:      docsCount.count     || 0,
-    workers:   workersCount.count  || 0,
-    issues:    issuesCount.count   || 0
+    residents: Number(totals.residents || 0),
+    docs:      Number(totals.docs || 0),
+    workers:   Number(totals.workers || 0),
+    issues:    Number(totals.unresolvedReports || totals.issues || 0)
   };
 
   // Monthly buckets
@@ -2650,7 +2759,7 @@ async function loadAnalyticsPanelData() {
   _anlAnalyticsData.skills.values = topSkills.map(i => i[1]);
 
   // Barangay list
-  _anlAnalyticsData.barangays = (barangaysRes.data || []).map(b => ({
+  _anlAnalyticsData.barangays = (metricsPayload.barangays || []).map(b => ({
     name:     b.name,
     residents: Number(b.residents || 0),
     docs:      Number(b.docs      || 0),
@@ -3284,6 +3393,8 @@ async function openFillDocModal(reqId, redownload = false) {
   const req = docRequests.find(r => String(r.id) === String(reqId));
   if (!req) { showAdminToast("Request not found."); return; }
 
+  await ensureDocTemplatesLoaded();
+
   // Find matching template for this barangay + doc type
   const tpl = docTemplates.find(
     t => t.barangay_name === req.barangay && t.document_type === req.type
@@ -3415,6 +3526,42 @@ function getFilledDocFields() {
   return data;
 }
 
+function loadExternalScript(src) {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) {
+      if (existing.dataset.loaded === "true") resolve();
+      else {
+        existing.addEventListener("load", resolve, { once: true });
+        existing.addEventListener("error", reject, { once: true });
+      }
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.dataset.loaded = "false";
+    script.addEventListener("load", () => {
+      script.dataset.loaded = "true";
+      resolve();
+    }, { once: true });
+    script.addEventListener("error", () => reject(new Error(`Failed to load ${src}`)), { once: true });
+    document.head.appendChild(script);
+  });
+}
+
+async function ensureDocxLibrariesLoaded() {
+  if (window.PizZip && window.saveAs) return;
+  if (!docxLibraryPromise) {
+    docxLibraryPromise = Promise.all([
+      window.PizZip ? Promise.resolve() : loadExternalScript("https://cdn.jsdelivr.net/npm/pizzip@3.1.4/dist/pizzip.js"),
+      window.saveAs ? Promise.resolve() : loadExternalScript("https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js")
+    ]);
+  }
+  await docxLibraryPromise;
+}
+
 async function generateFilledDocx() {
   if (!fillDocContext.templateUrl) {
     showAdminToast("No template available for this document type.");
@@ -3425,6 +3572,8 @@ async function generateFilledDocx() {
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...'; }
 
   try {
+    await ensureDocxLibrariesLoaded();
+
     // 1. Download the template .docx (which is just a ZIP file), using a cache-buster
     const cacheBustedUrl = new URL(fillDocContext.templateUrl);
     cacheBustedUrl.searchParams.append("t", Date.now());
